@@ -39,3 +39,4 @@ jobs:
           author_name: Kwangsik Lee
           fields: repo,message,commit,author,action,eventName,ref,workflow,job,took,pullRequest
           mention: here
+          if: always()
