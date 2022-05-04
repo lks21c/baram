@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "baram"
-version = "0.1.0"
+version = "0.1.1"
 description = "AWS Framework for python"
 authors = ["Kwangsik Lee <lks21c@gmail.com>"]
 readme = "readme.md"
