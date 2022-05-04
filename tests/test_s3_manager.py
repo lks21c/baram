@@ -103,6 +103,3 @@ def test_list_dir(sm, sample):
     for dir in sm.list_dir('nylon-detector/', '/'):
         assert dir
         print(dir)
-
-def test_fail():
-    assert False
