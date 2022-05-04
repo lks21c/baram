@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "baram"
+version = "0.1.0"
+description = "AWS Framework for python"
+authors = ["Kwangsik Lee <lks21c@gmail.com>"]
+readme = "readme.md"
+
+[tool.poetry.dependencies]
+python = "^3.7.10"
+fire = "^0.4.0"
+pytest-cov = "^3.0.0"
+boto3 = "1.18.65"
+aiohttp = "^3.8.1"
+nest-asyncio = "^1.5.5"
+toml = "^0.10.2"
+
+[tool.poetry.dev-dependencies]
+pytest = "^7.1.2"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

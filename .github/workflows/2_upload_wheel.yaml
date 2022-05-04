@@ -1,0 +1,37 @@
+name: 2. Upload Wheel
+
+on:
+  workflow_run:
+    workflows: [ 1. Unit Test ]
+    types:
+      - completed
+jobs:
+  Run:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ap-northeast-2
+      SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+    steps:
+      - uses: actions/checkout@main
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3
+      - name: Run image
+        uses: abatilo/actions-poetry@v2.0.0
+        with:
+          poetry-version: 1.1.13
+      - name: poetry update
+        run: poetry update
+      - name: run upload_wheel
+        run: |
+          poetry run python upload_wheel.py
+      - name: action-slack
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          author_name: Kwangsik Lee
+          fields: repo,commit,message,author # action,eventName,ref,workflow,job,took 추가할 수 있음
+          mention: here
