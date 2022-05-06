@@ -25,12 +25,7 @@ jobs:
         run: poetry update
       - name: run unit test
         run: |
-          poetry run python -m pytest --junitxml=pytest.xml --cov-report=term-missing:skip-covered --cov=baram tests/ | tee pytest-coverage.txt
-      - name: Pytest coverage comment
-        uses: MishaKav/pytest-coverage-comment@main
-        with:
-          pytest-coverage-path: ./pytest-coverage.txt
-          junitxml-path: ./pytest.xml
+            poetry run python -m pytest --cache-clear --cov-report term-missing --cov=baram tests
       - name: action-slack
         uses: 8398a7/action-slack@v3
         with:
