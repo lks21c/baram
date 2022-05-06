@@ -14,8 +14,6 @@ jobs:
       SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
     steps:
       - uses: actions/checkout@main
-        with:
-          ref: ${{ github.event.pull_request.head.sha }}
       - uses: actions/setup-python@v2
         with:
           python-version: 3
@@ -27,9 +25,7 @@ jobs:
         run: poetry update
       - name: run unit test
         run: |
-          poetry run python -m pytest --cache-clear --cov=baram tests > tee pytest-coverage.txt
-      - name: Comment coverage
-        uses: coroo/pytest-coverage-commentator@v1.0.2
+            poetry run python -m pytest --cache-clear --cov-report term-missing --cov=baram tests
       - name: action-slack
         uses: 8398a7/action-slack@v3
         with:
