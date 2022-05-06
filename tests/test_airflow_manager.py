@@ -42,3 +42,6 @@ def test_get_vpc_id(em):
 def test_get_subnet_id(em):
     pprint(em.get_subnet_id(em.get_vpc_id('aflow'), 'AFlow-Pri-Sub-AZ1'))
     em.get_subnet_id(em.get_vpc_id('aflow'), 'AFlow-Pri-Sub-AZ1')
+
+def test_fail():
+    assert False
