@@ -1,16 +1,17 @@
 import os
+import tempfile
 
 import boto3
 
+from baram.s3_manager import S3Manager
 from baram.log_manager import LogManager
 from baram.process_manager import ProcessManager
-from baram.s3_manager import S3Manager
 
 
 class LambdaManager(object):
     def __init__(self):
         self.cli = boto3.client('lambda')
-        self.logger = LogManager.get_logger()
+        self.logger = LogManager.get_logger('LambdaManager')
 
     def list_layers(self):
         '''
@@ -39,17 +40,15 @@ class LambdaManager(object):
         :param sm: S3Manager instance
         :return:
         '''
-        cmd = f'rm -rf python ' \
-              f"&& mkdir python " \
-              f'&& cd python && pip3 install {layer_name} -t . ' \
-              f'&& cd .. ' \
-              f'&& zip -r {layer_name}.zip python ' \
-              f'&& rm -rf python'
+        temp_dir = tempfile.mkdtemp()
+        os.mkdir(os.path.join(temp_dir, 'python'))
+        zip_path = os.path.join(tempfile.mkdtemp(), f'{layer_name}.zip')
+        cmd = f'cd {temp_dir} && pip3 install {layer_name} -t python ' \
+              f'&& zip -r {zip_path} python '
         self.logger.info(cmd)
         ProcessManager.run_cmd(cmd, False)
 
-        sm.upload_file(os.path.join(os.getcwd(), f'{layer_name}.zip'), f'lambda_layers/{layer_name}.zip')
-        os.remove(f'{layer_name}.zip')
+        sm.upload_file(zip_path, f'lambda_layers/{layer_name}.zip')
 
         content = {
             'S3Bucket': s3_bucket_name,

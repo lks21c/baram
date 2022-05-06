@@ -1,7 +1,7 @@
 import pytest
 
-from baram.kms_manager import KMSManager
 from baram.s3_manager import S3Manager
+from baram.kms_manager import KMSManager
 from baram.lambda_manager import LambdaManager
 
 
@@ -11,13 +11,15 @@ def lm():
 
 
 def test_list_layers(lm):
-    print(lm.list_layers())
-    assert lm.list_layers() is not None
+    layers = lm.list_layers()
+    print(layers)
+    assert layers
 
 
 def test_get_latest_layer_arn(lm):
-    print(lm.get_latest_layer_arn('ventus'))
-    assert lm.get_latest_layer_arn('ventus') is not None
+    arn = lm.get_latest_layer_arn('ventus')
+    print(arn)
+    assert arn
 
 
 def test_publish_lambda_layer(lm):

@@ -4,8 +4,8 @@ import tempfile
 
 import pytest
 
-from baram.kms_manager import KMSManager
 from baram.s3_manager import S3Manager
+from baram.kms_manager import KMSManager
 
 
 @pytest.fixture()
