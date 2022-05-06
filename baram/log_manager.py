@@ -5,13 +5,14 @@ import logging
 class LogManager(object):
 
     @staticmethod
-    def get_logger():
-        logger = logging.getLogger()
+    def get_logger(name=''):
+        logger = logging.getLogger(name)
+        logger.propagate = False
         logger.setLevel(logging.INFO)
 
-        handler = logging.StreamHandler(sys.stdout)
-        handler.setLevel(logging.INFO)
+        streamHandler = logging.StreamHandler(sys.stdout)
         formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        handler.setFormatter(formatter)
-        logger.addHandler(handler)
+        streamHandler.setFormatter(formatter)
+        logger.addHandler(streamHandler)
+
         return logger

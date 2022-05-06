@@ -11,7 +11,7 @@ class S3Manager(object):
     def __init__(self, bucket_name, kms_id):
         self.cli = boto3.client('s3', config=Config(signature_version='s3v4'))
         self.km = KMSManager()
-        self.logger = LogManager.get_logger()
+        self.logger = LogManager.get_logger('S3Manager')
         self.bucket_name = bucket_name
         self.kms_id = kms_id
 
