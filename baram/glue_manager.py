@@ -21,7 +21,7 @@ class GlueManager(object):
         self.max_retries = 0
         self.python_ver = '3'
         self.glue_ver = '3.0'
-        self.s3_path = s3_path
+        self.s3_path = s3_path if 's3://' in s3_path else f's3://{s3_path}'
 
         # See https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-glue-arguments.html
         self.default_args = {
