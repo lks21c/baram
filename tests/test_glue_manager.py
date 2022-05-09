@@ -13,21 +13,39 @@ def gm():
 
 
 def test_create_job(gm):
-    # pass
-    gm.create_job('CreateHiraYearAgeInOut',
-                  'com.sli',
-                  'Glue-developer-role',
-                  's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
-                  'sli-security-configuration'
-                  )
+    pass
+    # gm.create_job('CreateHiraYearAgeInOut',
+    #               'com.sli',
+    #               'Glue-developer-role',
+    #               's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
+    #               'sli-security-configuration'
+    #               )
 
 
 def test_delete_job(gm):
-    # pass
-    gm.delete_job('CreateHiraYearAgeInOut')
-    gm.delete_table('sli-dst', 'hira_year_age_gndr')
-    sm = S3Manager('sli-dst-glue', KMSManager().get_kms_arn('s3-glue-ksm'))
-    sm.delete_dir('table/hira_year_age_gndr')
+    pass
+    # gm.delete_job('CreateHiraYearAgeInOut')
+    # gm.delete_table('sli-dst', 'hira_year_age_gndr')
+    # sm = S3Manager('sli-dst-glue', KMSManager().get_kms_arn('s3-glue-ksm'))
+    # sm.delete_dir('table/hira_year_age_gndr')
+
+
+def test_create_job(gm):
+    pass
+    # gm.create_job('CreateHiraYearAgeInOut',
+    #               'com.sli',
+    #               'Glue-developer-role',
+    #               's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
+    #               'sli-security-configuration'
+    #               )
+
+
+def test_delete_job(gm):
+    pass
+    # gm.delete_job('CreateHiraYearAgeInOut')
+    # gm.delete_table('sli-dst', 'hira_year_age_gndr')
+    # sm = S3Manager('sli-dst-glue', KMSManager().get_kms_arn('s3-glue-ksm'))
+    # sm.delete_dir('table/hira_year_age_gndr')
 
 
 def test_crud_job(gm):
