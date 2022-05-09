@@ -93,7 +93,13 @@ class GlueManager(object):
     def delete_job(self, name):
         return self.cli.delete_job(JobName=name)
 
-    def refresh_job(self, code_path: str, exclude_names: list):
+    def refresh_job(self,
+                    code_path: str,
+                    exclude_names: list,
+                    class_name,
+                    role_name,
+                    extra_jars,
+                    security_configuration):
         response = self.cli.list_jobs(MaxResults=1000)
         glue_jobs = set([f'{jn}.scala' for jn in response['JobNames']])
         git_jobs = set([f for f in os.listdir(code_path)])
@@ -109,7 +115,7 @@ class GlueManager(object):
             name = Path(f).stem
             if name in exclude_names:
                 continue
-            self.create_job(name)
+            self.create_job(name, class_name, role_name, extra_jars, security_configuration)
             self.logger.info(f'{name} created.')
 
 

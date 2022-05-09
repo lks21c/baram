@@ -32,4 +32,9 @@ def test_crud_job(gm):
 
 def test_refresh_job(gm):
     pass
-    # gm.refresh_job()
+    # gm.refresh_job('src/main/scala/com/sli',
+    #                ['GlueHelper'],
+    #                'com.sli.CreateHiraYearAgeGndr',
+    #                'Glue-developer-role',
+    #                's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
+    #                'sli-security-configuration')
