@@ -149,6 +149,9 @@ class S3Manager(object):
         :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data
         :return:
         '''
+        files = self.list_objects(s3_dir_path)
+        if not files:
+            return
         for k in self.list_objects(s3_dir_path):
             self.delete_object(k['Key'])
         self.delete_object(s3_dir_path)

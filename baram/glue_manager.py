@@ -44,8 +44,8 @@ class GlueManager(object):
             'PythonVersion': self.python_ver
         }
 
-    def create_job(self, name, class_name, role_name, extra_jars, security_configuration):
-        self.default_args['--class'] = class_name
+    def create_job(self, name, package_name, role_name, extra_jars, security_configuration):
+        self.default_args['--class'] = f'{package_name}.{name}'
         self.default_args['--extra-jars'] = extra_jars
 
         return self.cli.create_job(
@@ -68,8 +68,8 @@ class GlueManager(object):
     def get_job(self, job_name):
         return self.cli.get_job(JobName=job_name)
 
-    def update_job(self, name, class_name, role_name, extra_jars, security_configuration):
-        self.default_args['--class'] = class_name
+    def update_job(self, name, package_name, role_name, extra_jars, security_configuration):
+        self.default_args['--class'] = f'{package_name}.{name}'
         self.default_args['--extra-jars'] = extra_jars
 
         return self.cli.update_job(
@@ -93,10 +93,25 @@ class GlueManager(object):
     def delete_job(self, name):
         return self.cli.delete_job(JobName=name)
 
+    def delete_table(self, db_name, name):
+        try:
+            return self.cli.delete_table(
+                DatabaseName=db_name,
+                Name=name
+            )
+        except Exception as e:
+            self.logger.error(str(e))
+
+    def get_table(self, db_name, name):
+        return self.cli.get_table(
+            DatabaseName=db_name,
+            Name=name
+        )
+
     def refresh_job(self,
                     code_path: str,
                     exclude_names: list,
-                    class_name,
+                    package_name,
                     role_name,
                     extra_jars,
                     security_configuration):
@@ -115,7 +130,7 @@ class GlueManager(object):
             name = Path(f).stem
             if name in exclude_names:
                 continue
-            self.create_job(name, class_name, role_name, extra_jars, security_configuration)
+            self.create_job(name, package_name, role_name, extra_jars, security_configuration)
             self.logger.info(f'{name} created.')
 
 
