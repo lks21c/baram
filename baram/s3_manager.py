@@ -8,12 +8,13 @@ from baram.kms_manager import KMSManager
 
 
 class S3Manager(object):
-    def __init__(self, bucket_name, kms_id):
+    def __init__(self, bucket_name):
         self.cli = boto3.client('s3', config=Config(signature_version='s3v4'))
         self.km = KMSManager()
         self.logger = LogManager.get_logger('S3Manager')
         self.bucket_name = bucket_name
-        self.kms_id = kms_id
+        bi = self.get_bucket_encryption()
+        self.kms_algorithm, self.kms_id = bi['SSEAlgorithm'], bi['KMSMasterKeyID']
 
     def list_buckets(self):
         '''
@@ -29,12 +30,13 @@ class S3Manager(object):
         :param body: byte or str data
         :return: response
         '''
-
-        response = self.cli.put_object(Bucket=self.bucket_name,
-                                       Key=s3_key_id,
-                                       Body=body,
-                                       ServerSideEncryption='aws:kms',
-                                       SSEKMSKeyId=self.kms_id)
+        kwargs = {"Bucket": self.bucket_name,
+                  "Key": s3_key_id,
+                  "Body": body}
+        if self.kms_id:
+            kwargs['ServerSideEncryption'] = self.kms_algorithm
+            kwargs['SSEKMSKeyId'] = self.kms_id
+        response = self.cli.put_object(**kwargs)
         return response
 
     def get_object(self, s3_key_id: str):
@@ -94,11 +96,13 @@ class S3Manager(object):
                     dest_path = path.replace(local_dir_path, '')
                     s3file_path = os.path.normpath(s3_dir_path + '/' + dest_path + '/' + file)
                     local_file_path = os.path.join(path, file)
+
+                    extra_args = {'ServerSideEncryption': self.kms_algorithm,
+                                  'SSEKMSKeyId': self.kms_id} if self.kms_id else None
                     self.cli.upload_file(local_file_path,
                                          self.bucket_name,
                                          s3file_path,
-                                         ExtraArgs={'ServerSideEncryption': 'aws:kms',
-                                                    'SSEKMSKeyId': self.kms_id})
+                                         ExtraArgs=extra_args)
                     self.logger.info(
                         f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3file_path} Success.')
         except Exception as e:
@@ -114,11 +118,12 @@ class S3Manager(object):
         '''
 
         try:
+            extra_args = {'ServerSideEncryption': self.kms_algorithm,
+                          'SSEKMSKeyId': self.kms_id} if self.kms_id else None
             self.cli.upload_file(local_file_path,
                                  self.bucket_name,
                                  s3file_path,
-                                 ExtraArgs={'ServerSideEncryption': 'aws:kms',
-                                            'SSEKMSKeyId': self.kms_id})
+                                 ExtraArgs=extra_args)
             self.logger.info(f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3file_path} Success.')
         except Exception as e:
             self.logger.info(e)
@@ -204,3 +209,11 @@ class S3Manager(object):
         return next(
             (f'arn:aws:s3:::{i["Name"]}' for i in self.list_buckets() if bucket_name in i['Name']),
             None)
+
+    def get_bucket_encryption(self):
+        '''
+
+        :return: KMS ID
+        '''
+        conf = self.cli.get_bucket_encryption(Bucket=self.bucket_name)['ServerSideEncryptionConfiguration']
+        return conf['Rules'][0]['ApplyServerSideEncryptionByDefault'] if conf else None

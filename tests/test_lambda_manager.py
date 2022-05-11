@@ -23,5 +23,5 @@ def test_get_latest_layer_arn(lm):
 
 
 def test_publish_lambda_layer(lm):
-    sm = S3Manager('sli-dst-security', KMSManager().get_kms_arn('s3-hydra01-kms', False))
+    sm = S3Manager('sli-dst-security')
     lm.publish_lambda_layer('baram', 'sli-dst-security', sm)

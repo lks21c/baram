@@ -5,12 +5,11 @@ import tempfile
 import pytest
 
 from baram.s3_manager import S3Manager
-from baram.kms_manager import KMSManager
 
 
 @pytest.fixture()
 def sm():
-    return S3Manager('sli-dst-security', KMSManager().get_kms_arn('alias/s3-hydra01-kms', False))
+    return S3Manager('sli-dst-security')
 
 
 @pytest.fixture()
@@ -103,3 +102,10 @@ def test_list_dir(sm, sample):
     for dir in sm.list_dir('nylon-detector/', '/'):
         assert dir
         print(dir)
+
+
+def test_get_bucket_encryption(sm, sample):
+    bi = sm.get_bucket_encryption()
+    assert bi
+    print(bi['SSEAlgorithm'])
+    print(bi['KMSMasterKeyID'])
