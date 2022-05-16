@@ -21,7 +21,7 @@ def test_create_job(gm):
 
 
 def test_delete_table(gm):
-    gm.delete_table('sli-dst', 'test', True)
+    gm.delete_table('hira', 'hira_year_age_gndr', True)
 
 
 def test_crud_job(gm):

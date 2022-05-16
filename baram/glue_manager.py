@@ -174,7 +174,7 @@ class GlueManager(object):
                 Name=table_name
             )
         except Exception as e:
-            self.logger.error(str(e))
+            pass
         finally:
             if include_s3:
                 print(f'delete {os.path.join(self.TABLE_PATH_PREFIX, db_name, table_name)}')
