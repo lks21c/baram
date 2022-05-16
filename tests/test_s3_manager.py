@@ -78,24 +78,46 @@ def test_upload_download_delete_dir(sm, sample):
 
 
 def test_upload_download_delete_file(sm, sample):
+    # Given
     temp_file = tempfile.mkstemp()
     s3_tmp_file = 'tmp_file'
+
+    # When
+    sm.upload_file(
+        temp_file[1],
+        s3_tmp_file)
+
+    # Then
+    for obj in sm.list_objects(s3_tmp_file):
+        assert obj['Key'] == s3_tmp_file
+
+    sm.download_file(s3_tmp_file, s3_tmp_file)
+    assert os.path.exists(s3_tmp_file)
+    os.remove(s3_tmp_file)
+
+    sm.delete_object(s3_tmp_file)
+    assert sm.get_object(s3_tmp_file) is None
+
+
+def test_delete_objects(sm, sample):
+    # Given
+    temp_file, temp_file2 = tempfile.mkstemp(), tempfile.mkstemp()
+    s3_tmp_file, s3_tmp_file2 = 'tmp_file', 'tmp_file2'
 
     sm.upload_file(
         temp_file[1],
         s3_tmp_file)
 
-    # s3 file check
-    for obj in sm.list_objects(s3_tmp_file):
-        assert obj['Key'] == s3_tmp_file
+    sm.upload_file(
+        temp_file2[1],
+        s3_tmp_file2)
 
-    # download
-    sm.download_file(s3_tmp_file, s3_tmp_file)
-    assert os.path.exists(s3_tmp_file)
-    os.remove(s3_tmp_file)
+    # When
+    sm.delete_objects([s3_tmp_file, s3_tmp_file2])
 
-    # delete
-    sm.delete_object(s3_tmp_file)
+    # Then
+    assert sm.get_object(s3_tmp_file) is None
+    assert sm.get_object(s3_tmp_file2) is None
 
 
 def test_list_dir(sm, sample):
@@ -109,3 +131,29 @@ def test_get_bucket_encryption(sm, sample):
     assert bi
     print(bi['SSEAlgorithm'])
     print(bi['KMSMasterKeyID'])
+
+
+def test_upload_download_delete_dir(sm, sample):
+    temp_dir = tempfile.mkdtemp()
+    temp_file = tempfile.mkstemp(dir=temp_dir)
+    tmp_filename = temp_file[1].split('/')[-1]
+    s3_tmp_dir = 'tmp_dir'
+
+    sm.upload_dir(
+        temp_dir,
+        s3_tmp_dir)
+
+    # s3 file check
+    file_exist = False
+    for f in sm.list_objects(f'{s3_tmp_dir}/'):
+        if f['Key'].split('/')[-1] == tmp_filename:
+            file_exist = True
+    assert file_exist
+
+    # download
+    sm.download_dir(s3_tmp_dir)
+    assert os.path.exists(os.path.join(s3_tmp_dir, tmp_filename))
+    shutil.rmtree(s3_tmp_dir)
+
+    # delete
+    sm.delete_dir(s3_tmp_dir)

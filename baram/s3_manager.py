@@ -77,9 +77,16 @@ class S3Manager(object):
         :param s3_key_id: s3 key id. ex) nylon-detector/a.csv
         :return: response
         '''
-        response = self.cli.delete_object(Bucket=self.bucket_name,
-                                          Key=s3_key_id)
-        return response
+        return self.cli.delete_object(Bucket=self.bucket_name,
+                                      Key=s3_key_id)
+
+    def delete_objects(self, s3_keys: list, quiet: bool = True):
+        objects = [{'Key': k} for k in s3_keys]
+        return self.cli.delete_objects(Bucket=self.bucket_name,
+                                       Delete={
+                                           'Objects': objects,
+                                           'Quiet': quiet
+                                       })
 
     def upload_dir(self, local_dir_path: str, s3_dir_path: str):
         '''
@@ -157,9 +164,17 @@ class S3Manager(object):
         files = self.list_objects(s3_dir_path)
         if not files:
             return
+        s3_keys = []
         for k in self.list_objects(s3_dir_path):
-            self.delete_object(k['Key'])
-        self.delete_object(s3_dir_path)
+            s3_keys.append(k['Key'])
+            if len(s3_keys) % 1000 == 0:
+                self.logger.info(f'delete 1000 keys.')
+                self.delete_objects(s3_keys)
+                s3_keys = []
+        if len(s3_keys) > 0:
+            self.logger.info(f'delete {len(s3_keys)} keys.')
+            self.delete_objects(s3_keys)
+        self.logger.info(f'delete {s3_dir_path}')
 
     def download_file(self, s3_file_path: str, local_file_path: str):
         '''
