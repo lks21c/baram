@@ -120,7 +120,7 @@ class S3Manager(object):
         '''
         Upload file.
         :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+        :param s3file_path: s3 path. ex) nylon-detector/crawl_data/a.csv
         :return: response
         '''
 
@@ -180,7 +180,7 @@ class S3Manager(object):
         '''
         Download file from s3.
         \
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+        :param s3_file_path: s3 path. ex) nylon-detector/crawl_data/a.csv
         :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
         :return: response
         '''
@@ -232,3 +232,57 @@ class S3Manager(object):
         '''
         conf = self.cli.get_bucket_encryption(Bucket=self.bucket_name)['ServerSideEncryptionConfiguration']
         return conf['Rules'][0]['ApplyServerSideEncryptionByDefault'] if conf else None
+
+    def get_csv_line_count(self,
+                           key: str,
+                           csv_header: bool = True,
+                           delimeter: str = ',') -> int:
+        '''
+
+        :param key: s3 key
+        :return: line count
+        '''
+        response = self.cli.select_object_content(
+            Bucket=self.bucket_name,
+            Key=key,
+            Expression=f'select count(*) from S3Object s',
+            ExpressionType='SQL',
+            RequestProgress={
+                'Enabled': True
+            },
+            InputSerialization={
+                'CSV': {
+                    'FileHeaderInfo': 'USE' if csv_header else 'NONE',
+                    'QuoteEscapeCharacter': '\"',
+                    'RecordDelimiter': delimeter,
+                    'FieldDelimiter': ',',
+                    'QuoteCharacter': '"',
+                    'AllowQuotedRecordDelimiter': False
+                },
+                'CompressionType': 'NONE',  # | 'GZIP' | 'BZIP2',
+            },
+            OutputSerialization={
+                'CSV': {
+                    'QuoteFields': 'ASNEEDED',
+                    'QuoteEscapeCharacter': '\"',
+                    'RecordDelimiter': delimeter,
+                    'FieldDelimiter': ',',
+                    'QuoteCharacter': '"'
+                }
+            }
+        )
+        event_stream = response['Payload']
+        end_event_received = False
+        output = ''
+        for event in event_stream:
+            if 'Records' in event:
+                data = event['Records']['Payload']
+                output += data.decode()
+            elif 'Progress' in event:
+                self.logger.info(event['Progress']['Details'])
+            elif 'End' in event:
+                self.logger.info('Result is complete')
+                end_event_received = True
+        if not end_event_received:
+            raise Exception("End event not received, request incomplete.")
+        return int(output.replace(",", ""))
