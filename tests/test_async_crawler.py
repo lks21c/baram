@@ -13,7 +13,7 @@ def ac():
 def test_crawl_urls(ac):
     urls = ['http://www.google.com',
             'http://www.naver.com']
-    htmls = ac.get_urls(urls)
+    htmls = ac.request_urls('GET', urls)
     assert htmls is not None
     print(htmls[0])
 
@@ -23,7 +23,7 @@ def test_crawl_urls_with_header(ac):
     header = {
         'User-Agent': 'Mozilla22'
     }
-    htmls = ac.get_urls(urls, headers=header)
+    htmls = ac.request_urls('GET', urls, headers=header)
     assert htmls is not None
     print(htmls[0])
 
@@ -59,8 +59,8 @@ def test_naver_cafe(ac):
         'includeAll': '실비',
     }
 
-    htmls = ac.post_urls(
-        ['https://apis.naver.com/cafe-home-web/cafe-home/v1/search/articles'],
-        json=json_data,
-        headers=headers)
+    htmls = ac.request_urls('POST',
+                            ['https://apis.naver.com/cafe-home-web/cafe-home/v1/search/articles'],
+                            json=json_data,
+                            headers=headers)
     pprint(htmls[0])
