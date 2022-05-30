@@ -29,6 +29,6 @@ class AsyncCrawler(object):
                 *[self._fetch_page(session, method, url, **kwargs) for url in urls], return_exceptions=True)
 
     async def _fetch_page(self, session, method: str, url: str, **kwargs: dict) -> str:
-        async with session.request(method, url, **kwargs) as response:
+        async with session.request(method, url, ssl=False, **kwargs) as response:
             html = await response.text()
             return html if response.status == 200 else None
