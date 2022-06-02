@@ -13,8 +13,11 @@ class S3Manager(object):
         self.km = KMSManager()
         self.logger = LogManager.get_logger('S3Manager')
         self.bucket_name = bucket_name
-        bi = self.get_bucket_encryption()
-        self.kms_algorithm, self.kms_id = bi['SSEAlgorithm'], bi['KMSMasterKeyID']
+        try:
+            bi = self.get_bucket_encryption()
+            self.kms_algorithm, self.kms_id = bi['SSEAlgorithm'], bi['KMSMasterKeyID']
+        except:
+            self.kms_algorithm, self.kms_id = None, None
 
     def list_buckets(self):
         '''
