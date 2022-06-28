@@ -57,3 +57,12 @@ class EC2Manager(object):
         '''
         return next(s['SubnetId'] for s in self.list_subnet() if vpc_id == s['VpcId'] and 'Tags' in s
                     for t in s['Tags'] if subnet_name == t['Value'])
+
+    def get_ec2_id(self, name):
+        '''
+
+        :param name: ec2 instance name
+        :return:
+        '''
+        ec2 = boto3.resource('ec2')
+        return next(i.id for i in ec2.instances.all() for t in i.tags if name == t['Value'])
