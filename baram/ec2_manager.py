@@ -65,4 +65,4 @@ class EC2Manager(object):
         :return:
         '''
         ec2 = boto3.resource('ec2')
-        return next(i.id for i in ec2.instances.all() for t in i.tags if name == t['Value'])
+        return next(i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
