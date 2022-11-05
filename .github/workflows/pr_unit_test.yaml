@@ -25,7 +25,7 @@ jobs:
         run: poetry update
       - name: run unit test
         run: |
-          poetry run python -m pytest --cache-clear --cov-report term-missing --cov=baram tests
+          poetry run python -m pytest tests
       - name: action-slack
         uses: 8398a7/action-slack@v3
         with:
