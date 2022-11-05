@@ -5,14 +5,11 @@ from baram.log_manager import LogManager
 
 class RequestsManager(object):
 
-    def __init__(self):
-        self.logger = LogManager.get_logger()
-
-    def get(self,
-            url: str,
+    @staticmethod
+    def get(url: str,
             params: dict = None,
             cookies: dict = None,
-            headers: dict = None) -> dict:
+            headers: dict = None):
         """
 
         :param url: url
@@ -21,9 +18,10 @@ class RequestsManager(object):
         :param headers: headers
         :return:
         """
+        logger = LogManager.get_logger()
         with requests.Session() as s:
             try:
                 response = s.get(url, params=params, cookies=cookies, headers=headers)
                 return response
             except Exception as e:
-                self.logger.info(e)
+                logger.info(e)
