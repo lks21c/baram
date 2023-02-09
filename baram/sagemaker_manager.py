@@ -5,6 +5,11 @@ class SagemakerManager(object):
     def __init__(self):
         self.cli = boto3.client('sagemaker')
 
+    def describe_domain(self):
+        domain_list = self.cli.list_domains()['Domains']
+        result = [x['DomainId'] for x in domain_list]
+        return set(result)
+
     def describe_image(self, name: str):
         return self.cli.describe_image(ImageName=name)
 
