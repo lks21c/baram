@@ -30,25 +30,30 @@ def test_list_security_group_id_without_instances(em):
     assert em.list_security_group_id_without_instances()
 
 
-def test_list_redundant_security_group(em):
-    em.list_redundant_security_group()
+def test_delete_redundant_sm_security_groups(em):
+    em.delete_redundant_sm_security_groups()
+
+
+def test_list_redundant_sm_security_group(em):
+    pprint(em.list_redundant_sm_security_groups())
+    assert em.list_redundant_sm_security_groups()
 
 
 def test_list_security_group_relation(em):
-    pprint(em.list_security_group_relation())
-    assert em.list_security_group_relation()
+    pprint(em.list_security_group_relations())
+    assert em.list_security_group_relations()
 
 
 def test_get_related_security_groups(em):
-    sg_id = 'sg-0fe321a807f037ba1'
+    sg_id = 'sg-0cc39dfc07c29ba7e'
     pprint(em.get_related_security_groups(sg_id))
     assert em.get_related_security_groups(sg_id)
 
 
 def test_get_security_group_rule(em):
     sg_id = 'sg-0fe321a807f037ba1'
-    pprint(em.get_security_group_rule(sg_id))
-    assert type(em.get_security_group_rule(sg_id)) == list
+    pprint(em.get_security_group_rules(sg_id))
+    assert type(em.get_security_group_rules(sg_id)) == list
 
 
 def test_revoke_security_group_rule(em):

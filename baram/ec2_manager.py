@@ -2,11 +2,12 @@ import boto3
 import botocore.exceptions
 
 from baram.log_manager import LogManager
-
+from baram.sagemaker_manager import SagemakerManager
 
 class EC2Manager(object):
     def __init__(self):
         self.cli = boto3.client('ec2')
+        self.sm = SagemakerManager()
         self.logger = LogManager.get_logger()
 
     def list_security_groups(self):
@@ -15,8 +16,8 @@ class EC2Manager(object):
 
         :return: SecurityGroups
         """
-        sg = self.cli.describe_security_groups()['SecurityGroups']
-        result = [x['GroupId'] for x in sg]
+        security_groups = self.cli.describe_security_groups()['SecurityGroups']
+        result = [x['GroupId'] for x in security_groups]
         return set(result)
 
     def list_instances(self):
@@ -40,9 +41,9 @@ class EC2Manager(object):
         security_groups = self.cli.describe_security_groups()['SecurityGroups']
 
         if with_name:
-            result = [{x['GroupId']: x['GroupName']} for x in security_groups if x['VpcId'] in vpc_with_instances]
+            result = [{sg['GroupId']: sg['GroupName']} for sg in security_groups if sg['VpcId'] in vpc_with_instances]
         else:
-            result = [x['GroupId'] for x in security_groups if x['VpcId'] in vpc_with_instances]
+            result = [sg['GroupId'] for sg in security_groups if sg['VpcId'] in vpc_with_instances]
         return set(result)
 
     def list_security_group_id_without_instances(self):
@@ -55,15 +56,40 @@ class EC2Manager(object):
         sg_with_instances = self.list_security_group_id_with_instances()
         return sg_total - sg_with_instances
 
-    def list_redundant_security_group(self):
+    def delete_redundant_sm_security_groups(self):
         """
-        Describe useless and deletable security groups
+        Delete useless and deletable security group ids related to non-using sagemaker
 
         :return:
         """
-        pass
+        redundant_sm_security_groups = self.list_redundant_sm_security_groups()
 
-    def list_security_group_relation(self):
+        if len(redundant_sm_security_groups) > 0:
+            self.revoke_security_group_rules(redundant_sm_security_groups)
+            self.delete_security_groups(redundant_sm_security_groups)
+        else:
+            print("There's no redundant security groups to delete")
+
+    def list_redundant_sm_security_groups(self):
+        """
+        Describe useless and deletable security group ids related to non-using sagemaker
+
+        :return:
+        """
+        valid_domains = self.sm.describe_domain()
+        security_groups = self.cli.describe_security_groups()['SecurityGroups']
+
+        result = []
+        for sg in security_groups:
+            is_sm = ('DO NOT DELETE' in sg['Description']) and ('SageMaker' in sg['Description'])
+            sm_domain_id = sg['Description'].split(' ')[-1].split('[')[-1].split(']')[0] if is_sm else None
+
+            if is_sm and sm_domain_id not in valid_domains:
+                result.append(sg['GroupId'])
+
+        return result
+
+    def list_security_group_relations(self):
         """
         Describe security groups with related security groups, including egrss and ingress status
 
@@ -71,8 +97,8 @@ class EC2Manager(object):
         """
         sg_rules = self.cli.describe_security_group_rules()['SecurityGroupRules']
 
-        sg_id = [x['GroupId'] for x in sg_rules]
-        is_ob = [x['IsEgress'] for x in sg_rules]
+        sg_id = [sg_rule['GroupId'] for sg_rule in sg_rules]
+        is_ob = [sg_rule['IsEgress'] for sg_rule in sg_rules]
         referenced_groups = [x['ReferencedGroupInfo']['GroupId'] if 'ReferencedGroupInfo' in x.keys() else None
                              for x in sg_rules]
 
@@ -91,22 +117,27 @@ class EC2Manager(object):
         :param security_group_id:
         :return: SecurityGroupId
         """
-        sg_relation = self.list_security_group_relation()
+        sg_relations = self.list_security_group_relations()
 
-        result = [x['security_group_id'] for x in sg_relation if x['related_security_group_id'] == security_group_id]
+        result = [sg_relation['security_group_id'] for sg_relation in sg_relations
+                  if sg_relation['related_security_group_id'] == security_group_id]
         return set(result)
 
-    def get_security_group_rule(self, security_group_id: str):
+    def get_security_group_rules(self, security_group_id: str):
         sg_rules = self.cli.describe_security_group_rules()['SecurityGroupRules']
 
-        result = [{'security_group_rule_id': x['SecurityGroupRuleId'],
-                   'security_group_id': x['ReferencedGroupInfo']['GroupId'],
-                   'is_ob': True if x['IsEgress'] else False}
-                  for x in sg_rules if x['GroupId'] == security_group_id]
+        result = [{'security_group_rule_id': sg_rule['SecurityGroupRuleId'],
+                   'security_group_id': sg_rule['ReferencedGroupInfo']['GroupId'],
+                   'is_ob': True if sg_rule['IsEgress'] else False}
+                  for sg_rule in sg_rules if sg_rule['GroupId'] == security_group_id]
         return result
 
+    def revoke_security_group_rules(self, security_group_id_list: list):
+        for sg_id in security_group_id_list:
+            self.revoke_security_group_rule(sg_id)
+
     def revoke_security_group_rule(self, security_group_id: str):
-        sg_rules = self.get_security_group_rule(security_group_id)
+        sg_rules = self.get_security_group_rules(security_group_id)
 
         if len(sg_rules) > 0:
             for sg_rule in sg_rules:
@@ -120,12 +151,16 @@ class EC2Manager(object):
         else:
             print("There's no security group rule for this security group")
 
+    def delete_security_groups(self, security_group_id_list: list):
+        for sg_id in security_group_id_list:
+            self.delete_security_group(sg_id)
+
     def delete_security_group(self, security_group_id: str):
         try:
             self.cli.delete_security_group(GroupId=security_group_id)
+            print(f"{security_group_id} is deleted")
         except botocore.exceptions.ClientError:
             self.logger.info('error')
-
 
     def list_vpcs(self):
         """
