@@ -36,7 +36,7 @@ def test_delete_redundant_sm_security_groups(em):
 
 def test_list_redundant_sm_security_group(em):
     pprint(em.list_redundant_sm_security_groups())
-    assert em.list_redundant_sm_security_groups()
+    assert type(em.list_redundant_sm_security_groups()) == list
 
 
 def test_list_security_group_relation(em):
@@ -47,7 +47,7 @@ def test_list_security_group_relation(em):
 def test_get_related_security_groups(em):
     sg_id = 'sg-0cc39dfc07c29ba7e'
     pprint(em.get_related_security_groups(sg_id))
-    assert em.get_related_security_groups(sg_id)
+    assert type(em.get_related_security_groups(sg_id)) == set
 
 
 def test_get_security_group_rule(em):
