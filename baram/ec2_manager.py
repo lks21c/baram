@@ -1,9 +1,13 @@
 import boto3
+import botocore.exceptions
+
+from baram.log_manager import LogManager
 
 
 class EC2Manager(object):
     def __init__(self):
         self.cli = boto3.client('ec2')
+        self.logger = LogManager.get_logger()
 
     def list_security_groups(self):
         """
@@ -117,7 +121,11 @@ class EC2Manager(object):
             print("There's no security group rule for this security group")
 
     def delete_security_group(self, security_group_id: str):
-        self.cli.delete_security_group(GroupId=security_group_id)
+        try:
+            self.cli.delete_security_group(GroupId=security_group_id)
+        except botocore.exceptions.ClientError:
+            self.logger.info('error')
+
 
     def list_vpcs(self):
         """
@@ -142,7 +150,7 @@ class EC2Manager(object):
         :return: subnet id
         """
         return next(
-            (i['GroupId'] for i in self.list_security_groups()
+            (i['GroupId'] for i in self.cli.describe_security_groups()['SecurityGroups']
              if group_name.lower() in i['GroupName'].lower()), None)
 
     def get_vpc_id(self, vpc_name: str):

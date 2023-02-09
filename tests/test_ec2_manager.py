@@ -48,7 +48,7 @@ def test_get_related_security_groups(em):
 def test_get_security_group_rule(em):
     sg_id = 'sg-0fe321a807f037ba1'
     pprint(em.get_security_group_rule(sg_id))
-    assert em.get_security_group_rule(sg_id)
+    assert type(em.get_security_group_rule(sg_id)) == list
 
 
 def test_revoke_security_group_rule(em):
