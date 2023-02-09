@@ -11,9 +11,52 @@ def em():
 
 
 def test_list_security_groups(em):
-    for g_id in em.list_security_groups():
-        print(g_id['GroupName'])
+    pprint(em.list_security_groups())
     assert em.list_security_groups()
+
+
+def test_list_instances(em):
+    pprint(em.list_instances())
+    assert em.list_instances()
+
+
+def test_list_security_group_id_with_instances(em):
+    pprint(em.list_security_group_id_with_instances())
+    assert em.list_security_group_id_with_instances()
+
+
+def test_list_security_group_id_without_instances(em):
+    pprint(em.list_security_group_id_without_instances())
+    assert em.list_security_group_id_without_instances()
+
+
+def test_list_redundant_security_group(em):
+    em.list_redundant_security_group()
+
+
+def test_list_security_group_relation(em):
+    pprint(em.list_security_group_relation())
+    assert em.list_security_group_relation()
+
+
+def test_get_related_security_groups(em):
+    sg_id = 'sg-0fe321a807f037ba1'
+    pprint(em.get_related_security_groups(sg_id))
+    assert em.get_related_security_groups(sg_id)
+
+
+def test_get_security_group_rule(em):
+    sg_id = 'sg-0fe321a807f037ba1'
+    pprint(em.get_security_group_rule(sg_id))
+    assert em.get_security_group_rule(sg_id)
+
+
+def test_revoke_security_group_rule(em):
+    em.revoke_security_group_rule('sg-0fe321a807f037ba1')
+
+
+def test_delete_security_group(em):
+    em.delete_security_group('sg-0fe321a807f037ba1')
 
 
 def test_list_vpcs(em):
