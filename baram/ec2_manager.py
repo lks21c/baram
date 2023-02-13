@@ -65,4 +65,40 @@ class EC2Manager(object):
         :return:
         '''
         ec2 = boto3.resource('ec2')
-        return next(i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
+        return next(
+            i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
+
+    def describe_instance(self, instance_id_list: list = None):
+        '''
+
+        Retrieve ec2 instance description.
+        :param instance_id: ec2 instance id
+        :return:
+        '''
+        if instance_id_list is not None:
+            return self.cli.describe_instances(InstanceIds=instance_id_list)
+        else:
+            return self.cli.describe_instances()
+
+    def get_ec2_instances_with_imds_v1(self):
+        '''
+
+        :return: get ec2 instances that support imds_v1.
+        '''
+        response = self.describe_instance()
+        return [i['InstanceId'] for r in response['Reservations']
+                for i in r['Instances'] if i['MetadataOptions']['HttpTokens'] != 'required']
+
+    def apply_imdsv2_only_mode(self, instances_list: list = None):
+        '''
+
+        Apply imdsv2 only mode into ec2 instances.
+        :param instances_list:
+        :return:
+        '''
+        for i in instances_list:
+            self.cli.modify_instance_metadata_options(InstanceId=i,
+                                                      HttpTokens='required',
+                                                      HttpPutResponseHopLimit=1,
+                                                      HttpEndpoint='enabled'
+                                                      )
