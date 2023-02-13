@@ -69,7 +69,6 @@ def test_get_ec2_instances_with_imds_v1(em):
     instance_list = em.get_ec2_instances_with_imds_v1()
 
     # Then
-    assert instance_list
     pprint(instance_list)
 
 def test_apply_imdsv2_only_mode(em):

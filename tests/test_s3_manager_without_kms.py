@@ -9,7 +9,7 @@ from baram.s3_manager import S3Manager
 
 @pytest.fixture()
 def sm():
-    return S3Manager('sli-dst-ge')
+    return S3Manager('sli-dst-security')
 
 
 @pytest.fixture()
