@@ -51,13 +51,13 @@ def test_get_related_security_groups(em):
 
 
 def test_get_security_group_rule(em):
-    sg_id = 'sg-0fe321a807f037ba1'
+    sg_id = 'sg-091f94833154ca3fd'
     pprint(em.get_security_group_rules(sg_id))
     assert type(em.get_security_group_rules(sg_id)) == list
 
 
 def test_revoke_security_group_rule(em):
-    em.revoke_security_group_rule('sg-0fe321a807f037ba1')
+    em.revoke_security_group_rule('sg-04689e68b9eace024')
 
 
 def test_delete_security_group(em):

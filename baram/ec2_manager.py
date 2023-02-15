@@ -4,6 +4,7 @@ import botocore.exceptions
 from baram.log_manager import LogManager
 from baram.sagemaker_manager import SagemakerManager
 
+
 class EC2Manager(object):
     def __init__(self):
         self.cli = boto3.client('ec2')
@@ -127,7 +128,6 @@ class EC2Manager(object):
         sg_rules = self.cli.describe_security_group_rules()['SecurityGroupRules']
 
         result = [{'security_group_rule_id': sg_rule['SecurityGroupRuleId'],
-                   'security_group_id': sg_rule['ReferencedGroupInfo']['GroupId'],
                    'is_ob': True if sg_rule['IsEgress'] else False}
                   for sg_rule in sg_rules if sg_rule['GroupId'] == security_group_id]
         return result
