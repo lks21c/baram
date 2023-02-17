@@ -9,10 +9,6 @@ def sm():
     return SagemakerManager()
 
 
-def test_describe_domain(sm):
-    print(sm.describe_domain())
-
-
 def test_describe_image(sm):
     response = sm.describe_image('sli-docker')
     assert response
