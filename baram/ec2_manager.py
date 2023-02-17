@@ -89,16 +89,18 @@ class EC2Manager(object):
         return [i['InstanceId'] for r in response['Reservations']
                 for i in r['Instances'] if i['MetadataOptions']['HttpTokens'] != 'required']
 
-    def apply_imdsv2_only_mode(self, instances_list: list = None):
+    def apply_imdsv2_only_mode(self,
+                               instances_list: list = None,
+                               http_put_response_hop_limit: int = 1):
         '''
 
         Apply imdsv2 only mode into ec2 instances.
         :param instances_list:
+        :param http_put_response_hop_limit: see https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_InstanceMetadataOptionsRequest.html.
         :return:
         '''
         for i in instances_list:
             self.cli.modify_instance_metadata_options(InstanceId=i,
                                                       HttpTokens='required',
-                                                      HttpPutResponseHopLimit=1,
-                                                      HttpEndpoint='enabled'
-                                                      )
+                                                      HttpPutResponseHopLimit=http_put_response_hop_limit,
+                                                      HttpEndpoint='enabled')
