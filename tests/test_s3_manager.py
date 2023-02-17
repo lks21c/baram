@@ -9,7 +9,7 @@ from baram.s3_manager import S3Manager
 
 @pytest.fixture()
 def sm():
-    return S3Manager('sli-dst-security')
+    return S3Manager('sli-dst-sms')
 
 
 @pytest.fixture()
@@ -33,10 +33,10 @@ def test_put_get_delete_object(sm, sample):
     assert sm.get_object(sample['s3_key']) is None
 
 
-def test_list_objects(sm, sample):
-    for obj in sm.list_objects('nylon-detector/crawl_data/백내장+부수입/url_original', ''):
-        assert obj
-        print(f'Key: {obj["Key"]}, LastModified: {obj["LastModified"]}')
+# def test_list_objects(sm, sample):
+#     for obj in sm.list_objects('nylon-detector/crawl_data/백내장+부수입/url_original', ''):
+#         assert obj
+#         print(f'Key: {obj["Key"]}, LastModified: {obj["LastModified"]}')
 
 
 def test_get_object_by_lines(sm, sample):

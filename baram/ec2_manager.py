@@ -87,7 +87,8 @@ class EC2Manager(object):
         '''
         response = self.describe_instance()
         return [i['InstanceId'] for r in response['Reservations']
-                for i in r['Instances'] if i['MetadataOptions']['HttpTokens'] != 'required']
+                for i in r['Instances']
+                if i['MetadataOptions']['HttpTokens'] != 'required' and i['State']['Name'] == 'running']
 
     def apply_imdsv2_only_mode(self,
                                instances_list: list = None,
