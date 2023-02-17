@@ -1,4 +1,6 @@
 import boto3
+import fire
+import pprint
 
 
 class IAMManager(object):
@@ -61,3 +63,23 @@ class IAMManager(object):
         :return:
         '''
         return self.cli.list_group_policies(GroupName=user_group_name, MaxItems=max_items)
+
+    def get_policies(self):
+        """
+        Lists all policies in IAM
+        :return:
+        """
+        return self.cli.list_policies(MaxItems=1000)['Policies']
+
+    def get_redundant_policies(self):
+        """
+        Lists redundant policies that are not attached to any IAM user, group, or role
+        :return:
+        """
+        for i in self.get_policies():
+            if i['AttachmentCount'] == 0:
+                pprint.pprint(i)
+
+
+if __name__ == '__main__':
+    fire.Fire(IAMManager)
