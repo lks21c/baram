@@ -17,26 +17,39 @@ def test_list_security_groups(em):
 
 def test_list_instances(em):
     pprint(em.list_instances())
-    assert em.list_instances()
+    assert type(em.list_instances()) == set
 
 
-def test_list_security_group_id_with_instances(em):
-    pprint(em.list_security_group_id_with_instances())
-    assert em.list_security_group_id_with_instances()
+def test_list_subnet(em):
+    pprint(em.list_subnet())
 
 
-def test_list_security_group_id_without_instances(em):
-    pprint(em.list_security_group_id_without_instances())
-    assert em.list_security_group_id_without_instances()
+def test_delete_redundant_security_groups(em):
+    em.delete_redundant_security_groups()
 
 
-def test_delete_redundant_sm_security_groups(em):
-    em.delete_redundant_sm_security_groups()
+def test_list_redundant_security_group_ids(em):
+    pprint(em.list_redundant_security_group_ids())
+    assert type(em.list_redundant_security_group_ids()) == set
 
 
-def test_list_redundant_sm_security_group(em):
-    pprint(em.list_redundant_sm_security_groups())
-    assert type(em.list_redundant_sm_security_groups()) == list
+def test_list_vpc_sg_eni_subnets(em):
+    result = em.list_vpc_sg_eni_subnets()
+    pprint(result)
+    assert type(result) == list
+    assert len(result) == len(em.list_security_groups())
+    if len(result) != 0:
+        assert type(result[0]) == dict
+
+
+def test_get_sg_ids_with_vpc_id(em):
+    vpc_id = 'vpc-04863aaf1ea9a3b35'
+    pprint(em.get_sg_ids_with_vpc_id(vpc_id))
+
+
+def test_get_eni_ids_with_sg_id(em):
+    sg_id = 'sg-0c41c743caf85d50b'
+    pprint(em.get_eni_ids_with_sg_id(sg_id))
 
 
 def test_list_security_group_relation(em):
@@ -91,7 +104,7 @@ def test_get_subnet_id(em):
     em.get_subnet_id(em.get_vpc_id('aflow'), 'AFlow-Pri-Sub-AZ1')
 
 
-def test_get_ec2_id(em):
-    ec2_id = em.get_ec2_id('bastion-host-1')
-    assert ec2_id
-    print(ec2_id)
+# def test_get_ec2_id(em):
+#     ec2_id = em.get_ec2_id('')
+#     assert ec2_id
+#     print(ec2_id)

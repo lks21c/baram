@@ -2,13 +2,11 @@ import boto3
 import botocore.exceptions
 
 from baram.log_manager import LogManager
-from baram.sagemaker_manager import SagemakerManager
 
 
 class EC2Manager(object):
     def __init__(self):
         self.cli = boto3.client('ec2')
-        self.sm = SagemakerManager()
         self.logger = LogManager.get_logger()
 
     def list_security_groups(self):
@@ -24,69 +22,87 @@ class EC2Manager(object):
     def list_instances(self):
         """
 
+
         :return:
         """
         instances = self.cli.describe_instances()['Reservations']
         result = [x['Instances'][0]['InstanceId'] for x in instances]
         return set(result)
 
-    def list_security_group_id_with_instances(self, with_name: bool = False):
+    def delete_redundant_security_groups(self):
         """
-        Describes all security groups tied to specific instance
-
-        :param with_name:
-        :return: SecurityGroups
-        """
-        instances = [x['Instances'][0] for x in self.cli.describe_instances()['Reservations']]
-        vpc_with_instances = [x['VpcId'] for x in instances if x['State']['Name'] != 'terminated']
-        security_groups = self.cli.describe_security_groups()['SecurityGroups']
-
-        if with_name:
-            result = [{sg['GroupId']: sg['GroupName']} for sg in security_groups if sg['VpcId'] in vpc_with_instances]
-        else:
-            result = [sg['GroupId'] for sg in security_groups if sg['VpcId'] in vpc_with_instances]
-        return set(result)
-
-    def list_security_group_id_without_instances(self):
-        """
-        Describes all security groups tied to any instance
-
-        :return: SecurityGroups
-        """
-        sg_total = self.list_security_groups()
-        sg_with_instances = self.list_security_group_id_with_instances()
-        return sg_total - sg_with_instances
-
-    def delete_redundant_sm_security_groups(self):
-        """
-        Delete useless and deletable security group ids related to non-using sagemaker
+        Delete useless and deletable security groups.
 
         :return:
         """
-        redundant_sm_security_groups = self.list_redundant_sm_security_groups()
+        redundant_security_groups = self.list_redundant_security_group_ids()
 
-        if len(redundant_sm_security_groups) > 0:
-            self.revoke_security_group_rules(redundant_sm_security_groups)
-            self.delete_security_groups(redundant_sm_security_groups)
+        if len(redundant_security_groups) > 0:
+            self.revoke_security_group_rules(redundant_security_groups)
+            self.delete_security_groups(redundant_security_groups)
         else:
             print("There's no redundant security groups to delete")
 
-    def list_redundant_sm_security_groups(self):
+    def list_redundant_security_group_ids(self):
         """
-        Describe useless and deletable security group ids related to non-using sagemaker
+        Describe useless and deletable security group ids.
 
-        :return:
+        :return: SecurityGroupIds
         """
-        valid_domains = self.sm.describe_domain()
+        vpc_sg_eni_subnets = self.list_vpc_sg_eni_subnets()
+        security_group_ids_valid = set([pair['sg_id'] for pair in vpc_sg_eni_subnets])
+
         security_groups = self.cli.describe_security_groups()['SecurityGroups']
+        security_group_ids_total = set([sg['GroupId'] for sg in security_groups])
+
+        return security_group_ids_total - security_group_ids_valid
+
+    def list_vpc_sg_eni_subnets(self):
+        """
+        return the list of all pairs of {vpc_id, security_group_id, eni_id, subnet_id}
+
+        :param:
+        :return: The list of {vpc_id, security_group_id, eni_id, subnet_id}
+        """
+        vpcs = [vpc for vpc in self.list_vpcs() if vpc['State'] == 'available']
+        vpc_ids = [vpc['VpcId'] for vpc in vpcs]
 
         result = []
-        for sg in security_groups:
-            is_sm = ('DO NOT DELETE' in sg['Description']) and ('SageMaker' in sg['Description'])
-            sm_domain_id = sg['Description'].split(' ')[-1].split('[')[-1].split(']')[0] if is_sm else None
+        for vpc_id in vpc_ids:
+            specified_sg_ids = self.get_sg_ids_with_vpc_id(vpc_id=vpc_id)
+            for sg_id in specified_sg_ids:
+                specified_enis = self.get_eni_ids_with_sg_id(security_group_id=sg_id)
+                pairs = {'vpc_id': vpc_id, 'sg_id': sg_id}
+                if len(specified_enis) != 0:
+                    for eni in specified_enis:
+                        pairs['eni_id'] = eni['NetworkInterfaceId']
+                        pairs['subnet_id'] = eni['SubnetId']
+                result.append(pairs)
 
-            if is_sm and sm_domain_id not in valid_domains:
-                result.append(sg['GroupId'])
+        return result
+
+    def get_sg_ids_with_vpc_id(self, vpc_id: str):
+        """
+
+        :param vpc_id:
+        :return: SecurityGroupId
+        """
+        security_groups = self.cli.describe_security_groups()['SecurityGroups']
+        result = [sg['GroupId'] for sg in security_groups if sg['VpcId'] == vpc_id]
+
+        return result
+
+    def get_eni_ids_with_sg_id(self, security_group_id: str):
+        """
+        Get
+
+        :param security_group_id:
+        :return: NetworkInterfaces
+        """
+        enis = self.cli.describe_network_interfaces()['NetworkInterfaces']
+        result = [eni for eni in enis
+                  if eni['Groups'] != []
+                  and security_group_id in [x['GroupId'] for x in eni['Groups']]]
 
         return result
 
@@ -98,22 +114,22 @@ class EC2Manager(object):
         """
         sg_rules = self.cli.describe_security_group_rules()['SecurityGroupRules']
 
-        sg_id = [sg_rule['GroupId'] for sg_rule in sg_rules]
-        is_ob = [sg_rule['IsEgress'] for sg_rule in sg_rules]
+        sg_ids = [sg_rule['GroupId'] for sg_rule in sg_rules]
+        is_obs = [sg_rule['IsEgress'] for sg_rule in sg_rules]
         referenced_groups = [x['ReferencedGroupInfo']['GroupId'] if 'ReferencedGroupInfo' in x.keys() else None
                              for x in sg_rules]
 
         result = []
         for i in range(len(sg_rules)):
-            result.append({'security_group_id': sg_id[i],
-                           'is_ob': is_ob[i],
+            result.append({'security_group_id': sg_ids[i],
+                           'is_ob': is_obs[i],
                            'related_security_group_id': referenced_groups[i]})
 
         return result
 
     def get_related_security_groups(self, security_group_id: str):
         """
-        Get the set of related security groups for specific security group
+        Get the set of related security groups for specific security group.
 
         :param security_group_id:
         :return: SecurityGroupId
@@ -125,6 +141,12 @@ class EC2Manager(object):
         return set(result)
 
     def get_security_group_rules(self, security_group_id: str):
+        """
+        Get security group rules of specific security group.
+
+        :param security_group_id:
+        :return: SecurityGroupRuleId
+        """
         sg_rules = self.cli.describe_security_group_rules()['SecurityGroupRules']
 
         result = [{'security_group_rule_id': sg_rule['SecurityGroupRuleId'],
@@ -133,10 +155,20 @@ class EC2Manager(object):
         return result
 
     def revoke_security_group_rules(self, security_group_id_list: list):
+        """
+        Get rid of security group rule of security groups in list.
+
+        :param security_group_id_list:
+        """
         for sg_id in security_group_id_list:
             self.revoke_security_group_rule(sg_id)
 
     def revoke_security_group_rule(self, security_group_id: str):
+        """
+        Get rid of security group rule of specific security group.
+
+        :param security_group_id:
+        """
         sg_rules = self.get_security_group_rules(security_group_id)
 
         if len(sg_rules) > 0:
@@ -152,10 +184,20 @@ class EC2Manager(object):
             print("There's no security group rule for this security group")
 
     def delete_security_groups(self, security_group_id_list: list):
+        """
+        Delete every security groups in input list.
+
+        :param security_group_id_list:
+        """
         for sg_id in security_group_id_list:
             self.delete_security_group(sg_id)
 
     def delete_security_group(self, security_group_id: str):
+        """
+        Delete specific security group.
+
+        :param security_group_id:
+        """
         try:
             self.cli.delete_security_group(GroupId=security_group_id)
             print(f"{security_group_id} is deleted")
@@ -190,7 +232,8 @@ class EC2Manager(object):
 
     def get_vpc_id(self, vpc_name: str):
         """
-        Retrieve vpc id from vpc name.
+        Retrieve vpc id from vpc name
+
         :param vpc_name: vpc name
         :return:
         """
@@ -207,11 +250,12 @@ class EC2Manager(object):
         return next(s['SubnetId'] for s in self.list_subnet() if vpc_id == s['VpcId'] and 'Tags' in s
                     for t in s['Tags'] if subnet_name == t['Value'])
 
-    def get_ec2_id(self, name):
-        """
-
-        :param name: ec2 instance name
-        :return:
-        """
-        ec2 = boto3.resource('ec2')
-        return next(i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
+    # def get_ec2_id(self, name):
+    #     """
+    #
+    #     :param name: ec2 instance name
+    #     :return:
+    #     """
+    #     ec2 = boto3.resource('ec2')
+    #     return next(i.id for i in ec2.instances.all()
+    #     if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
