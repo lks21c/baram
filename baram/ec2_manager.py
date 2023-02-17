@@ -250,12 +250,50 @@ class EC2Manager(object):
         return next(s['SubnetId'] for s in self.list_subnet() if vpc_id == s['VpcId'] and 'Tags' in s
                     for t in s['Tags'] if subnet_name == t['Value'])
 
-    # def get_ec2_id(self, name):
-    #     """
-    #
-    #     :param name: ec2 instance name
-    #     :return:
-    #     """
-    #     ec2 = boto3.resource('ec2')
-    #     return next(i.id for i in ec2.instances.all()
-    #     if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
+    def get_ec2_id(self, name):
+        '''
+
+        :param name: ec2 instance name
+        :return:
+        '''
+        ec2 = boto3.resource('ec2')
+        return next(
+            i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
+
+    def describe_instance(self, instance_id_list: list = None):
+        '''
+
+        Retrieve ec2 instance description.
+        :param instance_id: ec2 instance id
+        :return:
+        '''
+        if instance_id_list is not None:
+            return self.cli.describe_instances(InstanceIds=instance_id_list)
+        else:
+            return self.cli.describe_instances()
+
+    def get_ec2_instances_with_imds_v1(self):
+        '''
+
+        :return: get ec2 instances that support imds_v1.
+        '''
+        response = self.describe_instance()
+        return [i['InstanceId'] for r in response['Reservations']
+                for i in r['Instances']
+                if i['MetadataOptions']['HttpTokens'] != 'required' and i['State']['Name'] == 'running']
+
+    def apply_imdsv2_only_mode(self,
+                               instances_list: list = None,
+                               http_put_response_hop_limit: int = 1):
+        '''
+
+        Apply imdsv2 only mode into ec2 instances.
+        :param instances_list:
+        :param http_put_response_hop_limit: see https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_InstanceMetadataOptionsRequest.html.
+        :return:
+        '''
+        for i in instances_list:
+            self.cli.modify_instance_metadata_options(InstanceId=i,
+                                                      HttpTokens='required',
+                                                      HttpPutResponseHopLimit=http_put_response_hop_limit,
+                                                      HttpEndpoint='enabled')

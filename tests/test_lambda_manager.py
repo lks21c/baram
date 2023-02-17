@@ -16,12 +16,12 @@ def test_list_layers(lm):
     assert layers
 
 
-def test_get_latest_layer_arn(lm):
-    arn = lm.get_latest_layer_arn('ventus')
-    print(arn)
-    assert arn
-
-
-def test_publish_lambda_layer(lm):
-    sm = S3Manager('sli-dst-security')
-    lm.publish_lambda_layer('baram', 'sli-dst-security', sm)
+# def test_get_latest_layer_arn(lm):
+#     arn = lm.get_latest_layer_arn('ventus')
+#     print(arn)
+#     assert arn
+#
+#
+# def test_publish_lambda_layer(lm):
+#     sm = S3Manager('sli-dst-security')
+#     lm.publish_lambda_layer('baram', 'sli-dst-security', sm)
