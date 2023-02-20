@@ -16,6 +16,22 @@ def test_list_security_groups(em):
     assert em.list_security_groups()
 
 
+def test_list_instances(em):
+    pprint(em.list_instances())
+
+
+def test_delete_redundant_key_pairs(em):
+    em.delete_redundant_key_pairs()
+
+
+def test_list_redundant_key_pairs(em):
+    pprint(em.list_redundant_key_pairs())
+
+
+def test_list_key_pairs(em):
+    pprint(em.list_key_pairs())
+
+
 def test_list_vpcs(em):
     pprint(em.list_vpcs())
     assert em.list_vpcs()

@@ -13,6 +13,50 @@ class EC2Manager(object):
         '''
         return self.cli.describe_security_groups()['SecurityGroups']
 
+    def list_instances(self):
+        """
+        Describes all instances currently using
+
+        :return:
+        """
+        instances = self.cli.describe_instances()['Reservations']
+        result = [x['Instances'][0] for x in instances]
+        return result
+
+    def delete_redundant_key_pairs(self):
+        """
+        Delete redundant key pairs (i.e. not related to any instances)
+        """
+        key_pairs_redundant = self.list_redundant_key_pairs()
+        number_of_key_pairs_redundant = len(key_pairs_redundant)
+        if number_of_key_pairs_redundant == 0:
+            print("There's no redundant key pair")
+        else:
+            for key_pair in key_pairs_redundant:
+                self.cli.delete_key_pair(KeyName=key_pair)
+            print(f"{number_of_key_pairs_redundant} redundant key pairs has deleted")
+
+    def list_redundant_key_pairs(self):
+        """
+        Describes all disused key pairs
+
+        :return: KeyName
+        """
+        key_pairs_total = self.list_key_pairs()
+        key_pairs_using = [instance['KeyName'] for instance in self.list_instances()]
+
+        return key_pairs_total - set(key_pairs_using)
+
+    def list_key_pairs(self):
+        """
+        Describes all key pairs
+
+        :return: KeyName
+        """
+        key_pairs = self.cli.describe_key_pairs()['KeyPairs']
+        result = [key_pair['KeyName'] for key_pair in key_pairs]
+        return set(result)
+
     def list_vpcs(self):
         '''
         List one or more of your VPCs.
