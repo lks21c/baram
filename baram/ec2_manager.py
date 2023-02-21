@@ -5,7 +5,7 @@ from baram.log_manager import LogManager
 class EC2Manager(object):
     def __init__(self):
         self.cli = boto3.client('ec2')
-        self.logger = LogManager()
+        self.logger = LogManager().get_logger()
 
     def list_security_groups(self):
         """
@@ -42,7 +42,7 @@ class EC2Manager(object):
             for key_pair in key_pairs_redundant:
                 self.cli.delete_key_pair(KeyName=key_pair)
         except:
-            self.logger.get_logger()
+            self.logger.info('error')
 
     def list_redundant_key_pairs(self):
         """
