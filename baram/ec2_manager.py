@@ -15,18 +15,7 @@ class EC2Manager(object):
 
         :return: SecurityGroups
         """
-        result = self.cli.describe_security_groups()['SecurityGroups']
-        return result
-
-    def list_instances(self):
-        """
-
-
-        :return:
-        """
-        instances = self.cli.describe_instances()['Reservations']
-        result = [x['Instances'][0]['InstanceId'] for x in instances]
-        return set(result)
+        return self.cli.describe_security_groups()['SecurityGroups']
 
     def delete_redundant_security_groups(self, redundant_security_group_ids: list):
         """
@@ -50,12 +39,12 @@ class EC2Manager(object):
         """
         # 1. Get security groups not related to anything in ec2
         vpc_sg_eni_subnets = self.list_vpc_sg_eni_subnets()
-        security_group_ids_valid = set([pair['sg_id'] for pair in vpc_sg_eni_subnets])
+        security_group_valid_ids = set([pair['sg_id'] for pair in vpc_sg_eni_subnets])
 
         security_groups = self.list_security_groups()
         security_group_ids_total = set([sg['GroupId'] for sg in security_groups])
 
-        result = security_group_ids_total - security_group_ids_valid
+        result = security_group_ids_total - security_group_valid_ids
 
         # 2. Get security groups related to disused sagemaker domains (NFS related)
         nfs_sgs = [sg['GroupId'] for sg in security_groups

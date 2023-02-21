@@ -16,11 +16,6 @@ def test_list_security_groups(em):
     assert em.list_security_groups()
 
 
-def test_list_instances(em):
-    pprint(em.list_instances())
-    assert type(em.list_instances()) == set
-
-
 def test_list_subnet(em):
     pprint(em.list_subnet())
 
@@ -47,8 +42,8 @@ def test_list_vpc_sg_eni_subnets(em):
 
 
 def test_get_sg_ids_with_vpc_id(em):
-    vpc_id = 'vpc-04863aaf1ea9a3b35'
-    pprint(em.get_sg_ids_with_vpc_id(vpc_id))
+    default_vpc_id = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]['VpcId']
+    pprint(em.get_sg_ids_with_vpc_id(default_vpc_id))
 
 
 def test_get_eni_ids_with_sg_id(em):
