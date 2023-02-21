@@ -24,12 +24,12 @@ class EC2Manager(object):
         :return:
         """
         number_of_redundant_sg = len(redundant_security_group_ids)
-        if number_of_redundant_sg > 0:
+        try:
             self.revoke_security_group_rules(redundant_security_group_ids)
             self.delete_security_groups(redundant_security_group_ids)
             print(f"{number_of_redundant_sg} redundant security groups is deleted")
-        else:
-            print("There's no redundant security groups to delete")
+        except:
+            self.logger.info('error')
 
     def list_redundant_security_group_ids(self, sm_domain_ids: list = []):
         """
@@ -167,7 +167,7 @@ class EC2Manager(object):
         """
         sg_rules = self.get_security_group_rules(security_group_id)
 
-        if len(sg_rules) > 0:
+        try:
             for sg_rule in sg_rules:
                 if sg_rule['is_ob']:
                     self.cli.revoke_security_group_egress(GroupId=security_group_id,
@@ -176,8 +176,8 @@ class EC2Manager(object):
                     self.cli.revoke_security_group_ingress(GroupId=security_group_id,
                                                            SecurityGroupRuleIds=[sg_rule['security_group_rule_id']])
                 print(f"{security_group_id}'s {list(sg_rule.values())[0]} rule is deleted")
-        else:
-            print("There's no security group rule for this security group")
+        except:
+            self.logger.info('error')
 
     def delete_security_groups(self, security_group_id_list: list):
         """
@@ -247,32 +247,32 @@ class EC2Manager(object):
                     for t in s['Tags'] if subnet_name == t['Value'])
 
     def get_ec2_id(self, name):
-        '''
+        """
 
         :param name: ec2 instance name
         :return:
-        '''
+        """
         ec2 = boto3.resource('ec2')
         return next(
             i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
 
     def describe_instance(self, instance_id_list: list = None):
-        '''
+        """
 
         Retrieve ec2 instance description.
-        :param instance_id: ec2 instance id
+        :param instance_id_list: ec2 instance id list
         :return:
-        '''
+        """
         if instance_id_list is not None:
             return self.cli.describe_instances(InstanceIds=instance_id_list)
         else:
             return self.cli.describe_instances()
 
     def get_ec2_instances_with_imds_v1(self):
-        '''
+        """
 
         :return: get ec2 instances that support imds_v1.
-        '''
+        """
         response = self.describe_instance()
         return [i['InstanceId'] for r in response['Reservations']
                 for i in r['Instances']
@@ -281,13 +281,13 @@ class EC2Manager(object):
     def apply_imdsv2_only_mode(self,
                                instances_list: list = None,
                                http_put_response_hop_limit: int = 1):
-        '''
+        """
 
         Apply imdsv2 only mode into ec2 instances.
         :param instances_list:
         :param http_put_response_hop_limit: see https://docs.aws.amazon.com/AWSEC2/latest/APIReference/API_InstanceMetadataOptionsRequest.html.
         :return:
-        '''
+        """
         for i in instances_list:
             self.cli.modify_instance_metadata_options(InstanceId=i,
                                                       HttpTokens='required',
