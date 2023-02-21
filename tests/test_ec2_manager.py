@@ -3,6 +3,7 @@ from pprint import pprint
 import pytest
 
 from baram.ec2_manager import EC2Manager
+from baram.sagemaker_manager import SagemakerManager
 
 
 @pytest.fixture()
@@ -25,11 +26,14 @@ def test_list_subnet(em):
 
 
 def test_delete_redundant_security_groups(em):
-    em.delete_redundant_security_groups()
+    redundant_security_group_ids = em.list_redundant_security_group_ids()
+    em.delete_redundant_security_groups(redundant_security_group_ids)
 
 
 def test_list_redundant_security_group_ids(em):
-    pprint(em.list_redundant_security_group_ids())
+    sm = SagemakerManager()
+    sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
+    pprint(em.list_redundant_security_group_ids(sm_domain_ids))
     assert type(em.list_redundant_security_group_ids()) == set
 
 
@@ -74,7 +78,7 @@ def test_revoke_security_group_rule(em):
 
 
 def test_delete_security_group(em):
-    em.delete_security_group('sg-0fe321a807f037ba1')
+    em.delete_security_group('sg-001f0a494205e0fe6')
 
 
 def test_list_vpcs(em):

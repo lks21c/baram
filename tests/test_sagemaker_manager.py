@@ -15,6 +15,12 @@ def test_describe_image(sm):
     pprint(response)
 
 
+def test_list_domains(sm):
+    response = sm.list_domains()
+    assert response
+    pprint(response)
+
+
 def test_describe_image_version(sm):
     response = sm.describe_image_version('sli-docker')
     assert response['Version']

@@ -15,9 +15,8 @@ class EC2Manager(object):
 
         :return: SecurityGroups
         """
-        security_groups = self.cli.describe_security_groups()['SecurityGroups']
-        result = [x['GroupId'] for x in security_groups]
-        return set(result)
+        result = self.cli.describe_security_groups()['SecurityGroups']
+        return result
 
     def list_instances(self):
         """
@@ -29,33 +28,41 @@ class EC2Manager(object):
         result = [x['Instances'][0]['InstanceId'] for x in instances]
         return set(result)
 
-    def delete_redundant_security_groups(self):
+    def delete_redundant_security_groups(self, redundant_security_group_ids: list):
         """
         Delete useless and deletable security groups.
 
         :return:
         """
-        redundant_security_groups = self.list_redundant_security_group_ids()
-
-        if len(redundant_security_groups) > 0:
-            self.revoke_security_group_rules(redundant_security_groups)
-            self.delete_security_groups(redundant_security_groups)
+        number_of_redundant_sg = len(redundant_security_group_ids)
+        if number_of_redundant_sg > 0:
+            self.revoke_security_group_rules(redundant_security_group_ids)
+            self.delete_security_groups(redundant_security_group_ids)
+            print(f"{number_of_redundant_sg} redundant security groups is deleted")
         else:
             print("There's no redundant security groups to delete")
 
-    def list_redundant_security_group_ids(self):
+    def list_redundant_security_group_ids(self, sm_domain_ids: list = []):
         """
-        Describe useless and deletable security group ids.
+        Describe useless and deletable security group ids, including disused SageMaker domain related things
 
         :return: SecurityGroupIds
         """
+        # 1. Get security groups not related to anything in ec2
         vpc_sg_eni_subnets = self.list_vpc_sg_eni_subnets()
         security_group_ids_valid = set([pair['sg_id'] for pair in vpc_sg_eni_subnets])
 
-        security_groups = self.cli.describe_security_groups()['SecurityGroups']
+        security_groups = self.list_security_groups()
         security_group_ids_total = set([sg['GroupId'] for sg in security_groups])
 
-        return security_group_ids_total - security_group_ids_valid
+        result = security_group_ids_total - security_group_ids_valid
+
+        # 2. Get security groups related to disused sagemaker domains (NFS related)
+        nfs_sgs = [sg['GroupId'] for sg in security_groups
+                   if 'NFS' in sg['Description']
+                   and sum([domain_id in sg['Description'] for domain_id in sm_domain_ids]) == 0]
+
+        return result.union(nfs_sgs)
 
     def list_vpc_sg_eni_subnets(self):
         """
