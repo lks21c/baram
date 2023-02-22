@@ -21,6 +21,7 @@ class EC2Manager(object):
         """
         Delete useless and deletable security groups.
 
+        :param redundant_security_group_ids: List of redundant GroupId.
         :return:
         """
         number_of_redundant_sg = len(redundant_security_group_ids)
@@ -31,11 +32,13 @@ class EC2Manager(object):
         except:
             self.logger.info('error')
 
-    def list_redundant_security_group_ids(self, sm_domain_ids: list = []):
+    def list_redundant_security_group_ids(self, redundant_domain_ids: list = []):
         """
-        Describe useless and deletable security group ids, including disused SageMaker domain related things
+        Describe useless and deletable security group ids.
+        (including disused SageMaker domain related things)
 
-        :return: SecurityGroupIds
+        :param redundant_domain_ids:
+        :return: GroupIds
         """
         # 1. Get security groups not related to anything in ec2
         vpc_sg_eni_subnets = self.list_vpc_sg_eni_subnets()
@@ -46,18 +49,17 @@ class EC2Manager(object):
 
         result = security_group_ids_total - security_group_valid_ids
 
-        # 2. Get security groups related to disused sagemaker domains (NFS related)
+        # 2. Get security groups related to disused domains; SageMaker (NFS related)
         nfs_sgs = [sg['GroupId'] for sg in security_groups
                    if 'NFS' in sg['Description']
-                   and sum([domain_id in sg['Description'] for domain_id in sm_domain_ids]) == 0]
+                   and sum([domain_id in sg['Description'] for domain_id in redundant_domain_ids]) == 0]
 
         return result.union(nfs_sgs)
 
     def list_vpc_sg_eni_subnets(self):
         """
-        return the list of all pairs of {vpc_id, security_group_id, eni_id, subnet_id}
+        Return the list of all pairs of {VpcId, GroupId, NetworkInterfaceId, SubnetId}.
 
-        :param:
         :return: The list of {vpc_id, security_group_id, eni_id, subnet_id}
         """
         vpcs = [vpc for vpc in self.list_vpcs() if vpc['State'] == 'available']
@@ -67,7 +69,7 @@ class EC2Manager(object):
         for vpc_id in vpc_ids:
             specified_sg_ids = self.get_sg_ids_with_vpc_id(vpc_id=vpc_id)
             for sg_id in specified_sg_ids:
-                specified_enis = self.get_eni_ids_with_sg_id(security_group_id=sg_id)
+                specified_enis = self.get_eni_with_sg_id(security_group_id=sg_id)
                 pairs = {'vpc_id': vpc_id, 'sg_id': sg_id}
                 if len(specified_enis) != 0:
                     for eni in specified_enis:
@@ -79,20 +81,21 @@ class EC2Manager(object):
 
     def get_sg_ids_with_vpc_id(self, vpc_id: str):
         """
+        Get security group ids of specific vpc.
 
-        :param vpc_id:
-        :return: SecurityGroupId
+        :param vpc_id: VpcId
+        :return: GroupId
         """
         security_groups = self.cli.describe_security_groups()['SecurityGroups']
         result = [sg['GroupId'] for sg in security_groups if sg['VpcId'] == vpc_id]
 
         return result
 
-    def get_eni_ids_with_sg_id(self, security_group_id: str):
+    def get_eni_with_sg_id(self, security_group_id: str):
         """
-        Get
+        Get network interfaces with specific security group.
 
-        :param security_group_id:
+        :param security_group_id: GroupId
         :return: NetworkInterfaces
         """
         enis = self.cli.describe_network_interfaces()['NetworkInterfaces']
@@ -104,7 +107,7 @@ class EC2Manager(object):
 
     def list_security_group_relations(self):
         """
-        Describe security groups with related security groups, including egrss and ingress status
+        Describe security groups with related security groups, including egrss and ingress status.
 
         :return: SecurityGroupId, IsEgress, RelatedSecurityGroupId
         """
@@ -127,8 +130,8 @@ class EC2Manager(object):
         """
         Get the set of related security groups for specific security group.
 
-        :param security_group_id:
-        :return: SecurityGroupId
+        :param security_group_id: GroupId
+        :return: GroupId
         """
         sg_relations = self.list_security_group_relations()
 
@@ -140,7 +143,7 @@ class EC2Manager(object):
         """
         Get security group rules of specific security group.
 
-        :param security_group_id:
+        :param security_group_id: GroupId
         :return: SecurityGroupRuleId
         """
         sg_rules = self.cli.describe_security_group_rules()['SecurityGroupRules']
@@ -154,7 +157,7 @@ class EC2Manager(object):
         """
         Get rid of security group rule of security groups in list.
 
-        :param security_group_id_list:
+        :param security_group_id_list: GroupId
         """
         for sg_id in security_group_id_list:
             self.revoke_security_group_rule(sg_id)
@@ -163,7 +166,7 @@ class EC2Manager(object):
         """
         Get rid of security group rule of specific security group.
 
-        :param security_group_id:
+        :param security_group_id: GroupId
         """
         sg_rules = self.get_security_group_rules(security_group_id)
 
@@ -183,7 +186,7 @@ class EC2Manager(object):
         """
         Delete every security groups in input list.
 
-        :param security_group_id_list:
+        :param security_group_id_list: GroupId
         """
         for sg_id in security_group_id_list:
             self.delete_security_group(sg_id)
@@ -192,7 +195,7 @@ class EC2Manager(object):
         """
         Delete specific security group.
 
-        :param security_group_id:
+        :param security_group_id: GroupId
         """
         try:
             self.cli.delete_security_group(GroupId=security_group_id)
@@ -203,11 +206,12 @@ class EC2Manager(object):
     def list_vpcs(self):
         """
         List one or more of your VPCs.
+
         :return: Vpcs
         """
         return self.cli.describe_vpcs()['Vpcs']
 
-    def list_subnet(self):
+    def list_subnets(self):
         """
         List one or more of your Subnets.
 
@@ -215,12 +219,20 @@ class EC2Manager(object):
         """
         return self.cli.describe_subnets()['Subnets']
 
+    def list_enis(self):
+        """
+        List one or more of your Network Interfaces.
+
+        :return:
+        """
+        return self.cli.describe_network_interfaces()['NetworkInterfaces']
+
     def get_sg_id(self, group_name: str):
         """
         Retrieve subnet id from group name.
 
-        :param group_name: group name
-        :return: subnet id
+        :param group_name: GroupName
+        :return: GroupId
         """
         return next(
             (i['GroupId'] for i in self.cli.describe_security_groups()['SecurityGroups']
@@ -239,11 +251,12 @@ class EC2Manager(object):
     def get_subnet_id(self, vpc_id: str, subnet_name: str):
         """
         Retrieve subnet id from vpc id and subnet name.
+
         :param vpc_id: vpc_id
         :param subnet_name: subnet_name
         :return:
         """
-        return next(s['SubnetId'] for s in self.list_subnet() if vpc_id == s['VpcId'] and 'Tags' in s
+        return next(s['SubnetId'] for s in self.list_subnets() if vpc_id == s['VpcId'] and 'Tags' in s
                     for t in s['Tags'] if subnet_name == t['Value'])
 
     def get_ec2_id(self, name):
@@ -256,7 +269,7 @@ class EC2Manager(object):
         return next(
             i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
 
-    def describe_instance(self, instance_id_list: list = None):
+    def describe_instances(self, instance_id_list: list = None):
         """
 
         Retrieve ec2 instance description.
@@ -273,7 +286,7 @@ class EC2Manager(object):
 
         :return: get ec2 instances that support imds_v1.
         """
-        response = self.describe_instance()
+        response = self.describe_instances()
         return [i['InstanceId'] for r in response['Reservations']
                 for i in r['Instances']
                 if i['MetadataOptions']['HttpTokens'] != 'required' and i['State']['Name'] == 'running']

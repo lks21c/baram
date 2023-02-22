@@ -3,6 +3,7 @@ from pprint import pprint
 import pytest
 
 from baram.ec2_manager import EC2Manager
+from baram.efs_manager import EFSManager
 from baram.sagemaker_manager import SagemakerManager
 
 
@@ -16,19 +17,25 @@ def test_list_security_groups(em):
     assert em.list_security_groups()
 
 
-def test_list_subnet(em):
-    pprint(em.list_subnet())
-
-
 def test_delete_redundant_security_groups(em):
-    redundant_security_group_ids = em.list_redundant_security_group_ids()
+    # Given
+    sm = SagemakerManager()
+    redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
+
+    efsm = EFSManager()
+    efsm.delete_redundant_file_systems(redundant_sm_domain_ids)
+
+    redundant_security_group_ids = em.list_redundant_security_group_ids(redundant_sm_domain_ids)
+
+    # When
     em.delete_redundant_security_groups(redundant_security_group_ids)
 
 
 def test_list_redundant_security_group_ids(em):
     sm = SagemakerManager()
-    sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
-    pprint(em.list_redundant_security_group_ids(sm_domain_ids))
+    redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
+
+    pprint(em.list_redundant_security_group_ids(redundant_sm_domain_ids))
     assert type(em.list_redundant_security_group_ids()) == set
 
 
@@ -46,9 +53,9 @@ def test_get_sg_ids_with_vpc_id(em):
     pprint(em.get_sg_ids_with_vpc_id(default_vpc_id))
 
 
-def test_get_eni_ids_with_sg_id(em):
+def test_get_eni_with_sg_id(em):
     sg_id = 'sg-0c41c743caf85d50b'
-    pprint(em.get_eni_ids_with_sg_id(sg_id))
+    pprint(em.get_eni_with_sg_id(sg_id))
 
 
 def test_list_security_group_relation(em):
@@ -82,10 +89,15 @@ def test_list_vpcs(em):
 
 
 def test_list_subnets(em):
-    for s in em.list_subnet():
+    for s in em.list_subnets():
         if 'Tags' in s:
             print(s['Tags'])
-    assert em.list_subnet()
+    assert em.list_subnets()
+
+
+def test_list_enis(em):
+    pprint(em.list_enis())
+    assert em.list_enis()
 
 
 def test_get_ec2_instances_with_imds_v1(em):
