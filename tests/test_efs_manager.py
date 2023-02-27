@@ -42,10 +42,11 @@ def test_list_redundant_file_systems(efsm):
 
 def test_delete_mount_targets(efsm):
     file_system_id = 'fs-090f17ba800036e22'
-    mount_target_ids = [mt['MountTargetId'] for mt in efsm.list_mount_targets(file_system_id)]
+    mount_targets = efsm.list_mount_targets(file_system_id)
 
-    for mt_id in mount_target_ids:
-        efsm.delete_mount_targets(mt_id)
+    if len(mount_targets) > 0:
+        mount_target_ids = [mt['MountTargetId'] for mt in mount_targets]
+        for mt_id in mount_target_ids: efsm.delete_mount_targets(mt_id)
 
 
 def test_delete_file_system(efsm):

@@ -56,7 +56,7 @@ def test_get_related_security_groups(em):
 
 
 def test_revoke_security_group_rule(em):
-    em.revoke_security_group_rules('sg-04689e68b9eace024')
+    em.revoke_security_group_rules('sg-0817bb034de60ade5')
 
 
 def test_delete_security_groups(em):
@@ -65,9 +65,11 @@ def test_delete_security_groups(em):
     redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
 
     efsm = EFSManager()
-    efsm.delete_redundant_file_systems(redundant_sm_domain_ids)
+    redundant_sf_ids = efsm.list_redundant_file_systems(redundant_sm_domain_ids)
+    efsm.delete_file_systems(redundant_sf_ids)
 
     redundant_security_group_ids = em.list_redundant_security_group_ids(redundant_sm_domain_ids)
+    pprint(redundant_security_group_ids)
 
     # When
     em.delete_security_groups(redundant_security_group_ids)

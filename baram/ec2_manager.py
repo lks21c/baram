@@ -168,7 +168,7 @@ class EC2Manager(object):
         try:
             for sg_id in security_group_ids:
                 self.revoke_security_group_rules(sg_id)
-                self.delete_security_groups(sg_id)
+                self.delete_security_group(sg_id)
                 self.logger.info('info')
         except:
             self.logger.info('error')

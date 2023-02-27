@@ -27,6 +27,7 @@ class EFSManager(object):
             return self.cli.describe_mount_targets(FileSystemId=file_system_id)['MountTargets']
         except:
             self.logger.info('error')
+            return []
 
     def delete_file_systems(self, redundant_fs_ids: list = []):
         """
