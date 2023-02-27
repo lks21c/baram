@@ -63,7 +63,7 @@ class IAMManager(object):
         '''
         return self.cli.list_group_policies(GroupName=user_group_name, MaxItems=max_items)
 
-    def get_policies(self, scope='All', max_result=1000):
+    def get_policies(self, scope: str = 'All', max_result: int = 1000):
         """
         Lists all policies in IAM
         :param scope: 'Local' for customer managed policies, 'AWS' for AWS managed policies, 'All' for all policies
@@ -71,7 +71,7 @@ class IAMManager(object):
         :return:
         """
         policies = self.cli.list_policies(Scope=scope, MaxItems=max_result)
-        result = [i for i in policies['Policies']]
+        result = policies['Policies']
         if policies['IsTruncated']:
             marker = policies['Marker']
             while True:
@@ -81,18 +81,15 @@ class IAMManager(object):
                     marker = next_policies['Marker']
                 else:
                     break
-        else:
-            return result
         return result
 
-    def get_redundant_policies(self, scope='Local'):
+    def get_redundant_policies(self, scope: str = 'Local'):
         """
         Lists redundant policies that are not attached to any IAM user, group, or role
         :param scope: 'Local' for customer managed policies, 'AWS' for AWS managed policies, 'All' for all policies
         :return:
         """
-        redundant_policies = [i for i in self.get_policies(scope=scope) if i['AttachmentCount'] == 0]
-        return redundant_policies
+        return [i for i in self.get_policies(scope=scope) if i['AttachmentCount'] == 0]
 
 
 if __name__ == '__main__':
