@@ -28,3 +28,13 @@ def test_list_group_policies(im):
 def test_role_arn(im):
     pprint(im.get_role_arn('AFlow-developer-role'))
     assert im.get_role_arn('AFlow-developer-role')
+
+
+def test_get_policies(im):
+    pprint(im.get_policies())
+    assert im.get_policies()
+
+
+def test_get_redundant_policies(im):
+    pprint(im.get_redundant_policies())
+    assert im.get_redundant_policies()

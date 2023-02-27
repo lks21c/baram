@@ -1,6 +1,5 @@
-import boto3
 import fire
-import pprint
+import boto3
 
 
 class IAMManager(object):
@@ -64,21 +63,30 @@ class IAMManager(object):
         '''
         return self.cli.list_group_policies(GroupName=user_group_name, MaxItems=max_items)
 
-    def get_policies(self):
+    def get_policies(self, max_result=1000):
         """
         Lists all policies in IAM
         :return:
         """
-        return self.cli.list_policies(MaxItems=1000)['Policies']
+        policies = self.cli.list_policies(MaxItems=max_result)
+        result = [i for i in policies['Policies']]
+        marker = policies['Marker']
+        while True:
+            next_policies = self.cli.list_policies(MaxItems=max_result, Marker=marker)
+            result += next_policies['Policies']
+            if 'Marker' in next_policies:
+                marker = next_policies['Marker']
+            else:
+                break
+        return result
 
     def get_redundant_policies(self):
         """
         Lists redundant policies that are not attached to any IAM user, group, or role
         :return:
         """
-        for i in self.get_policies():
-            if i['AttachmentCount'] == 0:
-                pprint.pprint(i)
+        redundant_policies = [i for i in self.get_policies() if i['AttachmentCount'] == 0]
+        return redundant_policies
 
 
 if __name__ == '__main__':
