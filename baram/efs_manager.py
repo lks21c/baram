@@ -28,17 +28,13 @@ class EFSManager(object):
         except:
             self.logger.info('error')
 
-    def delete_redundant_file_systems(self, redundant_domain_ids: list = []):
+    def delete_file_systems(self, redundant_fs_ids: list = []):
         """
         Delete file systems of disused domains.
 
-        :param redundant_domain_ids: list of DomainId of redundant domains
+        :param redundant_fs_ids: list of FileSystemId.
         :return:
         """
-        redundant_fs_ids = [fs['FileSystemId'] for fs in self.list_file_systems()
-                            if fs['CreationToken'] not in redundant_domain_ids
-                            and 'sagemaker' in fs['Tags'][0]['Value']]
-
         for fs_id in redundant_fs_ids:
             mount_target_ids = [mt['MountTargetId'] for mt in self.list_mount_targets(fs_id)]
 
@@ -52,6 +48,19 @@ class EFSManager(object):
                     break
                 else:
                     continue
+
+    def list_redundant_file_systems(self, redundant_domain_ids: list = []):
+        """
+        Describe redundant file systems
+
+        :param redundant_domain_ids: DomainId
+        :return: List of FileSystemId
+        """
+        # Todo: Need more cases (sagemaker case only)
+        redundant_fs_ids = [fs['FileSystemId'] for fs in self.list_file_systems()
+                            if fs['CreationToken'] not in redundant_domain_ids
+                            and 'sagemaker' in fs['Tags'][0]['Value']]
+        return redundant_fs_ids
 
     def delete_mount_targets(self, mount_target_id: str):
         """

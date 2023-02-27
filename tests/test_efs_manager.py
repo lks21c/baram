@@ -22,13 +22,22 @@ def test_list_mount_targets(efsm):
     pprint(efsm.list_mount_targets(file_system_id))
 
 
-def test_delete_redundant_file_systems(efsm):
+def test_delete_file_systems(efsm):
     # Given
     sm = SagemakerManager()
     redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
+    redundant_fs_ids = efsm.list_redundant_file_systems(redundant_sm_domain_ids)
 
     # When
-    efsm.delete_redundant_file_systems(redundant_sm_domain_ids)
+    efsm.delete_file_systems(redundant_fs_ids)
+
+
+def test_list_redundant_file_systems(efsm):
+    sm = SagemakerManager()
+    redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
+    redundant_fs_ids = efsm.list_redundant_file_systems(redundant_sm_domain_ids)
+    assert len(redundant_fs_ids) >= 0
+    assert type(redundant_fs_ids) == list
 
 
 def test_delete_mount_targets(efsm):
