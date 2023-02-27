@@ -63,16 +63,18 @@ class IAMManager(object):
         '''
         return self.cli.list_group_policies(GroupName=user_group_name, MaxItems=max_items)
 
-    def get_policies(self, max_result=1000):
+    def get_policies(self, scope='All', max_result=1000):
         """
         Lists all policies in IAM
+        :param scope: 'Local' for customer managed policies, 'AWS' for AWS managed policies, 'All' for all policies
+        :param max_result: max number of results (max=1000)
         :return:
         """
-        policies = self.cli.list_policies(MaxItems=max_result)
+        policies = self.cli.list_policies(Scope=scope, MaxItems=max_result)
         result = [i for i in policies['Policies']]
         marker = policies['Marker']
         while True:
-            next_policies = self.cli.list_policies(MaxItems=max_result, Marker=marker)
+            next_policies = self.cli.list_policies(Scope=scope, MaxItems=max_result, Marker=marker)
             result += next_policies['Policies']
             if 'Marker' in next_policies:
                 marker = next_policies['Marker']
@@ -80,12 +82,13 @@ class IAMManager(object):
                 break
         return result
 
-    def get_redundant_policies(self):
+    def get_redundant_policies(self, scope='Local'):
         """
         Lists redundant policies that are not attached to any IAM user, group, or role
+        :param scope: 'Local' for customer managed policies, 'AWS' for AWS managed policies, 'All' for all policies
         :return:
         """
-        redundant_policies = [i for i in self.get_policies() if i['AttachmentCount'] == 0]
+        redundant_policies = [i for i in self.get_policies(scope=scope) if i['AttachmentCount'] == 0]
         return redundant_policies
 
 
