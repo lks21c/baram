@@ -17,20 +17,6 @@ def test_list_security_groups(em):
     assert em.list_security_groups()
 
 
-def test_delete_redundant_security_groups(em):
-    # Given
-    sm = SagemakerManager()
-    redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
-
-    efsm = EFSManager()
-    efsm.delete_redundant_file_systems(redundant_sm_domain_ids)
-
-    redundant_security_group_ids = em.list_redundant_security_group_ids(redundant_sm_domain_ids)
-
-    # When
-    em.delete_redundant_security_groups(redundant_security_group_ids)
-
-
 def test_list_redundant_security_group_ids(em):
     sm = SagemakerManager()
     redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
@@ -69,14 +55,22 @@ def test_get_related_security_groups(em):
     assert type(em.get_related_security_groups(sg_id)) == set
 
 
-def test_get_security_group_rule(em):
-    sg_id = 'sg-091f94833154ca3fd'
-    pprint(em.get_security_group_rules(sg_id))
-    assert type(em.get_security_group_rules(sg_id)) == list
-
-
 def test_revoke_security_group_rule(em):
-    em.revoke_security_group_rule('sg-04689e68b9eace024')
+    em.revoke_security_group_rules('sg-04689e68b9eace024')
+
+
+def test_delete_security_groups(em):
+    # Given
+    sm = SagemakerManager()
+    redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
+
+    efsm = EFSManager()
+    efsm.delete_redundant_file_systems(redundant_sm_domain_ids)
+
+    redundant_security_group_ids = em.list_redundant_security_group_ids(redundant_sm_domain_ids)
+
+    # When
+    em.delete_security_groups(redundant_security_group_ids)
 
 
 def test_delete_security_group(em):

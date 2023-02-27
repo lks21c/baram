@@ -17,21 +17,6 @@ class EC2Manager(object):
         """
         return self.cli.describe_security_groups()['SecurityGroups']
 
-    def delete_redundant_security_groups(self, redundant_security_group_ids: list):
-        """
-        Delete useless and deletable security groups.
-
-        :param redundant_security_group_ids: List of redundant GroupId.
-        :return:
-        """
-        number_of_redundant_sg = len(redundant_security_group_ids)
-        try:
-            self.revoke_security_group_rules(redundant_security_group_ids)
-            self.delete_security_groups(redundant_security_group_ids)
-            print(f"{number_of_redundant_sg} redundant security groups is deleted")
-        except:
-            self.logger.info('error')
-
     def list_redundant_security_group_ids(self, redundant_domain_ids: list = []):
         """
         Describe useless and deletable security group ids.
@@ -153,16 +138,7 @@ class EC2Manager(object):
                   for sg_rule in sg_rules if sg_rule['GroupId'] == security_group_id]
         return result
 
-    def revoke_security_group_rules(self, security_group_id_list: list):
-        """
-        Get rid of security group rule of security groups in list.
-
-        :param security_group_id_list: GroupId
-        """
-        for sg_id in security_group_id_list:
-            self.revoke_security_group_rule(sg_id)
-
-    def revoke_security_group_rule(self, security_group_id: str):
+    def revoke_security_group_rules(self, security_group_id: str):
         """
         Get rid of security group rule of specific security group.
 
@@ -182,24 +158,30 @@ class EC2Manager(object):
         except:
             self.logger.info('error')
 
-    def delete_security_groups(self, security_group_id_list: list):
+    def delete_security_groups(self, security_group_ids: list):
         """
-        Delete every security groups in input list.
+        Delete useless and deletable security groups.
 
-        :param security_group_id_list: GroupId
+        :param security_group_ids: List of GroupId.
+        :return:
         """
-        for sg_id in security_group_id_list:
-            self.delete_security_group(sg_id)
+        try:
+            for sg_id in security_group_ids:
+                self.revoke_security_group_rules(sg_id)
+                self.delete_security_groups(sg_id)
+                self.logger.info('info')
+        except:
+            self.logger.info('error')
 
     def delete_security_group(self, security_group_id: str):
         """
-        Delete specific security group.
+        Delete security group.
 
         :param security_group_id: GroupId
         """
         try:
             self.cli.delete_security_group(GroupId=security_group_id)
-            print(f"{security_group_id} is deleted")
+            self.logger.info('info')
         except botocore.exceptions.ClientError:
             self.logger.info('error')
 
