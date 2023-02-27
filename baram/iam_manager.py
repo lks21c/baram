@@ -72,14 +72,17 @@ class IAMManager(object):
         """
         policies = self.cli.list_policies(Scope=scope, MaxItems=max_result)
         result = [i for i in policies['Policies']]
-        marker = policies['Marker']
-        while True:
-            next_policies = self.cli.list_policies(Scope=scope, MaxItems=max_result, Marker=marker)
-            result += next_policies['Policies']
-            if 'Marker' in next_policies:
-                marker = next_policies['Marker']
-            else:
-                break
+        if policies['IsTruncated']:
+            marker = policies['Marker']
+            while True:
+                next_policies = self.cli.list_policies(Scope=scope, MaxItems=max_result, Marker=marker)
+                result += next_policies['Policies']
+                if 'Marker' in next_policies:
+                    marker = next_policies['Marker']
+                else:
+                    break
+        else:
+            return result
         return result
 
     def get_redundant_policies(self, scope='Local'):
