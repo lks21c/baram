@@ -30,11 +30,13 @@ def test_role_arn(im):
     assert im.get_role_arn('AFlow-developer-role')
 
 
-def test_get_policies(im):
-    pprint(im.get_policies())
-    assert im.get_policies()
+def test_list_policies(im):
+    policies = im.list_policies()
+    assert policies
+    assert len(policies) == len(set([i['Arn'] for i in policies]))
+    pprint(im.list_policies())
 
 
-def test_get_redundant_policies(im):
-    pprint(im.get_redundant_policies())
-    assert im.get_redundant_policies()
+def test_list_redundant_policies(im):
+    pprint(im.list_redundant_policies())
+    assert im.list_redundant_policies()
