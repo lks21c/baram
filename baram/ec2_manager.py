@@ -1,6 +1,8 @@
 import boto3
+import traceback
 
 from baram.log_manager import LogManager
+
 
 class EC2Manager(object):
     def __init__(self):
@@ -22,7 +24,10 @@ class EC2Manager(object):
         :return:
         """
         instances = self.cli.describe_instances()['Reservations']
-        return [instance['Instances'][0] for instance in instances]
+        try:
+            return [instance['Instances'][0] for instance in instances]
+        except:
+            traceback.print_exc()
 
     def list_specific_status_instances(self, status: str = 'running'):
         """
@@ -31,7 +36,10 @@ class EC2Manager(object):
         :return:
         """
         instances = self.list_instances()
-        return [instance for instance in instances if instance['State']['Name'] == status]
+        try:
+            return [instance for instance in instances if instance['State']['Name'] == status]
+        except:
+            traceback.print_exc()
 
     def delete_redundant_key_pairs(self):
         """
@@ -41,8 +49,9 @@ class EC2Manager(object):
         try:
             for key_pair in key_pairs_redundant:
                 self.cli.delete_key_pair(KeyName=key_pair)
+                self.logger.info('info')
         except:
-            self.logger.info('error')
+            traceback.print_exc()
 
     def list_redundant_key_pairs(self):
         """
