@@ -17,26 +17,14 @@ class EC2Manager(object):
         """
         return self.cli.describe_security_groups()['SecurityGroups']
 
-    def list_instances(self):
-        """
-        Describes all existing instances.
-
-        :return:
-        """
-        instances = self.cli.describe_instances()['Reservations']
-        try:
-            return [instance['Instances'][0] for instance in instances]
-        except:
-            traceback.print_exc()
-
     def list_specific_status_instances(self, status: str = 'running'):
         """
         Describes all instances in specific status (ex: 'running', ...)
 
         :return:
         """
-        instances = self.list_instances()
         try:
+            instances = [instance['Instances'][0] for instance in self.describe_instances()['Reservations']]
             return [instance for instance in instances if instance['State']['Name'] == status]
         except:
             traceback.print_exc()
@@ -60,7 +48,8 @@ class EC2Manager(object):
         :return: KeyName
         """
         key_pairs_total = self.list_key_pairs()
-        key_pairs_using = [instance['KeyName'] for instance in self.list_instances()]
+        instances = [instance['Instances'][0] for instance in self.describe_instances()['Reservations']]
+        key_pairs_using = [instance['KeyName'] for instance in instances]
 
         return key_pairs_total - set(key_pairs_using)
 
@@ -128,11 +117,11 @@ class EC2Manager(object):
         return next(
             i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if name == t['Value'])
 
-    def describe_instance(self, instance_id_list: list = None):
+    def describe_instances(self, instance_id_list: list = None):
         """
 
         Retrieve ec2 instance description.
-        :param instance_id: ec2 instance id
+        :param instance_id_list: the list of InstanceIds
         :return:
         """
         if instance_id_list is not None:
@@ -145,7 +134,7 @@ class EC2Manager(object):
 
         :return: get ec2 instances that support imds_v1.
         """
-        response = self.describe_instance()
+        response = self.describe_instances()
         return [i['InstanceId'] for r in response['Reservations']
                 for i in r['Instances']
                 if i['MetadataOptions']['HttpTokens'] != 'required' and i['State']['Name'] == 'running']

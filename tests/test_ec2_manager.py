@@ -16,8 +16,8 @@ def test_list_security_groups(em):
     assert em.list_security_groups()
 
 
-def test_list_instances(em):
-    pprint(em.list_instances())
+def test_list_specific_status_instances(em):
+    pprint(em.list_specific_status_instances())
 
 
 def test_delete_redundant_key_pairs(em):
@@ -42,6 +42,11 @@ def test_list_subnets(em):
         if 'Tags' in s:
             print(s['Tags'])
     assert em.list_subnet()
+
+
+def test_describe_instances(em):
+    pprint(em.describe_instances())
+    assert em.describe_instances()
 
 
 def test_get_ec2_instances_with_imds_v1(em):
