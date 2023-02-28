@@ -44,7 +44,7 @@ def test_delete_mount_targets(efsm):
     file_system_id = 'fs-090f17ba800036e22'
     mount_targets = efsm.list_mount_targets(file_system_id)
 
-    if len(mount_targets) > 0:
+    if mount_targets is not None:
         mount_target_ids = [mt['MountTargetId'] for mt in mount_targets]
         for mt_id in mount_target_ids: efsm.delete_mount_targets(mt_id)
 

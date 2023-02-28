@@ -1,4 +1,5 @@
 import boto3
+import traceback
 
 from baram.log_manager import LogManager
 
@@ -26,8 +27,7 @@ class EFSManager(object):
         try:
             return self.cli.describe_mount_targets(FileSystemId=file_system_id)['MountTargets']
         except:
-            self.logger.info('error')
-            return []
+            traceback.print_exc()
 
     def delete_file_systems(self, redundant_fs_ids: list = []):
         """
@@ -42,13 +42,14 @@ class EFSManager(object):
             for mt_id in mount_target_ids:
                 self.delete_mount_targets(mt_id)
 
-            while True:
+            is_mount_targets_deleted = (len(self.list_mount_targets(fs_id)) == 0)
+            while not is_mount_targets_deleted:
                 is_mount_targets_deleted = (len(self.list_mount_targets(fs_id)) == 0)
-                if is_mount_targets_deleted:
-                    self.delete_file_system(fs_id)
-                    break
-                else:
-                    continue
+
+            if is_mount_targets_deleted:
+                self.delete_file_system(fs_id)
+
+            self.logger.info('info')
 
     def list_redundant_file_systems(self, redundant_domain_ids: list = []):
         """
@@ -57,7 +58,7 @@ class EFSManager(object):
         :param redundant_domain_ids: DomainId
         :return: List of FileSystemId
         """
-        # Todo: Need more cases (sagemaker case only)
+        # TODO: Need more cases (sagemaker case only)
         redundant_fs_ids = [fs['FileSystemId'] for fs in self.list_file_systems()
                             if fs['CreationToken'] not in redundant_domain_ids
                             and 'sagemaker' in fs['Tags'][0]['Value']]
@@ -73,7 +74,7 @@ class EFSManager(object):
         try:
             self.cli.delete_mount_target(MountTargetId=mount_target_id)
         except:
-            self.logger.info('error')
+            traceback.print_exc()
 
     def delete_file_system(self, file_system_id: str):
         """
@@ -85,4 +86,4 @@ class EFSManager(object):
         try:
             self.cli.delete_file_system(FileSystemId=file_system_id)
         except:
-            self.logger.info('error')
+            traceback.print_exc()

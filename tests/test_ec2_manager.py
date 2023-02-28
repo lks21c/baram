@@ -55,6 +55,10 @@ def test_get_related_security_groups(em):
     assert type(em.get_related_security_groups(sg_id)) == set
 
 
+def test_get_security_group_rules(em):
+    pprint(em.get_security_group_rules('sg-0817bb034de60ade5'))
+
+
 def test_revoke_security_group_rule(em):
     em.revoke_security_group_rules('sg-0817bb034de60ade5')
 

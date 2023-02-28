@@ -1,5 +1,5 @@
 import boto3
-import botocore.exceptions
+import traceback
 
 from baram.log_manager import LogManager
 
@@ -17,7 +17,7 @@ class EC2Manager(object):
         """
         return self.cli.describe_security_groups()['SecurityGroups']
 
-    def list_redundant_security_group_ids(self, redundant_domain_ids: list = []):
+    def list_redundant_security_group_ids(self, redundant_domain_ids: list = None):
         """
         Describe useless and deletable security group ids.
         (including disused SageMaker domain related things)
@@ -35,11 +35,13 @@ class EC2Manager(object):
         result = security_group_ids_total - security_group_valid_ids
 
         # 2. Get security groups related to disused domains; SageMaker (NFS related)
-        nfs_sgs = [sg['GroupId'] for sg in security_groups
-                   if 'NFS' in sg['Description']
-                   and sum([domain_id in sg['Description'] for domain_id in redundant_domain_ids]) == 0]
+        if redundant_domain_ids is not None:
+            nfs_sgs = [sg['GroupId'] for sg in security_groups
+                       if 'NFS' in sg['Description']
+                       and sum([domain_id in sg['Description'] for domain_id in redundant_domain_ids]) == 0]
+            result.union(nfs_sgs)
 
-        return result.union(nfs_sgs)
+        return result
 
     def list_vpc_sg_eni_subnets(self):
         """
@@ -154,9 +156,9 @@ class EC2Manager(object):
                 else:
                     self.cli.revoke_security_group_ingress(GroupId=security_group_id,
                                                            SecurityGroupRuleIds=[sg_rule['security_group_rule_id']])
-                print(f"{security_group_id}'s {list(sg_rule.values())[0]} rule is deleted")
+                self.logger.info('info')
         except:
-            self.logger.info('error')
+            traceback.print_exc()
 
     def delete_security_groups(self, security_group_ids: list):
         """
@@ -171,7 +173,7 @@ class EC2Manager(object):
                 self.delete_security_group(sg_id)
                 self.logger.info('info')
         except:
-            self.logger.info('error')
+            traceback.print_exc()
 
     def delete_security_group(self, security_group_id: str):
         """
@@ -182,8 +184,8 @@ class EC2Manager(object):
         try:
             self.cli.delete_security_group(GroupId=security_group_id)
             self.logger.info('info')
-        except botocore.exceptions.ClientError:
-            self.logger.info('error')
+        except:
+            traceback.print_exc()
 
     def list_vpcs(self):
         """
