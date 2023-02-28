@@ -1,10 +1,13 @@
 import fire
 import boto3
 
+from baram.log_manager import LogManager
+
 
 class IAMManager(object):
     def __init__(self):
         self.cli = boto3.client('iam')
+        self.logger = LogManager.get_logger()
 
     def get_role(self, role_name):
         '''
@@ -63,30 +66,30 @@ class IAMManager(object):
         '''
         return self.cli.list_group_policies(GroupName=user_group_name, MaxItems=max_items)
 
-    def get_policies(self, scope: str = 'All', max_result: int = 1000):
+    def list_policies(self, scope: str = 'All', max_result: int = 1000):
         """
-        Lists all policies in IAM
-        :param scope: 'Local' for customer managed policies, 'AWS' for AWS managed policies, 'All' for all policies
+        Lists policies in IAM
+        :param scope: 'All' for all policies, 'Local' for customer managed policies, 'AWS' for AWS managed policies
         :param max_result: max number of results (max=1000)
         :return:
         """
         policies = self.cli.list_policies(Scope=scope, MaxItems=max_result)
         result = policies['Policies']
-        while policies['IsTruncated']:
-            marker = policies['Marker']
-            next_policies = self.cli.list_policies(Scope=scope, MaxItems=max_result, Marker=marker)
-            result += next_policies['Policies']
-            if 'Marker' not in next_policies:
-                break
-        return result
+        try:
+            while 'Marker' in policies:
+                policies = self.cli.list_policies(Scope=scope, MaxItems=max_result, Marker=policies['Marker'])
+                result += policies['Policies']
+            return result
+        except:
+            self.logger.info('error')
 
-    def get_redundant_policies(self, scope: str = 'Local'):
+    def list_redundant_policies(self, scope: str = 'Local'):
         """
         Lists redundant policies that are not attached to any IAM user, group, or role
-        :param scope: 'Local' for customer managed policies, 'AWS' for AWS managed policies, 'All' for all policies
+        :param scope: 'All' for all policies, 'Local' for customer managed policies, 'AWS' for AWS managed policies
         :return:
         """
-        return [i for i in self.get_policies(scope=scope) if i['AttachmentCount'] == 0]
+        return [i for i in self.list_policies(scope=scope) if i['AttachmentCount'] == 0]
 
 
 if __name__ == '__main__':
