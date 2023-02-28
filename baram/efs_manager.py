@@ -42,11 +42,11 @@ class EFSManager(object):
             for mt_id in mount_target_ids:
                 self.delete_mount_targets(mt_id)
 
-            is_mount_targets_deleted = (len(self.list_mount_targets(fs_id)) == 0)
-            while not is_mount_targets_deleted:
-                is_mount_targets_deleted = (len(self.list_mount_targets(fs_id)) == 0)
+            is_mount_targets_remain = (len(self.list_mount_targets(fs_id)) != 0)
+            while is_mount_targets_remain:
+                is_mount_targets_remain = (len(self.list_mount_targets(fs_id)) != 0)
 
-            if is_mount_targets_deleted:
+            if is_mount_targets_remain:
                 self.delete_file_system(fs_id)
 
             self.logger.info('info')
