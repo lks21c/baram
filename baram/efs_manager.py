@@ -9,7 +9,7 @@ class EFSManager(object):
         self.cli = boto3.client('efs')
         self.logger = LogManager.get_logger()
 
-    def list_file_systems(self):
+    def list_efss(self):
         """
         List one or more of your EFS.
 
@@ -17,52 +17,52 @@ class EFSManager(object):
         """
         return self.cli.describe_file_systems()['FileSystems']
 
-    def list_mount_targets(self, file_system_id: str):
+    def list_mount_targets(self, efs_id: str):
         """
         List mount targets of specific file system.
 
-        :param file_system_id: FileSystemId
+        :param efs_id: FileSystemId
         :return:
         """
         try:
-            return self.cli.describe_mount_targets(FileSystemId=file_system_id)['MountTargets']
+            return self.cli.describe_mount_targets(FileSystemId=efs_id)['MountTargets']
         except:
             traceback.print_exc()
 
-    def delete_file_systems(self, redundant_fs_ids: list = []):
+    def delete_efss(self, redundant_efs_ids: list = []):
         """
         Delete file systems of disused domains.
 
-        :param redundant_fs_ids: list of FileSystemId.
+        :param redundant_efs_ids: list of FileSystemId.
         :return:
         """
-        for fs_id in redundant_fs_ids:
-            mount_target_ids = [mt['MountTargetId'] for mt in self.list_mount_targets(fs_id)]
+        for efs_id in redundant_efs_ids:
+            mount_target_ids = [mt['MountTargetId'] for mt in self.list_mount_targets(efs_id)]
 
             for mt_id in mount_target_ids:
                 self.delete_mount_targets(mt_id)
 
-            is_mount_targets_remain = (len(self.list_mount_targets(fs_id)) != 0)
+            is_mount_targets_remain = (len(self.list_mount_targets(efs_id)) != 0)
             while is_mount_targets_remain:
-                is_mount_targets_remain = (len(self.list_mount_targets(fs_id)) != 0)
+                is_mount_targets_remain = (len(self.list_mount_targets(efs_id)) != 0)
 
             if is_mount_targets_remain:
-                self.delete_file_system(fs_id)
+                self.delete_efs(efs_id)
 
             self.logger.info('info')
 
-    def list_redundant_file_systems(self, redundant_domain_ids: list = []):
+    def list_redundant_efss(self, redundant_sm_domain_ids: list = []):
         """
         Describe redundant file systems
 
-        :param redundant_domain_ids: DomainId
+        :param redundant_sm_domain_ids: DomainId
         :return: List of FileSystemId
         """
         # TODO: Need more cases (sagemaker case only)
-        redundant_fs_ids = [fs['FileSystemId'] for fs in self.list_file_systems()
-                            if fs['CreationToken'] not in redundant_domain_ids
-                            and 'sagemaker' in fs['Tags'][0]['Value']]
-        return redundant_fs_ids
+        redundant_efs_ids = [efs['FileSystemId'] for efs in self.list_efss()
+                             if efs['CreationToken'] not in redundant_sm_domain_ids
+                             and 'sagemaker' in efs['Tags'][0]['Value']]
+        return redundant_efs_ids
 
     def delete_mount_targets(self, mount_target_id: str):
         """
@@ -76,14 +76,14 @@ class EFSManager(object):
         except:
             traceback.print_exc()
 
-    def delete_file_system(self, file_system_id: str):
+    def delete_efs(self, efs_id: str):
         """
         Delete specific file system.
 
-        :param file_system_id: FileSystemId
+        :param efs_id: FileSystemId
         :return:
         """
         try:
-            self.cli.delete_file_system(FileSystemId=file_system_id)
+            self.cli.delete_efs(FileSystemId=efs_id)
         except:
             traceback.print_exc()

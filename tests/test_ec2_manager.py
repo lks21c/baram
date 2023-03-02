@@ -12,24 +12,24 @@ def em():
     return EC2Manager()
 
 
-def test_list_security_groups(em):
-    pprint(em.list_security_groups())
-    assert em.list_security_groups()
+def test_list_sgs(em):
+    pprint(em.list_sgs())
+    assert em.list_sgs()
 
 
-def test_list_redundant_security_group_ids(em):
+def test_list_unused_sg_ids(em):
     sm = SagemakerManager()
     redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
 
-    pprint(em.list_redundant_security_group_ids(redundant_sm_domain_ids))
-    assert type(em.list_redundant_security_group_ids()) == set
+    pprint(em.list_unused_sg_ids(redundant_sm_domain_ids))
+    assert type(em.list_unused_sg_ids()) == set
 
 
 def test_list_vpc_sg_eni_subnets(em):
     result = em.list_vpc_sg_eni_subnets()
     pprint(result)
     assert type(result) == list
-    assert len(result) == len(em.list_security_groups())
+    assert len(result) == len(em.list_sgs())
     if len(result) != 0:
         assert type(result[0]) == dict
 
@@ -44,43 +44,43 @@ def test_get_eni_with_sg_id(em):
     pprint(em.get_eni_with_sg_id(sg_id))
 
 
-def test_list_security_group_relation(em):
-    pprint(em.list_security_group_relations())
-    assert em.list_security_group_relations()
+def test_list_sg_relations(em):
+    pprint(em.list_sg_relations())
+    assert em.list_sg_relations()
 
 
-def test_get_related_security_groups(em):
+def test_get_related_sgs(em):
     sg_id = 'sg-0cc39dfc07c29ba7e'
-    pprint(em.get_related_security_groups(sg_id))
-    assert type(em.get_related_security_groups(sg_id)) == set
+    pprint(em.get_related_sgs(sg_id))
+    assert type(em.get_related_sgs(sg_id)) == set
 
 
-def test_get_security_group_rules(em):
-    pprint(em.get_security_group_rules('sg-0817bb034de60ade5'))
+def test_get_sg_rules(em):
+    pprint(em.get_sg_rules('sg-0817bb034de60ade5'))
 
 
-def test_revoke_security_group_rule(em):
-    em.revoke_security_group_rules('sg-0817bb034de60ade5')
+def test_revoke_sg_rules(em):
+    em.revoke_sg_rules('sg-0817bb034de60ade5')
 
 
-def test_delete_security_groups(em):
+def test_delete_sgs(em):
     # Given
     sm = SagemakerManager()
     redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
 
     efsm = EFSManager()
-    redundant_sf_ids = efsm.list_redundant_file_systems(redundant_sm_domain_ids)
-    efsm.delete_file_systems(redundant_sf_ids)
+    redundant_sf_ids = efsm.list_redundant_efss(redundant_sm_domain_ids)
+    efsm.delete_efss(redundant_sf_ids)
 
-    redundant_security_group_ids = em.list_redundant_security_group_ids(redundant_sm_domain_ids)
-    pprint(redundant_security_group_ids)
+    unused_sg_ids = em.list_unused_sg_ids(redundant_sm_domain_ids)
+    pprint(unused_sg_ids)
 
     # When
-    em.delete_security_groups(redundant_security_group_ids)
+    em.delete_sgs(unused_sg_ids)
 
 
-def test_delete_security_group(em):
-    em.delete_security_group('sg-001f0a494205e0fe6')
+def test_delete_sg(em):
+    em.delete_sg('sg-001f0a494205e0fe6')
 
 
 def test_list_vpcs(em):
