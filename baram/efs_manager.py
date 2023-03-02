@@ -29,28 +29,6 @@ class EFSManager(object):
         except:
             traceback.print_exc()
 
-    def delete_efss(self, redundant_efs_ids: list = []):
-        """
-        Delete file systems of disused domains.
-
-        :param redundant_efs_ids: list of FileSystemId.
-        :return:
-        """
-        for efs_id in redundant_efs_ids:
-            mount_target_ids = [mt['MountTargetId'] for mt in self.list_mount_targets(efs_id)]
-
-            for mt_id in mount_target_ids:
-                self.delete_mount_targets(mt_id)
-
-            is_mount_targets_remain = (len(self.list_mount_targets(efs_id)) != 0)
-            while is_mount_targets_remain:
-                is_mount_targets_remain = (len(self.list_mount_targets(efs_id)) != 0)
-
-            if is_mount_targets_remain:
-                self.delete_efs(efs_id)
-
-            self.logger.info('info')
-
     def list_redundant_efss(self, redundant_sm_domain_ids: list = []):
         """
         Describe redundant file systems
@@ -84,6 +62,18 @@ class EFSManager(object):
         :return:
         """
         try:
-            self.cli.delete_efs(FileSystemId=efs_id)
+            mount_target_ids = [mt['MountTargetId'] for mt in self.list_mount_targets(efs_id)]
+
+            for mt_id in mount_target_ids:
+                self.delete_mount_targets(mt_id)
+
+            is_mount_targets_remain = (len(self.list_mount_targets(efs_id)) != 0)
+            while is_mount_targets_remain:
+                is_mount_targets_remain = (len(self.list_mount_targets(efs_id)) != 0)
+
+            if is_mount_targets_remain:
+                self.cli.delete_efs(FileSystemId=efs_id)
+
+            self.logger.info('info')
         except:
             traceback.print_exc()

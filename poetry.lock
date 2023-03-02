@@ -84,7 +84,7 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
-version = "1.29.80"
+version = "1.29.82"
 description = "Low-level, data-driven core of boto 3."
 category = "main"
 optional = false
@@ -531,8 +531,8 @@ boto3 = [
     {file = "boto3-1.26.74.tar.gz", hash = "sha256:a3cf126d18194e5d350ec46f99f1fff15beacdf091d1979e8471681688e14ba1"},
 ]
 botocore = [
-    {file = "botocore-1.29.80-py3-none-any.whl", hash = "sha256:9a301cb4de8ec6efe4e4b6ebb29b4301decd5b00c1a7f9187652002efb520ad0"},
-    {file = "botocore-1.29.80.tar.gz", hash = "sha256:19d4cadc79f75b31ffa78b5e750833d53e0edfe414d308b6788382ad32d23e12"},
+    {file = "botocore-1.29.82-py3-none-any.whl", hash = "sha256:b31e86f9b51eced5506a0f6038370fe8c1355000379610def1bb9e91cae9e77e"},
+    {file = "botocore-1.29.82.tar.gz", hash = "sha256:913ca09a184cf4428f05838afc631c4fb93f3b173871b69d66230fd14656a3a1"},
 ]
 certifi = [
     {file = "certifi-2022.12.7-py3-none-any.whl", hash = "sha256:4ad3232f5e926d6718ec31cfc1fcadfde020920e278684144551c91769c7bc18"},
