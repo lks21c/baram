@@ -69,8 +69,9 @@ def test_delete_sgs(em):
     redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
 
     efsm = EFSManager()
-    redundant_sf_ids = efsm.list_redundant_efss(redundant_sm_domain_ids)
-    efsm.delete_efss(redundant_sf_ids)
+    redundant_efs_ids = efsm.list_redundant_efss(redundant_sm_domain_ids)
+    for efs_id in redundant_efs_ids:
+        efsm.delete_efs(efs_id)
 
     unused_sg_ids = em.list_unused_sg_ids(redundant_sm_domain_ids)
     pprint(unused_sg_ids)
