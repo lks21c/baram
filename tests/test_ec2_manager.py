@@ -21,7 +21,7 @@ def test_list_unused_sg_ids(em):
     sm = SagemakerManager()
     redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
 
-    pprint(em.list_unused_sg_ids(redundant_sm_domain_ids))
+    pprint(em.list_unused_sg_ids('NFS', redundant_sm_domain_ids))
     assert type(em.list_unused_sg_ids()) == set
 
 
@@ -73,7 +73,7 @@ def test_delete_sgs(em):
     for efs_id in redundant_efs_ids:
         efsm.delete_efs(efs_id)
 
-    unused_sg_ids = em.list_unused_sg_ids(redundant_sm_domain_ids)
+    unused_sg_ids = em.list_unused_sg_ids('NFS', redundant_sm_domain_ids)
     pprint(unused_sg_ids)
 
     # When

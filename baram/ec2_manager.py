@@ -17,31 +17,24 @@ class EC2Manager(object):
         """
         return self.cli.describe_security_groups()['SecurityGroups']
 
-    def list_unused_sg_ids(self, unused_domain_ids: list = None):
+    def list_unused_sg_ids(self, description_filter: str = '', unused_domain_ids: list = []):
         """
         Describe useless and deletable security group ids.
         (including disused SageMaker domain related things)
 
+        :param description_filter:
         :param unused_domain_ids:
         :return: GroupIds
         """
         # 1. Get security groups not related to anything in ec2
-        vpc_sg_eni_subnets = self.list_vpc_sg_eni_subnets()
-        valid_sg_ids = set([pair['sg_id'] for pair in vpc_sg_eni_subnets])
-
         sgs = self.list_sgs()
-        total_sg_ids = set([sg['GroupId'] for sg in sgs])
+        valid_sg_ids = set([pair['sg_id'] for pair in self.list_vpc_sg_eni_subnets()])
+        result = [sg['GroupId'] for sg in sgs
+                  if sg['GroupId'] not in valid_sg_ids
+                  or (description_filter in sg['Description']
+                      and sum([domain_id in sg['Description'] for domain_id in unused_domain_ids]) == 0)]
 
-        result = total_sg_ids - valid_sg_ids
-
-        # 2. Get security groups related to disused domains; SageMaker (NFS related)
-        if unused_domain_ids is not None:
-            nfs_sgs = [sg['GroupId'] for sg in sgs
-                       if 'NFS' in sg['Description']
-                       and sum([domain_id in sg['Description'] for domain_id in unused_domain_ids]) == 0]
-            result.union(nfs_sgs)
-
-        return result
+        return set(result)
 
     def list_vpc_sg_eni_subnets(self):
         """
