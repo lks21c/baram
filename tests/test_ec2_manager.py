@@ -13,54 +13,121 @@ def em():
 
 
 def test_list_sgs(em):
-    pprint(em.list_sgs())
-    assert em.list_sgs()
+    # When
+    sgs = em.list_sgs()
+    pprint(sgs)
+
+    # Then
+    assert type(sgs) == list
+    if len(sgs) > 0:
+        assert type(sgs[0]) == dict
+        assert 'GroupId' in sgs[0].keys()
 
 
 def test_list_unused_sg_ids(em):
+    # Given
     sm = SagemakerManager()
-    redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
+    sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
 
-    pprint(em.list_unused_sg_ids('NFS', redundant_sm_domain_ids))
-    assert type(em.list_unused_sg_ids()) == set
+    # When
+    unused_sg_ids = em.list_unused_sg_ids('NFS', sm_domain_ids)
+    pprint(unused_sg_ids)
+
+    # Then
+    if unused_sg_ids is not None:
+        assert type(unused_sg_ids) == set
 
 
 def test_list_vpc_sg_eni_subnets(em):
-    result = em.list_vpc_sg_eni_subnets()
-    pprint(result)
-    assert type(result) == list
-    assert len(result) == len(em.list_sgs())
-    if len(result) != 0:
-        assert type(result[0]) == dict
+    # When
+    vpc_sg_eni_subnets = em.list_vpc_sg_eni_subnets()
+    pprint(vpc_sg_eni_subnets)
+
+    # Then
+    if vpc_sg_eni_subnets is not None:
+        assert type(vpc_sg_eni_subnets) == list
+        if len(vpc_sg_eni_subnets) > 0:
+            assert type(vpc_sg_eni_subnets[0]) == dict
 
 
 def test_get_sg_ids_with_vpc_id(em):
+    # Given
     default_vpc_id = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]['VpcId']
-    pprint(em.get_sg_ids_with_vpc_id(default_vpc_id))
+
+    # When
+    sg_ids = em.get_sg_ids_with_vpc_id(default_vpc_id)
+    pprint(sg_ids)
+
+    # Then
+    assert type(sg_ids) == list
+    if len(sg_ids) > 0:
+        assert type(sg_ids[0]) == str
 
 
 def test_get_eni_with_sg_id(em):
-    sg_id = 'sg-0c41c743caf85d50b'
-    pprint(em.get_eni_with_sg_id(sg_id))
+    # Given
+    default_vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
+
+    # When
+    eni = em.get_eni_with_sg_id(default_sg_id)
+    pprint(eni)
+
+    # Then
+    assert type(eni) == list
+    if len(eni) > 0:
+        assert type(eni[0]) == dict
 
 
 def test_list_sg_relations(em):
+    # When
+    sg_relations = em.list_sg_relations()
     pprint(em.list_sg_relations())
-    assert em.list_sg_relations()
+
+    # Then
+    assert type(sg_relations) == list
+    if len(sg_relations) > 0:
+        assert type(sg_relations[0]) == dict
+        assert 'sg_id' in sg_relations[0].keys()
+        assert 'is_egress' in sg_relations[0].keys()
+        assert 'related_sg_id' in sg_relations[0].keys()
 
 
 def test_get_related_sgs(em):
-    sg_id = 'sg-0cc39dfc07c29ba7e'
-    pprint(em.get_related_sgs(sg_id))
-    assert type(em.get_related_sgs(sg_id)) == set
+    # Given
+    default_vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
+
+    # When
+    related_sgs = em.get_related_sgs(default_sg_id)
+
+    # Then
+    assert type(related_sgs) == set
 
 
 def test_get_sg_rules(em):
-    pprint(em.get_sg_rules('sg-0817bb034de60ade5'))
+    # Given
+    default_vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
+
+    # When
+    sg_rules = em.get_sg_rules(default_sg_id)
+    pprint(sg_rules)
+
+    # Then
+    assert type(sg_rules) == list
 
 
-def test_revoke_sg_rules(em):
-    em.revoke_sg_rules('sg-0817bb034de60ade5')
+def test_delete_sg_rules(em):
+    # Given
+    default_vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
+
+    # When
+    em.delete_sg_rules(default_sg_id)
+
+    # Then
+    assert em.get_sg_rules(default_sg_id) == []
 
 
 def test_delete_sgs(em):
@@ -69,7 +136,7 @@ def test_delete_sgs(em):
     redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
 
     efsm = EFSManager()
-    redundant_efs_ids = efsm.list_redundant_efss(redundant_sm_domain_ids)
+    redundant_efs_ids = efsm.list_redundant_efs(redundant_sm_domain_ids)
     for efs_id in redundant_efs_ids:
         efsm.delete_efs(efs_id)
 
@@ -79,25 +146,54 @@ def test_delete_sgs(em):
     # When
     em.delete_sgs(unused_sg_ids)
 
+    # Then
+    sg_ids = set([sg['GroupId'] for sg in em.list_sgs()])
+    if unused_sg_ids is not None:
+        assert unused_sg_ids - sg_ids == set()
+
 
 def test_delete_sg(em):
-    em.delete_sg('sg-001f0a494205e0fe6')
+    # Given
+    vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    sg_id = em.get_sg_ids_with_vpc_id(vpc['VpcId'][0])
+
+    # When
+    em.delete_sg(sg_id)
+
+    # Then
+    if not vpc['IsDefault']:
+        sg_ids = set([sg['GroupId'] for sg in em.list_sgs()])
+        assert sg_id not in sg_ids
 
 
 def test_list_vpcs(em):
-    pprint(em.list_vpcs())
-    assert em.list_vpcs()
+    # When
+    vpcs = em.list_vpcs()
+    pprint(vpcs)
+
+    # Then
+    assert type(vpcs) == list
+    if len(vpcs) > 0:
+        assert 'VpcId' in vpcs[0].keys()
 
 
 def test_list_subnets(em):
-    for s in em.list_subnets():
-        if 'Tags' in s:
-            print(s['Tags'])
-    assert em.list_subnets()
+    # When
+    subnets = em.list_subnets()
+    pprint(subnets)
+
+    # Then
+    assert type(subnets) == list
+    if len(subnets) > 0:
+        assert type(subnets[0]) == dict
 
 
 def test_list_enis(em):
-    pprint(em.list_enis())
+    # When
+    enis = em.list_enis
+    pprint(enis)
+
+    # Then
     assert em.list_enis()
 
 

@@ -9,7 +9,7 @@ class EFSManager(object):
         self.cli = boto3.client('efs')
         self.logger = LogManager.get_logger()
 
-    def list_efss(self):
+    def list_efs(self):
         """
         List one or more of your EFS.
 
@@ -27,9 +27,10 @@ class EFSManager(object):
         try:
             return self.cli.describe_mount_targets(FileSystemId=efs_id)['MountTargets']
         except:
-            traceback.print_exc()
+            traceback.format_exc()
+            return None
 
-    def list_redundant_efss(self, redundant_sm_domain_ids: list = []):
+    def list_redundant_efs(self, redundant_sm_domain_ids: list = []):
         """
         Describe redundant file systems
 
@@ -37,7 +38,7 @@ class EFSManager(object):
         :return: List of FileSystemId
         """
         # TODO: Need more cases (sagemaker case only)
-        redundant_efs_ids = [efs['FileSystemId'] for efs in self.list_efss()
+        redundant_efs_ids = [efs['FileSystemId'] for efs in self.list_efs()
                              if efs['CreationToken'] not in redundant_sm_domain_ids
                              and 'sagemaker' in efs['Tags'][0]['Value']]
         return redundant_efs_ids
@@ -52,7 +53,7 @@ class EFSManager(object):
         try:
             self.cli.delete_mount_target(MountTargetId=mount_target_id)
         except:
-            traceback.print_exc()
+            traceback.format_exc()
 
     def delete_efs(self, efs_id: str):
         """
@@ -76,4 +77,4 @@ class EFSManager(object):
 
             self.logger.info('info')
         except:
-            traceback.print_exc()
+            traceback.format_exc()
