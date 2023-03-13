@@ -27,7 +27,7 @@ class EFSManager(object):
         try:
             return self.cli.describe_mount_targets(FileSystemId=efs_id)['MountTargets']
         except:
-            traceback.format_exc()
+            print(traceback.format_exc())
             return None
 
     def list_redundant_efs(self, redundant_sm_domain_ids: list = []):
@@ -53,7 +53,7 @@ class EFSManager(object):
         try:
             self.cli.delete_mount_target(MountTargetId=mount_target_id)
         except:
-            traceback.format_exc()
+            print(traceback.format_exc())
 
     def delete_efs(self, efs_id: str):
         """
@@ -77,4 +77,4 @@ class EFSManager(object):
 
             self.logger.info('info')
         except:
-            traceback.format_exc()
+            print(traceback.format_exc())
