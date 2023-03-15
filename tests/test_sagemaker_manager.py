@@ -14,6 +14,7 @@ def test_describe_image(sm):
     assert response
     pprint(response)
 
+
 def test_describe_image_version(sm):
     response = sm.describe_image_version('sli-docker')
     assert response['Version']
