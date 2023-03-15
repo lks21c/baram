@@ -74,6 +74,9 @@ class SagemakerManager(object):
             self.logger.info(f'wait 5 seconds. delete_cnt={delete_cnt}, elapsed_secs={elapsed_secs}')
         return self.cli.delete_user_profile(DomainId=self.domain_id, UserProfileName=user_profile_name)
 
+    def list_domains(self):
+        return self.cli.list_domains()['Domains']
+
     def delete_domain(self):
         response = self.cli.delete_domain(DomainId=self.domain_id, RetentionPolicy={'HomeEfsFileSystem': 'Delete'})
         return response
