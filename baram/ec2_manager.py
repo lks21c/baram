@@ -17,31 +17,31 @@ class EC2Manager(object):
         """
         return self.cli.describe_security_groups()['SecurityGroups']
 
-    def list_specific_status_instances(self, status: str = 'running'):
+    def list_instances_with_status(self, status: str = 'running'):
         """
         Describes all instances in specific status (ex: 'running', ...)
 
-        :return:
+        :return: Instances, with status
         """
         try:
             instances = [instance['Instances'][0] for instance in self.describe_instances()['Reservations']]
             return [instance for instance in instances if instance['State']['Name'] == status]
         except:
-            traceback.print_exc()
+            print(traceback.format_exc())
 
-    def delete_redundant_key_pairs(self):
+    def delete_unused_key_pairs(self):
         """
         Delete redundant key pairs (i.e. not related to any instances)
         """
-        key_pairs_redundant = self.list_redundant_key_pairs()
+        key_pairs_redundant = self.list_unused_key_pairs()
         try:
             for key_pair in key_pairs_redundant:
                 self.cli.delete_key_pair(KeyName=key_pair)
-                self.logger.info('info')
+                self.logger.info('key pair has deleted')
         except:
-            traceback.print_exc()
+            print(traceback.format_exc())
 
-    def list_redundant_key_pairs(self):
+    def list_unused_key_pairs(self):
         """
         Describes all disused key pairs
 
@@ -65,6 +65,7 @@ class EC2Manager(object):
     def list_vpcs(self):
         """
         List one or more of your VPCs.
+
         :return: Vpcs
         """
         return self.cli.describe_vpcs()['Vpcs']
@@ -91,8 +92,9 @@ class EC2Manager(object):
     def get_vpc_id(self, vpc_name: str):
         """
         Retrieve vpc id from vpc name.
+
         :param vpc_name: vpc name
-        :return:
+        :return: VpcId
         """
         return next(i['VpcId'] for i in self.list_vpcs() if 'Tags' in i
                     for t in i['Tags'] if vpc_name.lower() in t['Value'].lower())
@@ -100,9 +102,10 @@ class EC2Manager(object):
     def get_subnet_id(self, vpc_id: str, subnet_name: str):
         """
         Retrieve subnet id from vpc id and subnet name.
+
         :param vpc_id: vpc_id
         :param subnet_name: subnet_name
-        :return:
+        :return: SubnetId
         """
         return next(s['SubnetId'] for s in self.list_subnet() if vpc_id == s['VpcId'] and 'Tags' in s
                     for t in s['Tags'] if subnet_name == t['Value'])
