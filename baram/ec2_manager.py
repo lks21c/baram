@@ -155,7 +155,7 @@ class EC2Manager(object):
                 else:
                     self.cli.revoke_security_group_ingress(GroupId=sg_id,
                                                            SecurityGroupRuleIds=[sg_rule['sg_rule_id']])
-                self.logger.info('info')
+                self.logger.info('security group rule has deleted')
         except:
             traceback.format_exc()
 
@@ -170,7 +170,6 @@ class EC2Manager(object):
             for sg_id in sg_ids:
                 self.delete_sg_rules(sg_id)
                 self.delete_sg(sg_id)
-                self.logger.info('info')
         except:
             traceback.format_exc()
 
@@ -182,7 +181,7 @@ class EC2Manager(object):
         """
         try:
             self.cli.delete_sg(GroupId=sg_id)
-            self.logger.info('info')
+            self.logger.info('security group has deleted')
         except:
             traceback.format_exc()
 
