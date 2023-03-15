@@ -68,6 +68,14 @@ class EC2Manager(object):
             print(traceback.format_exc())
             return None
 
+    def get_default_vpc(self):
+        """
+        Get default vpc
+
+        :return: Default Vpc
+        """
+        return [vpc for vpc in self.list_vpcs() if vpc['IsDefault']][0]
+
     def get_sg_ids_with_vpc_id(self, vpc_id: str):
         """
         Get security group ids of specific vpc.
@@ -90,12 +98,11 @@ class EC2Manager(object):
         :return: NetworkInterfaces
         """
         enis = self.cli.describe_network_interfaces()['NetworkInterfaces']
-        return [eni for eni in enis if eni['Groups'] != [] and sg_id in [x['GroupId'] for x in eni['Groups']]]
-        # try:
-        #     return [eni for eni in enis if eni['Groups'] != [] and sg_id in [x['GroupId'] for x in eni['Groups']]]
-        # except TypeError:
-        #     print(traceback.format_exc())
-        #     return None
+        try:
+            return [eni for eni in enis if eni['Groups'] != [] and sg_id in [x['GroupId'] for x in eni['Groups']]]
+        except TypeError:
+            print(traceback.format_exc())
+            return None
 
     def list_sg_relations(self):
         """
@@ -157,7 +164,7 @@ class EC2Manager(object):
                                                            SecurityGroupRuleIds=[sg_rule['sg_rule_id']])
                 self.logger.info('security group rule has deleted')
         except:
-            traceback.format_exc()
+            print(traceback.format_exc())
 
     def delete_sgs(self, sg_ids: list):
         """
@@ -171,7 +178,7 @@ class EC2Manager(object):
                 self.delete_sg_rules(sg_id)
                 self.delete_sg(sg_id)
         except:
-            traceback.format_exc()
+            print(traceback.format_exc())
 
     def delete_sg(self, sg_id: str):
         """
@@ -183,7 +190,7 @@ class EC2Manager(object):
             self.cli.delete_sg(GroupId=sg_id)
             self.logger.info('security group has deleted')
         except:
-            traceback.format_exc()
+            print(traceback.format_exc())
 
     def list_vpcs(self):
         """

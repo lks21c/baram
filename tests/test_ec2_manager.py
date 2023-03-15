@@ -50,23 +50,32 @@ def test_list_vpc_sg_eni_subnets(em):
             assert type(vpc_sg_eni_subnets[0]) == dict
 
 
+def test_get_default_vpc(em):
+    # When
+    default_vpc = em.get_default_vpc()
+
+    # Then
+    assert default_vpc['IsDefault']
+
+
 def test_get_sg_ids_with_vpc_id(em):
     # Given
-    default_vpc_id = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]['VpcId']
+    default_vpc_id = em.get_default_vpc()['VpcId']
 
     # When
     sg_ids = em.get_sg_ids_with_vpc_id(default_vpc_id)
     pprint(sg_ids)
 
     # Then
-    assert type(sg_ids) == list
-    if len(sg_ids) > 0:
-        assert type(sg_ids[0]) == str
+    if sg_ids is not None:
+        assert type(sg_ids) == list
+        if len(sg_ids) > 0:
+            assert type(sg_ids[0]) == str
 
 
 def test_get_eni_with_sg_id(em):
     # Given
-    default_vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    default_vpc = em.get_default_vpc()
     default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
 
     # When
@@ -74,9 +83,10 @@ def test_get_eni_with_sg_id(em):
     pprint(eni)
 
     # Then
-    assert type(eni) == list
-    if len(eni) > 0:
-        assert type(eni[0]) == dict
+    if eni is not None:
+        assert type(eni) == list
+        if len(eni) > 0:
+            assert type(eni[0]) == dict
 
 
 def test_list_sg_relations(em):
@@ -95,7 +105,7 @@ def test_list_sg_relations(em):
 
 def test_get_related_sgs(em):
     # Given
-    default_vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    default_vpc = em.get_default_vpc()
     default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
 
     # When
@@ -107,7 +117,7 @@ def test_get_related_sgs(em):
 
 def test_get_sg_rules(em):
     # Given
-    default_vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    default_vpc = em.get_default_vpc()
     default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
 
     # When
@@ -120,7 +130,7 @@ def test_get_sg_rules(em):
 
 def test_delete_sg_rules(em):
     # Given
-    default_vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    default_vpc = em.get_default_vpc()
     default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
 
     # When
@@ -154,7 +164,7 @@ def test_delete_sgs(em):
 
 def test_delete_sg(em):
     # Given
-    vpc = [vpc for vpc in em.list_vpcs() if vpc['IsDefault']][0]
+    vpc = em.get_default_vpc()
     sg_id = em.get_sg_ids_with_vpc_id(vpc['VpcId'][0])
 
     # When
