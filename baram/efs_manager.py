@@ -75,6 +75,6 @@ class EFSManager(object):
             if is_mount_targets_remain:
                 self.cli.delete_efs(FileSystemId=efs_id)
 
-            self.logger.info('info')
+            self.logger.info('efs has deleted')
         except:
             print(traceback.format_exc())
