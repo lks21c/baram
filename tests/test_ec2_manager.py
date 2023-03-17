@@ -198,6 +198,17 @@ def test_list_subnets(em):
         assert type(subnets[0]) == dict
 
 
+def test_get_subnet_ids_with_vpc_id(em):
+    # When
+    vpc_id = 'vpc-04863aaf1ea9a3b35'
+    subnet_ids = em.get_subnet_ids_with_vpc_id(vpc_id)
+
+    # Then
+    assert isinstance(subnet_ids, list)
+    assert len(subnet_ids) > 0
+    pprint(subnet_ids)
+
+
 def test_list_enis(em):
     # When
     enis = em.list_enis

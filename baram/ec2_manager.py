@@ -2,6 +2,7 @@ import boto3
 import traceback
 
 from baram.log_manager import LogManager
+import fire
 
 
 class EC2Manager(object):
@@ -247,6 +248,9 @@ class EC2Manager(object):
         """
         return next(s['SubnetId'] for s in self.list_subnets() if vpc_id == s['VpcId'] and 'Tags' in s
                     for t in s['Tags'] if subnet_name == t['Value'])
+
+    def get_subnet_ids_with_vpc_id(self, vpc_id: str):
+        return [i['SubnetId'] for i in self.list_subnets() if i['VpcId'] == vpc_id]
 
     def get_ec2_id_with_ec2_name(self, ec2_name: str):
         """
