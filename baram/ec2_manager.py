@@ -2,7 +2,6 @@ import boto3
 import traceback
 
 from baram.log_manager import LogManager
-import fire
 
 
 class EC2Manager(object):
