@@ -1,3 +1,4 @@
+import json
 from pprint import pprint
 
 import pytest
@@ -176,15 +177,62 @@ def test_delete_sg(em):
         assert sg_id not in sg_ids
 
 
+def test_list_instances_with_status(em):
+    # When
+    instances_with_status = em.list_instances_with_status()
+    pprint(instances_with_status)
+
+    # Then
+    if instances_with_status is not None:
+        assert type(instances_with_status) == list
+
+
+def test_delete_unused_key_pairs(em):
+    # When
+    em.delete_unused_key_pairs()
+
+    # Then
+    assert em.list_unused_key_pairs() == set()
+
+
+def test_list_unused_key_pairs(em):
+    # When
+    unused_key_pairs = em.list_unused_key_pairs()
+    pprint(unused_key_pairs)
+
+    # Then
+    assert type(unused_key_pairs) == set
+
+
+def test_list_key_pairs(em):
+    # When
+    key_pairs = em.list_key_pairs()
+    pprint(key_pairs)
+
+    # Then
+    assert type(key_pairs) == set
+
+
 def test_list_vpcs(em):
     # When
     vpcs = em.list_vpcs()
-    pprint(vpcs)
 
     # Then
     assert type(vpcs) == list
     if len(vpcs) > 0:
         assert 'VpcId' in vpcs[0].keys()
+    print(json.dumps(vpcs))
+
+
+def test_list_detail_vpcs(em):
+    # When
+    vpcs = em.list_detail_vpcs()
+
+    # When
+    assert type(vpcs) == list
+    assert len(vpcs) > 0
+    for vpc in vpcs:
+        print(vpc)
 
 
 def test_list_subnets(em):
@@ -198,6 +246,16 @@ def test_list_subnets(em):
         assert type(subnets[0]) == dict
 
 
+def test_list_detail_subnets(em):
+    # When
+    subnets = em.list_detail_subnets()
+    pprint(subnets)
+
+    # Then
+    assert type(subnets) == list
+    assert len(subnets) > 0
+
+
 def test_list_enis(em):
     # When
     enis = em.list_enis
@@ -205,6 +263,11 @@ def test_list_enis(em):
 
     # Then
     assert em.list_enis()
+
+
+def test_describe_instances(em):
+    pprint(em.describe_instances())
+    assert em.describe_instances()
 
 
 def test_get_ec2_instances_with_imds_v1(em):
