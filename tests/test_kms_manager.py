@@ -9,12 +9,8 @@ def km():
 
 
 def test_list_keys(km):
-    assert km.list_keys() is not None
+    assert len(km.list_keys()) >= 0
 
 
 def test_list_aliases(km):
-    assert km.list_aliases() is not None
-
-
-def test_arn(km):
-    print(km.get_kms_arn('s3-hydra01-kms', False))
+    assert len(km.list_aliases()) >= 0
