@@ -245,6 +245,7 @@ def test_list_subnets(em):
     if len(subnets) > 0:
         assert type(subnets[0]) == dict
 
+
 def test_list_detail_subnets(em):
     # When
     subnets = em.list_detail_subnets()
