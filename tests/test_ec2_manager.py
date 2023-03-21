@@ -178,19 +178,39 @@ def test_delete_sg(em):
 
 
 def test_list_instances_with_status(em):
-    pprint(em.list_instances_with_status())
+    # When
+    instances_with_status = em.list_instances_with_status()
+    pprint(instances_with_status)
+
+    # Then
+    if instances_with_status is not None:
+        assert type(instances_with_status) == list
 
 
 def test_delete_unused_key_pairs(em):
+    # When
     em.delete_unused_key_pairs()
+
+    # Then
+    assert em.list_unused_key_pairs() == set()
 
 
 def test_list_unused_key_pairs(em):
-    pprint(em.list_unused_key_pairs())
+    # When
+    unused_key_pairs = em.list_unused_key_pairs()
+    pprint(unused_key_pairs)
+
+    # Then
+    assert type(unused_key_pairs) == set
 
 
 def test_list_key_pairs(em):
-    pprint(em.list_key_pairs())
+    # When
+    key_pairs = em.list_key_pairs()
+    pprint(key_pairs)
+
+    # Then
+    assert type(key_pairs) == set
 
 
 def test_list_vpcs(em):

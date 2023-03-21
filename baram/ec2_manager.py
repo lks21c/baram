@@ -205,6 +205,7 @@ class EC2Manager(object):
             return [instance for instance in instances if instance['State']['Name'] == status]
         except:
             print(traceback.format_exc())
+            return None
 
     def delete_unused_key_pairs(self):
         """
