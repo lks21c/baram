@@ -1,5 +1,6 @@
-import boto3
 import traceback
+
+import boto3
 
 from baram.log_manager import LogManager
 
@@ -9,7 +10,7 @@ class EC2Manager(object):
         self.cli = boto3.client('ec2')
         self.logger = LogManager.get_logger()
 
-    def list_sgs(self):
+    def list_sgs(self) -> list:
         """
         Describes the specified security groups or all of your security groups.
 
@@ -21,7 +22,7 @@ class EC2Manager(object):
             print(traceback.format_exc())
             return None
 
-    def list_unused_sg_ids(self, description_filter: str = '', sm_domain_ids: list = []):
+    def list_unused_sg_ids(self, description_filter: str = '', sm_domain_ids: list = None) -> set:
         """
         Describe useless and deletable security group ids.
         (including disused SageMaker domain related things)
@@ -43,7 +44,7 @@ class EC2Manager(object):
         except TypeError:
             return None
 
-    def list_vpc_sg_eni_subnets(self):
+    def list_vpc_sg_eni_subnets(self) -> list:
         """
         Return the list of all pairs of {VpcId, GroupId, NetworkInterfaceId, SubnetId}.
 
@@ -68,7 +69,7 @@ class EC2Manager(object):
             print(traceback.format_exc())
             return None
 
-    def get_default_vpc(self):
+    def get_default_vpc(self) -> list:
         """
         Get default vpc
 
@@ -76,7 +77,7 @@ class EC2Manager(object):
         """
         return [vpc for vpc in self.list_vpcs() if vpc['IsDefault']][0]
 
-    def get_sg_ids_with_vpc_id(self, vpc_id: str):
+    def get_sg_ids_with_vpc_id(self, vpc_id: str) -> list:
         """
         Get security group ids of specific vpc.
 
@@ -90,7 +91,7 @@ class EC2Manager(object):
             print(traceback.format_exc())
             return None
 
-    def get_eni_with_sg_id(self, sg_id: str):
+    def get_eni_with_sg_id(self, sg_id: str) -> list:
         """
         Get network interfaces with specific security group.
 
@@ -104,7 +105,7 @@ class EC2Manager(object):
             print(traceback.format_exc())
             return None
 
-    def list_sg_relations(self):
+    def list_sg_relations(self) -> list:
         """
         Describe security groups with related security groups, including egress and ingress status.
 
@@ -119,10 +120,10 @@ class EC2Manager(object):
 
         result = [{'sg_id': sg_ids[i],
                    'is_egress': is_egress_list[i],
-                   'related_sg_id':referenced_sgs[i]} for i in range(len(sg_rules))]
+                   'related_sg_id': referenced_sgs[i]} for i in range(len(sg_rules))]
         return result
 
-    def get_related_sgs(self, sg_id: str):
+    def get_related_sgs(self, sg_id: str) -> set:
         """
         Get the set of related security groups for specific security group.
 
@@ -132,7 +133,7 @@ class EC2Manager(object):
         sg_relations = self.list_sg_relations()
         return set([sg_relation['sg_id'] for sg_relation in sg_relations if sg_relation['related_sg_id'] == sg_id])
 
-    def get_sg_rules(self, sg_id: str):
+    def get_sg_rules(self, sg_id: str) -> list:
         """
         Get security group rules of specific security group.
 
@@ -192,7 +193,7 @@ class EC2Manager(object):
         except:
             print(traceback.format_exc())
 
-    def list_vpcs(self):
+    def list_vpcs(self) -> list:
         """
         List one or more of your VPCs.
 
@@ -200,7 +201,27 @@ class EC2Manager(object):
         """
         return self.cli.describe_vpcs()['Vpcs']
 
-    def list_subnets(self):
+    def list_detail_vpcs(self) -> list:
+        """
+        List one or more of your VPCs with detail.
+
+        :return: Vpcs.
+        """
+        vpc_list = []
+        for vpc in self.list_vpcs():
+            name = ''
+            if 'Tags' in vpc:
+                name = next(t['Value'] for t in vpc['Tags'] if t['Key'] == 'Name')
+            elif vpc['IsDefault']:
+                name = 'default'
+            vpc_list.append(
+                {'vpc_id': vpc['VpcId'],
+                 'name': name,
+                 'cidr_block': vpc['CidrBlock'],
+                 'state': vpc['State']})
+        return vpc_list
+
+    def list_subnets(self) -> list:
         """
         List one or more of your Subnets.
 
@@ -208,7 +229,30 @@ class EC2Manager(object):
         """
         return self.cli.describe_subnets()['Subnets']
 
-    def list_enis(self):
+    def list_detail_subnets(self) -> list:
+        """
+        List one or more of your Subnets with detail.
+
+        :return: Subnets
+        """
+        subnet_list = []
+        for subnet in self.list_subnets():
+            name = ''
+            vpc_name = ''
+            if 'Tags' in subnet:
+                name = next(t['Value'] for t in subnet['Tags'] if t['Key'] == 'Name')
+                vpc_name = next(t['Value'] for t in subnet['Tags'] if t['Key'] == 'aws:cloudformation:stack-name')
+
+            subnet_list.append(
+                {'subnet_id': subnet['SubnetId'],
+                 'vpc_id': subnet['VpcId'],
+                 'name': name,
+                 'vpc_name': vpc_name,
+                 'cidr_block': subnet['CidrBlock'],
+                 'state': subnet['State']})
+        return subnet_list
+
+    def list_enis(self) -> list:
         """
         List one or more of your Network Interfaces.
 
@@ -216,7 +260,7 @@ class EC2Manager(object):
         """
         return self.cli.describe_network_interfaces()['NetworkInterfaces']
 
-    def get_sg_id_with_sg_name(self, group_name: str):
+    def get_sg_id_with_sg_name(self, group_name: str) -> str:
         """
         Retrieve subnet id from group name.
 
@@ -227,7 +271,7 @@ class EC2Manager(object):
             (i['GroupId'] for i in self.cli.describe_security_groups()['SecurityGroups']
              if group_name.lower() in i['GroupName'].lower()), None)
 
-    def get_vpc_id_with_vpc_name(self, vpc_name: str):
+    def get_vpc_id_with_vpc_name(self, vpc_name: str) -> str:
         """
         Retrieve vpc id from vpc name
 
@@ -237,7 +281,7 @@ class EC2Manager(object):
         return next(i['VpcId'] for i in self.list_vpcs() if 'Tags' in i
                     for t in i['Tags'] if vpc_name.lower() in t['Value'].lower())
 
-    def get_subnet_id(self, vpc_id: str, subnet_name: str):
+    def get_subnet_id(self, vpc_id: str, subnet_name: str) -> str:
         """
         Retrieve subnet id from vpc id and subnet name.
 
@@ -248,7 +292,7 @@ class EC2Manager(object):
         return next(s['SubnetId'] for s in self.list_subnets() if vpc_id == s['VpcId'] and 'Tags' in s
                     for t in s['Tags'] if subnet_name == t['Value'])
 
-    def get_ec2_id_with_ec2_name(self, ec2_name: str):
+    def get_ec2_id_with_ec2_name(self, ec2_name: str) -> str:
         """
 
         :param ec2_name: ec2 instance name
@@ -258,7 +302,7 @@ class EC2Manager(object):
         return next(
             i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if ec2_name == t['Value'])
 
-    def describe_instances(self, instance_id_list: list = None):
+    def describe_instances(self, instance_id_list: list = None) -> list:
         """
 
         Retrieve ec2 instance description.
@@ -270,7 +314,7 @@ class EC2Manager(object):
         else:
             return self.cli.describe_instances()
 
-    def get_ec2_instances_with_imds_v1(self):
+    def get_ec2_instances_with_imds_v1(self) -> list:
         """
 
         :return: get ec2 instances that support imds_v1.
@@ -295,3 +339,14 @@ class EC2Manager(object):
                                                       HttpTokens='required',
                                                       HttpPutResponseHopLimit=http_put_response_hop_limit,
                                                       HttpEndpoint='enabled')
+
+    def delete_vpc(self, vpc_id: str):
+        """
+        Delete vpc with vpc_id.
+
+        :param vpc_id:
+        :return:
+        """
+        pass
+        # TODO: TBD.
+        # delete vpc with SG, EP and Key Pair.

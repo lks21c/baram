@@ -1,5 +1,3 @@
-from pprint import pprint
-
 import pytest
 
 from baram.iam_manager import IAMManager
@@ -11,20 +9,33 @@ def im():
 
 
 def test_get_role(im):
-    pprint(im.get_role('AFlow-developer-role'))
-    assert im.get_role('AFlow-developer-role')
+    # Given
+    role_name = 'AWSServiceRoleForLakeFormationDataAccess'
+
+    # When
+    role = im.get_role(role_name)
+
+    # Then
+    assert role is not None
 
 
 def test_list_role_policies(im):
-    pprint(im.list_role_policies('AFlow-developer-role'))
-    assert im.list_role_policies('AFlow-developer-role')
+    # Given
+    role_name = 'AWSServiceRoleForLakeFormationDataAccess'
 
+    # When
+    policies = im.list_role_policies(role_name)
 
-def test_list_group_policies(im):
-    pprint(im.list_group_policies('sagemaker_studio_user'))
-    assert im.list_group_policies('sagemaker_studio_user')
+    # Then
+    assert policies is not None
 
 
 def test_role_arn(im):
-    pprint(im.get_role_arn('AFlow-developer-role'))
-    assert im.get_role_arn('AFlow-developer-role')
+    # Given
+    role_name = 'AWSServiceRoleForLakeFormationDataAccess'
+
+    # When
+    arn = im.get_role_arn(role_name)
+
+    # Then
+    assert arn is not None

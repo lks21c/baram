@@ -1,3 +1,4 @@
+import json
 from pprint import pprint
 
 import pytest
@@ -179,12 +180,23 @@ def test_delete_sg(em):
 def test_list_vpcs(em):
     # When
     vpcs = em.list_vpcs()
-    pprint(vpcs)
 
     # Then
     assert type(vpcs) == list
     if len(vpcs) > 0:
         assert 'VpcId' in vpcs[0].keys()
+    print(json.dumps(vpcs))
+
+
+def test_list_detail_vpcs(em):
+    # When
+    vpcs = em.list_detail_vpcs()
+
+    # When
+    assert type(vpcs) == list
+    assert len(vpcs) > 0
+    for vpc in vpcs:
+        print(vpc)
 
 
 def test_list_subnets(em):
@@ -196,6 +208,15 @@ def test_list_subnets(em):
     assert type(subnets) == list
     if len(subnets) > 0:
         assert type(subnets[0]) == dict
+
+def test_list_detail_subnets(em):
+    # When
+    subnets = em.list_detail_subnets()
+    pprint(subnets)
+
+    # Then
+    assert type(subnets) == list
+    assert len(subnets) > 0
 
 
 def test_list_enis(em):
