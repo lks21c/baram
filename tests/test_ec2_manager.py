@@ -289,3 +289,14 @@ def test_apply_imdsv2_only_mode(em):
     response = em.get_ec2_instances_with_imds_v1()
     assert len(response) == 0
     print(response)
+
+
+def test_list_tgws(em):
+    # When
+    tgws = em.list_tgws()
+    pprint(tgws)
+
+    # Then
+    assert type(tgws) == list
+    if len(tgws) != 0:
+        assert type(tgws[0]['TransitGatewayId']) == str

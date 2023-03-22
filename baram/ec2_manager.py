@@ -306,6 +306,14 @@ class EC2Manager(object):
         """
         return self.cli.describe_network_interfaces()['NetworkInterfaces']
 
+    def list_tgws(self) -> list:
+        """
+        Get Id of Transit Gateway
+
+        :return: TransitGateways
+        """
+        return self.cli.describe_transit_gateways()['TransitGateways']
+
     def get_sg_id_with_sg_name(self, group_name: str) -> str:
         """
         Retrieve subnet id from group name.
