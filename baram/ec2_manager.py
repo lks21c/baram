@@ -52,8 +52,7 @@ class EC2Manager(object):
         :return: The list of {vpc_id, security_group_id, eni_id, subnet_id}
         """
         result = []
-        vpcs = [vpc for vpc in self.list_vpcs() if vpc['State'] == 'available']
-        vpc_ids = [vpc['VpcId'] for vpc in vpcs]
+        vpc_ids = [vpc['VpcId'] for vpc in self.list_vpcs() if vpc['State'] == 'available']
 
         try:
             for vpc_id in vpc_ids:
