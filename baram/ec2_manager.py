@@ -32,7 +32,7 @@ class EC2Manager(object):
         :param sm_domain_ids: DomainId of sagemaker
         :return: GroupIds
         """
-        # 1. Get security groups not related to anything in ec2
+        # Get security groups not related to anything in ec2
         sgs = self.list_sgs()
         try:
             valid_sg_ids = set([pair['sg_id'] for pair in self.list_vpc_sg_eni_subnets()])
@@ -52,18 +52,17 @@ class EC2Manager(object):
         :return: The list of {vpc_id, security_group_id, eni_id, subnet_id}
         """
         result = []
-        vpcs = [vpc for vpc in self.list_vpcs() if vpc['State'] == 'available']
-        vpc_ids = [vpc['VpcId'] for vpc in vpcs]
-        specified_sg_ids = [self.get_sg_ids_with_vpc_id(vpc_id=vpc_id) for vpc_id in vpc_ids][0]
-        specified_enis = [self.get_eni_with_sg_id(sg_id=sg_id) for sg_id in specified_sg_ids][0]
+        vpc_ids = [vpc['VpcId'] for vpc in self.list_vpcs() if vpc['State'] == 'available']
 
         try:
             for vpc_id in vpc_ids:
+                specified_sg_ids = self.get_sg_ids_with_vpc_id(vpc_id=vpc_id)
                 for sg_id in specified_sg_ids:
+                    specified_enis = self.get_eni_with_sg_id(sg_id=sg_id)
                     pairs = {'vpc_id': vpc_id, 'sg_id': sg_id}
                     for eni in specified_enis:
                         pairs['eni_id'], pairs['subnet_id'] = eni['NetworkInterfaceId'], eni['SubnetId']
-                        result.append(pairs)
+                    result.append(pairs)
             return result
 
         except TypeError:
