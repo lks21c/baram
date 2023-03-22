@@ -265,7 +265,8 @@ def test_get_subnet_ids_with_vpc_id(em):
 
     # Then
     assert len(subnets) > 0
-    pprint(subnets)
+    print(json.dumps(subnets, indent=4))
+
 
 def test_list_enis(em):
     # When
