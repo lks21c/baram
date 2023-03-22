@@ -1,5 +1,5 @@
 import pytest
-
+from pprint import pprint
 from baram.iam_manager import IAMManager
 
 
@@ -39,3 +39,12 @@ def test_role_arn(im):
 
     # Then
     assert arn is not None
+
+def test_get_policies(im):
+    pprint(im.get_policies())
+    assert im.get_policies()
+
+
+def test_get_redundant_policies(im):
+    pprint(im.get_redundant_policies())
+    assert im.get_redundant_policies()
