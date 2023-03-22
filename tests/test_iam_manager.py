@@ -1,5 +1,5 @@
+import json
 import pytest
-from pprint import pprint
 from baram.iam_manager import IAMManager
 
 
@@ -40,11 +40,26 @@ def test_role_arn(im):
     # Then
     assert arn is not None
 
-def test_get_policies(im):
-    pprint(im.get_policies())
-    assert im.get_policies()
+
+def test_list_policies(im):
+    # When
+    policies = im.list_policies()
+
+    # Then
+    if len(policies) > 0:
+        assert 'PolicyId' in policies[0]
+    else:
+        print('There is no policy')
+    print(json.dumps(policies, indent=4, default=str))
 
 
-def test_get_redundant_policies(im):
-    pprint(im.get_redundant_policies())
-    assert im.get_redundant_policies()
+def test_list_redundant_policies(im):
+    # When
+    redundant_policies = im.list_redundant_policies()
+
+    # Then
+    if len(redundant_policies) > 0:
+        assert 'PolicyId' in redundant_policies[0]
+    else:
+        print('There is no redundant policy')
+    print(json.dumps(redundant_policies, indent=4, default=str))
