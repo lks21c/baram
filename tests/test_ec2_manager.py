@@ -291,7 +291,7 @@ def test_apply_imdsv2_only_mode(em):
     print(response)
 
 
-def test_get_tgw_id(em):
+def test_list_tgws(em):
     # When
     tgws = em.list_tgws()
     pprint(tgws)
