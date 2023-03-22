@@ -77,7 +77,7 @@ def test_get_sg_ids_with_vpc_id(em):
 def test_get_eni_with_sg_id(em):
     # Given
     default_vpc = em.get_default_vpc()
-    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
+    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'])[0]
 
     # When
     eni = em.get_eni_with_sg_id(default_sg_id)
@@ -107,7 +107,7 @@ def test_list_sg_relations(em):
 def test_get_related_sgs(em):
     # Given
     default_vpc = em.get_default_vpc()
-    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
+    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'])[0]
 
     # When
     related_sgs = em.get_related_sgs(default_sg_id)
@@ -119,7 +119,7 @@ def test_get_related_sgs(em):
 def test_get_sg_rules(em):
     # Given
     default_vpc = em.get_default_vpc()
-    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
+    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'])[0]
 
     # When
     sg_rules = em.get_sg_rules(default_sg_id)
@@ -132,7 +132,7 @@ def test_get_sg_rules(em):
 def test_delete_sg_rules(em):
     # Given
     default_vpc = em.get_default_vpc()
-    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'][0])
+    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'])[0]
 
     # When
     em.delete_sg_rules(default_sg_id)
@@ -166,7 +166,7 @@ def test_delete_sgs(em):
 def test_delete_sg(em):
     # Given
     vpc = em.get_default_vpc()
-    sg_id = em.get_sg_ids_with_vpc_id(vpc['VpcId'][0])
+    sg_id = em.get_sg_ids_with_vpc_id(vpc['VpcId'])[0]
 
     # When
     em.delete_sg(sg_id)

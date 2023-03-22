@@ -17,7 +17,7 @@ def test_describe_image(sm):
 
 def test_list_domains(sm):
     response = sm.list_domains()
-    assert response
+    assert type(response) == list
     pprint(response)
 
 
