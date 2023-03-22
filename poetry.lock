@@ -84,7 +84,11 @@ crt = ["botocore[crt] (>=1.21.0,<2.0a0)"]
 
 [[package]]
 name = "botocore"
+<<<<<<< Updated upstream
 version = "1.29.95"
+=======
+version = "1.29.96"
+>>>>>>> Stashed changes
 description = "Low-level, data-driven core of boto 3."
 category = "main"
 optional = false

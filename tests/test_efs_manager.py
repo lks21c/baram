@@ -14,7 +14,7 @@ def efsm():
 def test_list_efs(efsm):
     efs = efsm.list_efs()
     pprint(efs)
-    assert efs
+    assert type(efs) == list
 
 
 def test_list_mount_targets(efsm):
