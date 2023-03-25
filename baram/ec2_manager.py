@@ -226,7 +226,7 @@ class EC2Manager(object):
         """
         key_pairs_total = self.list_key_pairs()
         instances = [instance['Instances'][0] for instance in self.describe_instances()['Reservations']]
-        key_pairs_using = [instance['KeyName'] for instance in instances]
+        key_pairs_using = [instance['KeyName'] for instance in instances if 'KeyName' in instance]
 
         return key_pairs_total - set(key_pairs_using)
 
@@ -286,14 +286,14 @@ class EC2Manager(object):
             name = ''
             vpc_name = ''
             if 'Tags' in subnet:
-                name = next(t['Value'] for t in subnet['Tags'] if t['Key'] == 'Name')
-                vpc_name = next(t['Value'] for t in subnet['Tags'] if t['Key'] == 'aws:cloudformation:stack-name')
+                name = [t['Value'] for t in subnet['Tags'] if t['Key'] == 'Name']
+                vpc_name = [t['Value'] for t in subnet['Tags'] if t['Key'] == 'aws:cloudformation:stack-name']
 
             subnet_list.append(
                 {'subnet_id': subnet['SubnetId'],
                  'vpc_id': subnet['VpcId'],
-                 'name': name,
-                 'vpc_name': vpc_name,
+                 'name': '' if len(name) == 0 else name[0],
+                 'vpc_name': '' if len(vpc_name) == 0 else vpc_name[0],
                  'cidr_block': subnet['CidrBlock'],
                  'state': subnet['State']})
         return subnet_list
