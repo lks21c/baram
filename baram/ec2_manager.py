@@ -298,6 +298,14 @@ class EC2Manager(object):
                  'state': subnet['State']})
         return subnet_list
 
+    def get_subnet_ids_with_vpc_id(self, vpc_id: str) -> list:
+        """
+        Retrieve subnet ids attached to specified VPC id
+        :param vpc_id: vpc id
+        :return:
+        """
+        return [i['SubnetId'] for i in self.list_subnets() if i['VpcId'] == vpc_id]
+
     def list_enis(self) -> list:
         """
         List one or more of your Network Interfaces.

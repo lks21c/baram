@@ -256,6 +256,18 @@ def test_list_detail_subnets(em):
     assert len(subnets) > 0
 
 
+def test_get_subnet_ids_with_vpc_id(em):
+    # Given
+    default_vpc_id = em.get_default_vpc()['VpcId']
+
+    # When
+    subnets = em.get_subnet_ids_with_vpc_id(default_vpc_id)
+
+    # Then
+    assert len(subnets) > 0
+    print(json.dumps(subnets, indent=4))
+
+
 def test_list_enis(em):
     # When
     enis = em.list_enis
