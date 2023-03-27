@@ -226,7 +226,7 @@ class EC2Manager(object):
         """
         key_pairs_total = self.list_key_pairs()
         instances = [instance['Instances'][0] for instance in self.describe_instances()['Reservations']]
-        key_pairs_using = [instance['KeyName'] for instance in instances]
+        key_pairs_using = [instance['KeyName'] for instance in instances if 'KeyName' in instance]
 
         return key_pairs_total - set(key_pairs_using)
 
@@ -286,17 +286,25 @@ class EC2Manager(object):
             name = ''
             vpc_name = ''
             if 'Tags' in subnet:
-                name = next(t['Value'] for t in subnet['Tags'] if t['Key'] == 'Name')
-                vpc_name = next(t['Value'] for t in subnet['Tags'] if t['Key'] == 'aws:cloudformation:stack-name')
+                name = [t['Value'] for t in subnet['Tags'] if t['Key'] == 'Name']
+                vpc_name = [t['Value'] for t in subnet['Tags'] if t['Key'] == 'aws:cloudformation:stack-name']
 
             subnet_list.append(
                 {'subnet_id': subnet['SubnetId'],
                  'vpc_id': subnet['VpcId'],
-                 'name': name,
-                 'vpc_name': vpc_name,
+                 'name': '' if len(name) == 0 else name[0],
+                 'vpc_name': '' if len(vpc_name) == 0 else vpc_name[0],
                  'cidr_block': subnet['CidrBlock'],
                  'state': subnet['State']})
         return subnet_list
+
+    def get_subnet_ids_with_vpc_id(self, vpc_id: str) -> list:
+        """
+        Retrieve subnet ids attached to specified VPC id
+        :param vpc_id: vpc id
+        :return:
+        """
+        return [i['SubnetId'] for i in self.list_subnets() if i['VpcId'] == vpc_id]
 
     def list_enis(self) -> list:
         """
@@ -305,6 +313,14 @@ class EC2Manager(object):
         :return:
         """
         return self.cli.describe_network_interfaces()['NetworkInterfaces']
+
+    def list_tgws(self) -> list:
+        """
+        Get Id of Transit Gateway
+
+        :return: TransitGateways
+        """
+        return self.cli.describe_transit_gateways()['TransitGateways']
 
     def get_sg_id_with_sg_name(self, group_name: str) -> str:
         """

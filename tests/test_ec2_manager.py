@@ -4,8 +4,6 @@ from pprint import pprint
 import pytest
 
 from baram.ec2_manager import EC2Manager
-from baram.efs_manager import EFSManager
-from baram.sagemaker_manager import SagemakerManager
 
 
 @pytest.fixture()
@@ -24,31 +22,32 @@ def test_list_sgs(em):
         assert type(sgs[0]) == dict
         assert 'GroupId' in sgs[0].keys()
 
+# TODO: TC is too slow. uncomment if tc can run within 1 sec.
+# def test_list_unused_sg_ids(em):
+#     # Given
+#     sm = SagemakerManager()
+#     sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
+#
+#     # When
+#     unused_sg_ids = em.list_unused_sg_ids('NFS', sm_domain_ids)
+#     pprint(unused_sg_ids)
+#
+#     # Then
+#     if unused_sg_ids is not None:
+#         assert type(unused_sg_ids) == set
 
-def test_list_unused_sg_ids(em):
-    # Given
-    sm = SagemakerManager()
-    sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
 
-    # When
-    unused_sg_ids = em.list_unused_sg_ids('NFS', sm_domain_ids)
-    pprint(unused_sg_ids)
-
-    # Then
-    if unused_sg_ids is not None:
-        assert type(unused_sg_ids) == set
-
-
-def test_list_vpc_sg_eni_subnets(em):
-    # When
-    vpc_sg_eni_subnets = em.list_vpc_sg_eni_subnets()
-    pprint(vpc_sg_eni_subnets)
-
-    # Then
-    if vpc_sg_eni_subnets is not None:
-        assert type(vpc_sg_eni_subnets) == list
-        if len(vpc_sg_eni_subnets) > 0:
-            assert type(vpc_sg_eni_subnets[0]) == dict
+# TODO: TC is too slow. uncomment if tc can run within 1 sec.
+# def test_list_vpc_sg_eni_subnets(em):
+#     # When
+#     vpc_sg_eni_subnets = em.list_vpc_sg_eni_subnets()
+#     pprint(vpc_sg_eni_subnets)
+#
+#     # Then
+#     if vpc_sg_eni_subnets is not None:
+#         assert type(vpc_sg_eni_subnets) == list
+#         if len(vpc_sg_eni_subnets) > 0:
+#             assert type(vpc_sg_eni_subnets[0]) == dict
 
 
 def test_get_default_vpc(em):
@@ -141,26 +140,27 @@ def test_delete_sg_rules(em):
     assert em.get_sg_rules(default_sg_id) == []
 
 
-def test_delete_sgs(em):
-    # Given
-    sm = SagemakerManager()
-    redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
-
-    efsm = EFSManager()
-    redundant_efs_ids = efsm.list_redundant_efs(redundant_sm_domain_ids)
-    for efs_id in redundant_efs_ids:
-        efsm.delete_efs(efs_id)
-
-    unused_sg_ids = em.list_unused_sg_ids('NFS', redundant_sm_domain_ids)
-    pprint(unused_sg_ids)
-
-    # When
-    em.delete_sgs(unused_sg_ids)
+# TODO: TC is too slow. uncomment if tc can run within 1 sec.
+# def test_delete_sgs(em):
+#     # Given
+#     sm = SagemakerManager()
+#     redundant_sm_domain_ids = [domain['DomainId'] for domain in sm.list_domains()]
+#
+#     efsm = EFSManager()
+#     redundant_efs_ids = efsm.list_redundant_efs(redundant_sm_domain_ids)
+#     for efs_id in redundant_efs_ids:
+#         efsm.delete_efs(efs_id)
+#
+#     unused_sg_ids = em.list_unused_sg_ids('NFS', redundant_sm_domain_ids)
+#     pprint(unused_sg_ids)
+#
+#     # When
+#     em.delete_sgs(unused_sg_ids)
 
     # Then
-    sg_ids = set([sg['GroupId'] for sg in em.list_sgs()])
-    if unused_sg_ids is not None:
-        assert unused_sg_ids - sg_ids == set()
+#    sg_ids = set([sg['GroupId'] for sg in em.list_sgs()])
+#    if unused_sg_ids is not None:
+#        assert unused_sg_ids - sg_ids == set()
 
 
 def test_delete_sg(em):
@@ -256,6 +256,18 @@ def test_list_detail_subnets(em):
     assert len(subnets) > 0
 
 
+def test_get_subnet_ids_with_vpc_id(em):
+    # Given
+    default_vpc_id = em.get_default_vpc()['VpcId']
+
+    # When
+    subnets = em.get_subnet_ids_with_vpc_id(default_vpc_id)
+
+    # Then
+    assert len(subnets) > 0
+    print(json.dumps(subnets, indent=4))
+
+
 def test_list_enis(em):
     # When
     enis = em.list_enis
@@ -289,3 +301,14 @@ def test_apply_imdsv2_only_mode(em):
     response = em.get_ec2_instances_with_imds_v1()
     assert len(response) == 0
     print(response)
+
+
+def test_list_tgws(em):
+    # When
+    tgws = em.list_tgws()
+    pprint(tgws)
+
+    # Then
+    assert type(tgws) == list
+    if len(tgws) != 0:
+        assert type(tgws[0]['TransitGatewayId']) == str
