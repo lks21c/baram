@@ -16,6 +16,12 @@ def test_print(em):
         pprint(i)
 
 
+def test_pprint(em):
+    for i in range(6):
+        ppprint(i)
+
+
+
 def test_list_sgs(em):
     # When
     sgs = em.list_sgs()
