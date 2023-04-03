@@ -11,6 +11,11 @@ def em():
     return EC2Manager()
 
 
+def test_print(em):
+    for i in range(3):
+        pprint(i)
+
+
 def test_list_sgs(em):
     # When
     sgs = em.list_sgs()
