@@ -18,8 +18,7 @@ def test_print(em):
 
 def test_pprint(em):
     for i in range(6):
-        ppprint(i)
-
+        pprint(i)
 
 
 def test_list_sgs(em):
