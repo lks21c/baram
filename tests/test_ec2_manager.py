@@ -130,14 +130,15 @@ def test_get_sg_rules(em):
 
 def test_delete_sg_rules(em):
     # Given
-    default_vpc = em.get_default_vpc()
-    default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'])[0]
+    vpc_ids = [vpc['VpcId'] for vpc in em.list_vpcs()]
+    default_sg_ids = [em.get_sg_ids_with_vpc_id(vpc_id, True)[0] for vpc_id in vpc_ids]
 
     # When
-    em.delete_sg_rules(default_sg_id)
+    for default_sg_id in default_sg_ids:
+        em.delete_sg_rules(default_sg_id)
 
     # Then
-    assert em.get_sg_rules(default_sg_id) == []
+    assert em.get_sg_rules(default_sg_ids[0]) == []
 
 
 # TODO: TC is too slow. uncomment if tc can run within 1 sec.
