@@ -1,8 +1,6 @@
 import fire
 import boto3
-
-import pygsheets
-import pandas as pd
+import gspread
 
 from baram.log_manager import LogManager
 
@@ -29,20 +27,24 @@ class SHManager(object):
     def export_to_google_sheet(self, service_file: str):
         """
 
-        :param service_file: json key file for authentication
-        :return: export and write sh_file findings to google sheet
+        :param service_file: json key file for google cloud authentication
+        :return: export and write security hub findings to linked google sheet file
         """
-        google_cloud_authorize = pygsheets.authorize(service_file=service_file)
-        sh_findings = self.list_findings()
-        assert len(sh_findings) > 0, 'there is no security hub findings'
+        values = []
+        headers = ['SchemaVersion', 'Id', 'ProductArn',	'ProductName', 'CompanyName', 'Region',	'GeneratorId',
+                   'AwsAccountId', 'Types', 'CreatedAt', 'UpdatedAt', 'Severity', 'Title', 'Description',
+                   'ProductFields', 'Resources', 'Compliance', 'WorkflowState', 'Workflow', 'RecordState',
+                   'FindingProviderFields', 'FirstObservedAt', 'LastObservedAt', 'Remediation', 'SourceUrl', 'Sample',
+                   'Confidence']
+        values.append(headers)
 
-        try:
-            sh_findings_df = pd.DataFrame(sh_findings)
-            sh_file = google_cloud_authorize.open('sh_findings')
-            worksheet = sh_file[0]
-            worksheet.set_dataframe(sh_findings_df, (1, 1))
-        except:
-            self.logger.info('error')
+        for finding in self.list_findings():
+            finding = [str(finding.get(header, 'N/A')) for header in headers]
+            values.append(finding)
+
+        google_cloud_authorize = gspread.service_account(filename=service_file)
+        worksheet = google_cloud_authorize.open('sh_findings').get_worksheet(0)
+        worksheet.update('A1', values)
 
 
 if __name__ == '__main__':
