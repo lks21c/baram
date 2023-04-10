@@ -4,7 +4,7 @@ from pprint import pprint
 import pytest
 
 from baram.ec2_manager import EC2Manager
-
+from baram.elb_manager import ELBManager
 
 @pytest.fixture()
 def em():
@@ -134,7 +134,7 @@ def test_delete_sg_rules(em):
     default_sg_id = em.get_sg_ids_with_vpc_id(default_vpc['VpcId'])[0]
 
     # When
-    em.delete_sg_rules(default_sg_id)
+    em.delete_sg_rules('sg-0750f072d295fa414-k8s-default-datahubd-0b4fbb1ac9')
 
     # Then
     assert em.get_sg_rules(default_sg_id) == []
@@ -312,3 +312,35 @@ def test_list_tgws(em):
     assert type(tgws) == list
     if len(tgws) != 0:
         assert type(tgws[0]['TransitGatewayId']) == str
+
+
+def test_describe_routing_tables(em):
+    pprint(em.describe_route_tables())
+
+
+def test_delete_route(em):
+    pprint(em.delete_route('rtb-07e4912606df83098'))
+
+
+def test_delete_internet_gateway(em):
+    em.delete_internet_gateway('')
+
+
+def test_delete_nat_gateway(em):
+    em.delete_nat_gateway('nat-0b3af5e8c97eaed58')
+
+
+def test_delete_endpoints(em):
+    em.delete_endpoints(['vpce-0b62871353a6dee25'])
+
+
+def test_delete_vpc(em):
+    vpc_id = 'vpc-0fc190dfe193757f0'
+
+    elb = ELBManager()
+    vpc_elb_arns = [elb['LoadBalancerArn'] for elb in elb.describe_load_balancers() if vpc_id in elb['VpcId']]
+    if len(vpc_elb_arns) > 0:
+        for elb_arn in vpc_elb_arns:
+            elb.delete_load_balacner(elb_arn)
+
+    em.delete_vpc(vpc_id)

@@ -1,6 +1,7 @@
 import traceback
 
 import boto3
+from json import dumps
 
 from baram.log_manager import LogManager
 
@@ -8,7 +9,6 @@ from baram.log_manager import LogManager
 class EC2Manager(object):
     def __init__(self):
         self.cli = boto3.client('ec2')
-
         self.logger = LogManager.get_logger()
 
     def list_sgs(self) -> list:
@@ -402,13 +402,117 @@ class EC2Manager(object):
                                                       HttpPutResponseHopLimit=http_put_response_hop_limit,
                                                       HttpEndpoint='enabled')
 
-    def delete_vpc(self, vpc_id: str):
-        """
-        Delete vpc with vpc_id.
+    def describe_route_tables(self):
+        return self.cli.describe_route_tables()['RouteTables']
 
-        :param vpc_id:
-        :return:
+    def delete_route(self, destination_cidr_block: str = '', route_table_id: str = ''):
         """
-        pass
-        # TODO: TBD.
-        # delete vpc with SG, EP and Key Pair.
+
+        :param destination_cidr_block:
+        :param route_table_id:
+        """
+        try:
+            self.cli.delete_route(DestinationCidrBlock=destination_cidr_block, RouteTableId=route_table_id)
+            self.logger.info(f'Route has deleted')
+        except:
+            print(traceback.format_exc())
+
+    def delete_internet_gateway(self, igw_id: str = '', vpc_id: str = ''):
+        """
+        Delete internet gateway with its ID
+
+        :param igw_id:
+        """
+        all_igw_ids = [igw['InternetGatewayId'] for igw in self.cli.describe_internet_gateways()['InternetGateways']]
+        try:
+            self.cli.detach_internet_gateway(InternetGatewayId=igw_id, VpcId=vpc_id)
+            self.cli.delete_internet_gateway(InternetGatewayId=igw_id)
+            is_deleted = igw_id in all_igw_ids
+            while is_deleted:
+                all_igw_ids = [igw['InternetGatewayId']
+                               for igw in self.cli.describe_internet_gateways()['InternetGateways']]
+                is_deleted = igw_id in all_igw_ids
+            self.logger.info(f'Internet gateway {igw_id} has deleted')
+        except:
+            print(traceback.format_exc())
+
+
+    def delete_nat_gateway(self, nat_gw_id: str = ''):
+        """
+        Delete nat gateway with its ID
+
+        :param nat_gw_id: NatGatewayId
+        """
+        all_nat_gws = self.cli.describe_nat_gateways()['NatGateways']
+        nat_gw_info = [nat_gw for nat_gw in all_nat_gws if nat_gw['NatGatewayId'] == nat_gw_id]
+        if len(nat_gw_info) > 0:
+            try:
+                self.cli.delete_nat_gateway(NatGatewayId=nat_gw_id)
+                while nat_gw_info[0]['State'] != 'deleted':
+                    all_nat_gws = self.cli.describe_nat_gateways()['NatGateways']
+                    nat_gw_info = [nat_gw for nat_gw in all_nat_gws if nat_gw['NatGatewayId'] == nat_gw_id]
+                self.logger.info(f'Nat gateway {nat_gw_id} has deleted')
+            except:
+                print(traceback.format_exc())
+
+    def delete_endpoints(self, endpoint_ids: list = []):
+        """
+        Delete vpc endpoints with their id
+
+        :param endpoint_ids:
+        """
+        all_endpoint_ids = [ep['VpcEndpointId'] for ep in self.cli.describe_vpc_endpoints()['VpcEndpoints']]
+        try:
+            self.cli.delete_vpc_endpoints(VpcEndpointIds=endpoint_ids)
+            while sum([ep_id in all_endpoint_ids for ep_id in endpoint_ids]) != 0:
+                all_endpoint_ids = [ep['VpcEndpointId'] for ep in self.cli.describe_vpc_endpoints()['VpcEndpoints']]
+            for ep_id in endpoint_ids:
+                self.logger.info(f'Endpoint {ep_id} has deleted')
+        except:
+            print(traceback.format_exc())
+
+    def delete_vpc(self, vpc_id: str = ''):
+        """
+        Delete vpc with its ID.
+
+        :param vpc_id: VpcId
+        """
+        # route_tables = [rtb for rtb in self.describe_route_tables() if rtb['VpcId'] == vpc_id]
+        # route_dumps = [rtb['RouteTableId'] for rtb in route_tables if 'igw' in dumps(rtb['Routes'])]
+
+        # all_igws = self.cli.describe_internet_gateways()['InternetGateways']
+        # igw_ids = [igw['InternetGatewayId'] for igw in all_igws if vpc_id in igw['Attachments'][0]['VpcId']]
+
+        all_nat_gws = self.cli.describe_nat_gateways()['NatGateways']
+        nat_gw_ids = [nat_gw['NatGatewayId'] for nat_gw in all_nat_gws if vpc_id in nat_gw['VpcId']]
+
+        all_endpoints = self.cli.describe_vpc_endpoints()['VpcEndpoints']
+        endpoint_ids = [ep['VpcEndpointId'] for ep in all_endpoints if vpc_id in ep['VpcId']]
+
+        # if len(igw_ids) > 0:
+        #     for igw_id in igw_ids:
+        #         igw_route_table = [rtb for rtb in route_tables if 'igw' in dumps(rtb['Routes'])]
+        #         if len(igw_route_table) > 0:
+        #             igw_route_table_id = igw_route_table['RouteTableId']
+        #             igw_route = [rt for rt in igw_route_table['Routes'] if 'igw' in dumps(rt)][0]
+        #
+        #             print(igw_route_table_id)
+        #             print(igw_route)
+        #             self.delete_route(igw_route['DestinationCidrBlock'], igw_route_table_id)
+        #         self.delete_internet_gateway(igw_id, vpc_id)
+
+        if len(nat_gw_ids) > 0:
+            for nat_gw_id in nat_gw_ids:
+                self.delete_nat_gateway(nat_gw_id)
+
+        if len(endpoint_ids) > 0:
+            self.delete_endpoints(endpoint_ids)
+
+        try:
+            self.cli.delete_vpc(VpcId=vpc_id)
+            vpc_ids = [vpc['VpcId'] for vpc in self.list_vpcs()]
+            while vpc_id in vpc_ids:
+                vpc_ids = [vpc['VpcId'] for vpc in self.list_vpcs()]
+            self.logger.info(f'VPC {vpc_id} has deleted')
+        except:
+            print(traceback.format_exc())
