@@ -477,11 +477,15 @@ class EC2Manager(object):
 
         :param vpc_id: VpcId
         """
-        # route_tables = [rtb for rtb in self.describe_route_tables() if rtb['VpcId'] == vpc_id]
+        vpc_info = [vpc for vpc in self.list_vpcs() if vpc_id in vpc['VpcId']]
+
+        subnets = [subnet['SubnetId'] for subnet in self.list_subnets() if vpc_id in subnet['VpcId']]
+        all_route_tables = [rtb for rtb in self.describe_route_tables() if (rtb['VpcId'] == vpc_id)]
+        route_tables = [rtb for rtb in all_route_tables if not rtb['Associations'][0]['Main']]
         # route_dumps = [rtb['RouteTableId'] for rtb in route_tables if 'igw' in dumps(rtb['Routes'])]
 
-        # all_igws = self.cli.describe_internet_gateways()['InternetGateways']
-        # igw_ids = [igw['InternetGatewayId'] for igw in all_igws if vpc_id in igw['Attachments'][0]['VpcId']]
+        all_igws = self.cli.describe_internet_gateways()['InternetGateways']
+        igw_ids = [igw['InternetGatewayId'] for igw in all_igws if vpc_id in igw['Attachments'][0]['VpcId']]
 
         all_nat_gws = self.cli.describe_nat_gateways()['NatGateways']
         nat_gw_ids = [nat_gw['NatGatewayId'] for nat_gw in all_nat_gws if vpc_id in nat_gw['VpcId']]
@@ -489,17 +493,25 @@ class EC2Manager(object):
         all_endpoints = self.cli.describe_vpc_endpoints()['VpcEndpoints']
         endpoint_ids = [ep['VpcEndpointId'] for ep in all_endpoints if vpc_id in ep['VpcId']]
 
-        # if len(igw_ids) > 0:
-        #     for igw_id in igw_ids:
-        #         igw_route_table = [rtb for rtb in route_tables if 'igw' in dumps(rtb['Routes'])]
-        #         if len(igw_route_table) > 0:
-        #             igw_route_table_id = igw_route_table['RouteTableId']
-        #             igw_route = [rt for rt in igw_route_table['Routes'] if 'igw' in dumps(rt)][0]
-        #
-        #             print(igw_route_table_id)
-        #             print(igw_route)
-        #             self.delete_route(igw_route['DestinationCidrBlock'], igw_route_table_id)
-        #         self.delete_internet_gateway(igw_id, vpc_id)
+        if len(igw_ids) > 0:
+            for igw_id in igw_ids:
+                # igw_route_table = [rtb for rtb in route_tables if 'igw' in dumps(rtb['Routes'])]
+                # if len(igw_route_table) > 0:
+                #     igw_route_table_id = igw_route_table['RouteTableId']
+                #     igw_route = [rt for rt in igw_route_table['Routes'] if 'igw' in dumps(rt)][0]
+                #
+                #     print(igw_route_table_id)
+                #     print(igw_route)
+                #     self.delete_route(igw_route['DestinationCidrBlock'], igw_route_table_id)
+                self.delete_internet_gateway(igw_id, vpc_id)
+
+        if len(subnets) > 0:
+            for subnet in subnets:
+                self.cli.delete_subnet(SubnetId=subnet)
+
+        if len(route_tables) > 0:
+            for route_table in route_tables:
+                self.cli.delete_route_table(RouteTableId=route_table['RouteTableId'])
 
         if len(nat_gw_ids) > 0:
             for nat_gw_id in nat_gw_ids:
@@ -516,3 +528,5 @@ class EC2Manager(object):
             self.logger.info(f'VPC {vpc_id} has deleted')
         except:
             print(traceback.format_exc())
+
+        # return route_tables

@@ -344,3 +344,4 @@ def test_delete_vpc(em):
             elb.delete_load_balacner(elb_arn)
 
     em.delete_vpc(vpc_id)
+    # pprint(em.delete_vpc(vpc_id))
