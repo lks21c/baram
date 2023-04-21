@@ -27,6 +27,19 @@ class IAMManager(object):
         '''
         return self.get_role(role_name)['Arn']
 
+    def list_roles(self, max_result: int = 1000):
+        """
+        Lists all roles
+        :param max_result: max number of results (max=1000)
+        :return:
+        """
+        roles = self.cli.list_roles(MaxItems=max_result)
+        result = roles['Roles']
+        while 'Marker' in roles:
+            roles = self.cli.list_roles(MaxItems=max_result, Marker=roles['Marker'])
+            result += roles['Roles']
+        return result
+
     def list_role_policies(self, role_name):
         '''
         Lists the names of the inline policies that are embedded in the specified IAM role.
@@ -80,13 +93,22 @@ class IAMManager(object):
             result += policies['Policies']
         return result
 
-    def list_redundant_policies(self, scope: str = 'Local'):
+    def list_unused_policies(self, scope: str = 'Local'):
         """
-        Lists redundant policies that are not attached to any IAM user, group, or role
+        Lists unused policies that are not attached to any IAM user, group, or role
         :param scope: 'All' for all policies, 'Local' for customer managed policies, 'AWS' for AWS managed policies
         :return:
         """
         return [i for i in self.list_policies(scope=scope) if i['AttachmentCount'] == 0]
+
+    def delete_unused_policies(self, unused_policies: list):
+        """
+        Deletes list of unused policies
+        :param unused_policies: list of unused policies
+        :return:
+        """
+        for unused_policy in self.list_unused_policies():
+            self.cli.delete_policy(unused_policy)
 
 
 if __name__ == '__main__':
