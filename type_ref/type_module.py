@@ -4,15 +4,15 @@ from typing import Any, TypedDict
 from botocore.client import BaseClient
 from pprint import pprint
 
-# type alias
-BotoClient = BaseClient
 
-
-class IdPairEC2(TypedDict):
+class IdList(TypedDict):
     eni_id: str
     vpc_id: str
     sg_id: str
     subnet_id: str
+
+class IdLists:
+    id_lists: list[IdList]
 
 class TypeCheck:
     def print_return_type(value):

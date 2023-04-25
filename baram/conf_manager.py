@@ -1,4 +1,5 @@
 import os
+from logging import Logger
 
 import ujson as json
 
@@ -15,7 +16,7 @@ class ConfManager(object):
         :return: dict
         """
 
-        logger = LogManager.get_logger()
+        logger: Logger = LogManager.get_logger()
 
         conf_dir_path = os.path.join(os.getcwd(), '..', 'conf') \
             if 'tests' in os.getcwd() \

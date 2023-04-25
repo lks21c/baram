@@ -2,16 +2,15 @@ import traceback
 from logging import Logger
 
 import boto3
+from botocore.client import BaseClient
 
 from baram.log_manager import LogManager
-from type_ref.test_type import Vpcs
-from type_ref.type_vpc import Vpc
-from type_ref.type_module import BotoClient, IdPairEC2
+from type_ref.type_module import IdLists
 
 
 class EC2Manager(object):
     def __init__(self):
-        self.cli: BotoClient = boto3.client('ec2')
+        self.cli: BaseClient = boto3.client('ec2')
         self.logger: Logger = LogManager.get_logger()
 
     def list_sgs(self) -> list:
@@ -53,7 +52,7 @@ class EC2Manager(object):
 
         :return: The list of {vpc_id, security_group_id, eni_id, subnet_id}
         """
-        result: list[dict[IdPairEC2]] = []
+        result: IdLists = []
         vpc_ids: list = [vpc['VpcId'] for vpc in self.list_vpcs() if vpc['State'] == 'available']
 
         try:
@@ -71,7 +70,7 @@ class EC2Manager(object):
             print(traceback.format_exc())
             return None
 
-    def get_default_vpc(self) -> Vpc:
+    def get_default_vpc(self) -> list:
         """
         Get default vpc
 
@@ -241,14 +240,14 @@ class EC2Manager(object):
         key_pairs = self.cli.describe_key_pairs()['KeyPairs']
         return set([key_pair['KeyName'] for key_pair in key_pairs])
 
-    def list_vpcs(self) -> Vpcs:
+    def list_vpcs(self) -> list:
         """
         List one or more of your VPCs.
 
         :return: Vpcs
 
         """
-        vpc_test: Vpcs = self.cli.describe_vpcs()['Vpcs']
+        vpc_test: list = self.cli.describe_vpcs()['Vpcs']
         return self.cli.describe_vpcs()['Vpcs']
 
     def list_detail_vpcs(self) -> list:
@@ -385,7 +384,7 @@ class EC2Manager(object):
 
         :return: get ec2 instances that support imds_v1.
         """
-        response = self.describe_instances()
+        response: list = self.describe_instances()
         return [i['InstanceId'] for r in response['Reservations']
                 for i in r['Instances']
                 if i['MetadataOptions']['HttpTokens'] != 'required' and i['State']['Name'] == 'running']
@@ -417,8 +416,3 @@ class EC2Manager(object):
         # TODO: TBD.
         # delete vpc with SG, EP and Key Pair.
 
-
-
-ec2 = EC2Manager()
-# ec2.list_vpcs()
-ec2.get_default_vpc()
