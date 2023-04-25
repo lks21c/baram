@@ -7,7 +7,7 @@ from baram.glue_manager import GlueManager
 
 @pytest.fixture()
 def gm():
-    return GlueManager('sli-dst-glue')
+    return GlueManager('sli-dst-dlbeta')
 
 
 def test_create_job(gm):
@@ -28,7 +28,7 @@ def test_crud_job(gm):
     job_name = 'test'
     gm.create_job(job_name,
                   'com.sli',
-                  'Glue-developer-role',
+                  'dlbeta-developer-role',
                   's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
                   'sli-security-configuration'
                   )
@@ -37,7 +37,7 @@ def test_crud_job(gm):
 
     gm.update_job(job_name,
                   'com.sli',
-                  'Glue-developer-role',
+                  'dlbeta-developer-role',
                   's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
                   'sli-security-configuration'
                   )

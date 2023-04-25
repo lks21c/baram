@@ -101,14 +101,14 @@ class IAMManager(object):
         """
         return [i for i in self.list_policies(scope=scope) if i['AttachmentCount'] == 0]
 
-    def delete_unused_policies(self, unused_policies: list):
+    def delete_unused_policies(self):
         """
         Deletes list of unused policies
-        :param unused_policies: list of unused policies
         :return:
         """
-        for unused_policy in self.list_unused_policies():
-            self.cli.delete_policy(unused_policy)
+        unused_policies = self.list_unused_policies()
+        for unused_policy in unused_policies:
+            self.cli.delete_policy(PolicyArn=unused_policy['Arn'])
 
 
 if __name__ == '__main__':

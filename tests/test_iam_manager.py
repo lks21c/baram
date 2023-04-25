@@ -78,5 +78,8 @@ def test_list_unused_policies(im):
 
 
 def test_delete_unused_policies(im):
-    # To-do
-    pass
+    # When
+    im.delete_unused_policies()
+
+    # Then
+    assert len(im.list_unused_policies()) == 0
