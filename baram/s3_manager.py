@@ -46,7 +46,7 @@ class S3Manager(object):
         response: dict = self.cli.put_object(**kwargs)
         return response
 
-    def get_object(self, s3_key_id: str) -> Optional[bytes, str]:
+    def get_object(self, s3_key_id: str) -> Optional[bytes]:
         '''
         :param s3_key_id: s3 key id. ex) nylon-detector/a.csv
         :return: response

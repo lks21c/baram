@@ -58,9 +58,6 @@ class GlueManager(object):
         )
 
     def _get_command(self, name: str) -> list:
-
-        # GlueCommand Class 타입 변수 정의 해야하는가?
-
         '''
 
         :param name: get command object when you create or update glue job.

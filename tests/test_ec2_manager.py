@@ -5,7 +5,6 @@ import fire
 import pytest
 
 from baram.ec2_manager import EC2Manager
-from types.type_module import TypeCheck
 
 
 @pytest.fixture()
@@ -314,8 +313,3 @@ def test_list_tgws(em):
     assert type(tgws) == list
     if len(tgws) != 0:
         assert type(tgws[0]['TransitGatewayId']) == str
-
-
-if __name__ == "__main__":
-    fire.Fire(em)
-    fire.Fire(test_list_sgs(em))
