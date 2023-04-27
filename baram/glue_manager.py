@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from typing import Union
 
 import boto3
 import fire
@@ -7,10 +8,11 @@ import fire
 from baram.s3_manager import S3Manager
 from baram.iam_manager import IAMManager
 from baram.log_manager import LogManager
+from type_ref.type_module import GlueCommand
 
 
 class GlueManager(object):
-    def __init__(self, s3_bucket_name: str, table_path_prefix='table'):
+    def __init__(self, s3_bucket_name: str, table_path_prefix='table') -> None:
         '''
 
         :param s3_bucket_name: s3 bucket name where Glue uses as default.
@@ -45,7 +47,7 @@ class GlueManager(object):
             '--encryption-type': 'sse-kms'
         }
 
-    def start_job_run(self, name: str):
+    def start_job_run(self, name: str) -> Union[list, str]:
         '''
 
         :param name: job name
@@ -55,7 +57,10 @@ class GlueManager(object):
             JobName=name
         )
 
-    def _get_command(self, name: str):
+    def _get_command(self, name: str) -> list:
+
+        # GlueCommand Class 타입 변수 정의 해야하는가?
+
         '''
 
         :param name: get command object when you create or update glue job.
@@ -73,9 +78,8 @@ class GlueManager(object):
                    package_name: str,
                    role_name: str,
                    extra_jars: str,
-                   security_configuration: str):
+                   security_configuration: str) -> None:
         '''
-
         :param name: glue job name
         :param package_name: glue jar package name
         :param role_name:  role name
@@ -107,7 +111,7 @@ class GlueManager(object):
         except self.cli.exceptions.IdempotentParameterMismatchException as e:
             self.logger.error(str(e))
 
-    def get_job(self, job_name: str):
+    def get_job(self, job_name: str) -> list:
         '''
 
         :param job_name: glue job name.
@@ -120,7 +124,7 @@ class GlueManager(object):
                    package_name: str,
                    role_name: str,
                    extra_jars: str,
-                   security_configuration: str):
+                   security_configuration: str) -> None:
         '''
 
         :param name: job name
@@ -134,7 +138,7 @@ class GlueManager(object):
         self.default_args['--class'] = f'{package_name}.{name}'
         self.default_args['--extra-jars'] = extra_jars
 
-        return self.cli.update_job(
+        self.cli.update_job(
             JobName=name,
             JobUpdate={
                 'Role': self.im.get_role_arn(role_name),
@@ -152,15 +156,15 @@ class GlueManager(object):
             }
         )
 
-    def delete_job(self, name: str):
+    def delete_job(self, name: str) -> None:
         '''
 
         :param name: job name
         :return:
         '''
-        return self.cli.delete_job(JobName=name)
+        self.cli.delete_job(JobName=name)
 
-    def delete_table(self, db_name: str, table_name: str, include_s3: bool = False):
+    def delete_table(self, db_name: str, table_name: str, include_s3: bool = False) -> None:
         '''
 
         :param db_name: database name
@@ -180,7 +184,7 @@ class GlueManager(object):
                 print(f'delete {os.path.join(self.TABLE_PATH_PREFIX, db_name, table_name)}')
                 self.sm.delete_dir(os.path.join(self.TABLE_PATH_PREFIX, db_name, table_name))
 
-    def get_table(self, db_name: str, table_name: str):
+    def get_table(self, db_name: str, table_name: str) -> list:
         '''
 
         :param db_name: database name
@@ -198,7 +202,7 @@ class GlueManager(object):
                     package_name: str,
                     role_name: str,
                     extra_jars: str,
-                    security_configuration: str):
+                    security_configuration: str) -> None:
         '''
 
         :param code_path: code path
@@ -210,24 +214,21 @@ class GlueManager(object):
         :return:
         '''
 
-        response = self.cli.list_jobs(MaxResults=1000)
-        glue_jobs = set([f'{jn}.scala' for jn in response['JobNames']])
-        git_jobs = set([f for f in os.listdir(code_path)])
+        response: list = self.cli.list_jobs(MaxResults=1000)
+        glue_jobs: set = set([f'{jn}.scala' for jn in response['JobNames']])
+        git_jobs: set = set([f for f in os.listdir(code_path)])
 
-        rest_in_glue = glue_jobs - git_jobs
+        rest_in_glue: set = glue_jobs - git_jobs
         for f in rest_in_glue:
-            name = Path(f).stem
+            name: str = Path(f).stem
             self.delete_job(name)
             self.logger.info(f'{name} deleted.')
 
-        rest_in_git = git_jobs - glue_jobs
+        rest_in_git: set = git_jobs - glue_jobs
         for f in rest_in_git:
-            name = Path(f).stem
+            name: str = Path(f).stem
             if name in exclude_names:
                 continue
             self.create_job(name, package_name, role_name, extra_jars, security_configuration)
             self.logger.info(f'{name} created.')
 
-
-if __name__ == '__main__':
-    fire.Fire(GlueManager)

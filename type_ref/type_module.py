@@ -5,14 +5,29 @@ from botocore.client import BaseClient
 from pprint import pprint
 
 
+# EC2
 class IdList(TypedDict):
     eni_id: str
     vpc_id: str
     sg_id: str
     subnet_id: str
 
-class IdLists:
+
+class IdLists(TypedDict):
     id_lists: list[IdList]
+
+
+# Glue
+class GlueCommand(TypedDict):
+    Name: str
+    ScriptLocation: bytes
+    PythonVersion: str
+
+
+class GlueTable(TypedDict):
+    DatabaseName: str
+    Name: str
+
 
 class TypeCheck:
     def print_return_type(value):
