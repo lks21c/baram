@@ -59,7 +59,7 @@ class IAMManager(object):
         '''
         return self.cli.detach_group_policy(GroupName=group_name, PolicyArn=policy_arn)
 
-    def list_group_policies(self, user_group_name: str, max_items: int = 100) -> list:
+    def list_group_policies(self, user_group_name: str, max_items: int = 100) -> dict:
         '''
         Lists the names of the inline policies that are embedded in the specified IAM group.
 

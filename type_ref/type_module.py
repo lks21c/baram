@@ -1,8 +1,8 @@
-import json
-from typing import Any, TypedDict
+from __future__ import annotations
 
-from botocore.client import BaseClient
-from pprint import pprint
+from enum import Enum
+from typing import Any, TypedDict, Union, Optional
+
 
 
 # EC2
@@ -29,20 +29,19 @@ class GlueTable(TypedDict):
     Name: str
 
 
-class TypeCheck:
-    def print_return_type(value):
-        print(f"Type : {type(value)}")
-        # js = json.dumps(value)
-        # # print(type(js))
-        # # print(js)
-        # js_v = json.loads(js)
-        pprint(value)
+# S3
+class PutObjectParam(TypedDict):
+    Bucket: str
+    Key: str
+    Body: Union[bytes, str]
+    ServerSideEncryption: str = None
+    SSEKMSKeyId: str = None
 
-    def type_test(self):
-        ts = [{'eni_id': 'eni-04a1b78149f92fb0b',
-               'sg_id': 'sg-083c9f868ca8d0129',
-               'subnet_id': 'subnet-0491719e14197fbdf',
-               'vpc_id': 'vpc-0116a6c58654c68af'}]
-        assert ts == list
-        assert ts == list[dict[str, Any]]
-        assert ts == list[dict[str, ...]]
+
+# sagemaker
+class AppType(Enum):
+    JupyterServer = 'JupyterServer'
+    KernelGateway = 'KernelGateway'
+    TensorBoard = 'TensorBoard'
+    RStudioServerPro = 'RStudioServerPro'
+    RSessionGateway = ' RSessionGateway'

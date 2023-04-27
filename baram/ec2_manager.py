@@ -11,7 +11,7 @@ from type_ref.type_module import IdLists
 
 
 class EC2Manager(object):
-    def __init__(self):
+    def __init__(self) -> None:
         self.cli: BaseClient = boto3.client('ec2')
         self.logger: Logger = LogManager.get_logger()
 
@@ -368,7 +368,7 @@ class EC2Manager(object):
         return next(
             i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if ec2_name == t['Value'])
 
-    def describe_instances(self, instance_id_list: list = None) -> list:
+    def describe_instances(self, instance_id_list: list = None) -> dict:
         """
 
         Retrieve ec2 instance description.

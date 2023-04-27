@@ -1,11 +1,14 @@
+from typing import Optional
+
 import boto3
+from botocore.client import BaseClient
 
 
 class KMSManager(object):
-    def __init__(self):
-        self.cli = boto3.client('kms')
+    def __init__(self) -> None:
+        self.cli: BaseClient = boto3.client('kms')
 
-    def list_keys(self):
+    def list_keys(self) -> dict:
         '''
         Gets a list of all KMS keys in the caller's Amazon Web Services account and Region.
 
@@ -13,7 +16,7 @@ class KMSManager(object):
         '''
         return self.cli.list_keys()
 
-    def list_aliases(self):
+    def list_aliases(self) -> dict:
         '''
         Gets a list of aliases in the caller's Amazon Web Services account and region.
 
@@ -21,7 +24,7 @@ class KMSManager(object):
         '''
         return self.cli.list_aliases()
 
-    def get_kms_arn(self, alias_name: str, arn_or_key: bool = True):
+    def get_kms_arn(self, alias_name: str, arn_or_key: bool = True) -> Optional[str]:
         '''
         Retrieve kms arn by alias.
 

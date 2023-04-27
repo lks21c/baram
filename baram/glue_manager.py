@@ -47,7 +47,7 @@ class GlueManager(object):
             '--encryption-type': 'sse-kms'
         }
 
-    def start_job_run(self, name: str) -> Union[list, str]:
+    def start_job_run(self, name: str) -> Union[dict, str]:
         '''
 
         :param name: job name
@@ -111,7 +111,7 @@ class GlueManager(object):
         except self.cli.exceptions.IdempotentParameterMismatchException as e:
             self.logger.error(str(e))
 
-    def get_job(self, job_name: str) -> list:
+    def get_job(self, job_name: str) -> dict:
         '''
 
         :param job_name: glue job name.
@@ -124,7 +124,7 @@ class GlueManager(object):
                    package_name: str,
                    role_name: str,
                    extra_jars: str,
-                   security_configuration: str) -> None:
+                   security_configuration: str) -> dict:
         '''
 
         :param name: job name
@@ -138,7 +138,7 @@ class GlueManager(object):
         self.default_args['--class'] = f'{package_name}.{name}'
         self.default_args['--extra-jars'] = extra_jars
 
-        self.cli.update_job(
+        return self.cli.update_job(
             JobName=name,
             JobUpdate={
                 'Role': self.im.get_role_arn(role_name),
@@ -156,7 +156,7 @@ class GlueManager(object):
             }
         )
 
-    def delete_job(self, name: str) -> None:
+    def delete_job(self, name: str) -> dict:
         '''
 
         :param name: job name
@@ -164,7 +164,7 @@ class GlueManager(object):
         '''
         self.cli.delete_job(JobName=name)
 
-    def delete_table(self, db_name: str, table_name: str, include_s3: bool = False) -> None:
+    def delete_table(self, db_name: str, table_name: str, include_s3: bool = False) -> dict:
         '''
 
         :param db_name: database name
@@ -173,7 +173,7 @@ class GlueManager(object):
         :return:
         '''
         try:
-            self.cli.delete_table(
+            return self.cli.delete_table(
                 DatabaseName=db_name,
                 Name=table_name
             )
@@ -184,7 +184,7 @@ class GlueManager(object):
                 print(f'delete {os.path.join(self.TABLE_PATH_PREFIX, db_name, table_name)}')
                 self.sm.delete_dir(os.path.join(self.TABLE_PATH_PREFIX, db_name, table_name))
 
-    def get_table(self, db_name: str, table_name: str) -> list:
+    def get_table(self, db_name: str, table_name: str) -> dict:
         '''
 
         :param db_name: database name
