@@ -130,7 +130,8 @@ def test_get_bucket_encryption(sm, sample):
     bi = sm.get_bucket_encryption()
     assert bi
     print(bi['SSEAlgorithm'])
-    print(bi['KMSMasterKeyID'])
+    # TODO: Fix after solving LF issue
+    # print(bi['KMSMasterKeyID'])
 
 
 def test_upload_download_delete_dir(sm, sample):

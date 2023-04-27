@@ -77,16 +77,21 @@ class EC2Manager(object):
         """
         return [vpc for vpc in self.list_vpcs() if vpc['IsDefault']][0]
 
-    def get_sg_ids_with_vpc_id(self, vpc_id: str) -> list:
+    def get_sg_ids_with_vpc_id(self, vpc_id: str, default_only: bool = False) -> list:
         """
         Get security group ids of specific vpc.
 
         :param vpc_id: VpcId
+        :param default_only: return default security group id only if it's True
         :return: GroupId
         """
         sgs = self.cli.describe_security_groups()['SecurityGroups']
         try:
-            return [sg['GroupId'] for sg in sgs if sg['VpcId'] == vpc_id]
+            specific_sgs = [sg for sg in sgs if sg['VpcId'] == vpc_id]
+            if default_only:
+                return [sg['GroupId'] for sg in specific_sgs if sg['GroupName'] == 'default']
+            else:
+                return [sg['GroupId'] for sg in specific_sgs]
         except TypeError:
             print(traceback.format_exc())
             return None
