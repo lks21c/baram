@@ -1,11 +1,12 @@
 import time
 from subprocess import Popen, PIPE, STDOUT
+from typing import Type
 
 
 class ProcessManager(object):
 
     @classmethod
-    def run_cmd(cls, cmd, sleep=True):
+    def run_cmd(cls, cmd: str, sleep: bool = True) -> None:
         '''
         run shell command with standard output.
 
@@ -13,10 +14,10 @@ class ProcessManager(object):
         :param sleep: sleeps a second or not.
         :return:
         '''
-        p = Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True)
+        p: Popen = Popen(cmd, stdout=PIPE, stderr=STDOUT, shell=True)
 
         while True:
-            line = p.stdout.readline()
+            line: str = p.stdout.readline()
             print(line.decode('utf-8'))
             if not line: break
             if sleep:

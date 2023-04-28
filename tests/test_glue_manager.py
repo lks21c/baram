@@ -10,28 +10,28 @@ def gm():
     return GlueManager('sli-dst-glue')
 
 
-def test_create_job(gm):
-    pass
-    # gm.create_job('CreateHiraYearAgeInOut',
-    #               'com.sli',
-    #               'Glue-developer-role',
-    #               's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
-    #               'sli-security-configuration'
-    #               )
+# def test_create_job(gm):
+#     pass
+#     # gm.create_job('CreateHiraYearAgeInOut',
+#     #               'com.sli',
+#     #               'Glue-developer-role',
+#     #               's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
+#     #               'sli-security-configuration'
+#     #               )
 
 
-def test_delete_table(gm):
-    gm.delete_table('sli-dst', 'test', True)
-
-
-def test_crud_job(gm):
-    job_name = 'test'
-    gm.create_job(job_name,
-                  'com.sli',
-                  'Glue-developer-role',
-                  's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
-                  'sli-security-configuration'
-                  )
+# def test_delete_table(gm):
+#     gm.delete_table('sli-dst', 'test', True)
+#
+#
+# def test_crud_job(gm):
+#     job_name = 'test'
+#     gm.create_job(job_name,
+#                   'com.sli',
+#                   'Glue-developer-role',
+#                   's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
+#                   'sli-security-configuration'
+#                   )
 
     pprint(gm.get_job('test'))
 

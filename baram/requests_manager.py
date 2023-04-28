@@ -1,4 +1,8 @@
+from logging import Logger
+from typing import Optional
+
 import requests
+from requests import Response
 
 from baram.log_manager import LogManager
 
@@ -9,7 +13,7 @@ class RequestsManager(object):
     def get(url: str,
             params: dict = None,
             cookies: dict = None,
-            headers: dict = None):
+            headers: dict = None) -> Optional[Response]:
         """
 
         :param url: url
@@ -18,10 +22,10 @@ class RequestsManager(object):
         :param headers: headers
         :return:
         """
-        logger = LogManager.get_logger()
+        logger: Logger = LogManager.get_logger()
         with requests.Session() as s:
             try:
-                response = s.get(url, params=params, cookies=cookies, headers=headers)
+                response: Response = s.get(url, params=params, cookies=cookies, headers=headers)
                 return response
             except Exception as e:
                 logger.info(e)

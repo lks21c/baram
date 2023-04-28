@@ -5,7 +5,7 @@ class ECRManager(object):
     def __init__(self):
         self.cli = boto3.client('ecr')
 
-    def describe_images(self, name: str, max_result: int = 100):
+    def describe_images(self, name: str, max_result: int = 100) -> list:
         '''
 
         :param name: repo name
@@ -18,7 +18,7 @@ class ECRManager(object):
         )
         return response['imageDetails']
 
-    def list_images(self, name: str, max_result: int = 100):
+    def list_images(self, name: str, max_result: int = 100) -> list:
         '''
 
         :param name: repo name

@@ -1,17 +1,21 @@
 import traceback
+from logging import Logger
+from typing import Optional, Union
 
 import boto3
+from boto3 import Session
+from botocore.client import BaseClient
 
 from baram.log_manager import LogManager
+from type_ref.type_module import IdLists
 
 
 class EC2Manager(object):
-    def __init__(self):
-        self.cli = boto3.client('ec2')
+    def __init__(self) -> None:
+        self.cli: BaseClient = boto3.client('ec2')
+        self.logger: Logger = LogManager.get_logger()
 
-        self.logger = LogManager.get_logger()
-
-    def list_sgs(self) -> list:
+    def list_sgs(self) -> Optional[list]:
         """
         Describes the specified security groups or all of your security groups.
 
@@ -23,7 +27,7 @@ class EC2Manager(object):
             print(traceback.format_exc())
             return None
 
-    def list_unused_sg_ids(self, description_filter: str = '', sm_domain_ids: list = None) -> set:
+    def list_unused_sg_ids(self, description_filter: str = '', sm_domain_ids: list = None) -> Optional[set]:
         """
         Describe useless and deletable security group ids.
         (including disused SageMaker domain related things)
@@ -33,26 +37,25 @@ class EC2Manager(object):
         :return: GroupIds
         """
         # Get security groups not related to anything in ec2
-        sgs = self.list_sgs()
+        sgs: list = self.list_sgs()
         try:
-            valid_sg_ids = set([pair['sg_id'] for pair in self.list_vpc_sg_eni_subnets()])
-            result = [sg['GroupId'] for sg in sgs
+            valid_sg_ids: set = set([pair['sg_id'] for pair in self.list_vpc_sg_eni_subnets()])
+            result: list = [sg['GroupId'] for sg in sgs
                       if sg['GroupId'] not in valid_sg_ids
                       or (description_filter in sg['Description']
                           and sum([domain_id in sg['Description'] for domain_id in sm_domain_ids]) == 0)]
-
             return set(result)
         except TypeError:
             return None
 
-    def list_vpc_sg_eni_subnets(self) -> list:
+    def list_vpc_sg_eni_subnets(self) -> Optional[list]:
         """
         Return the list of all pairs of {VpcId, GroupId, NetworkInterfaceId, SubnetId}.
 
         :return: The list of {vpc_id, security_group_id, eni_id, subnet_id}
         """
-        result = []
-        vpc_ids = [vpc['VpcId'] for vpc in self.list_vpcs() if vpc['State'] == 'available']
+        result: list = []
+        vpc_ids: list = [vpc['VpcId'] for vpc in self.list_vpcs() if vpc['State'] == 'available']
 
         try:
             for vpc_id in vpc_ids:
@@ -140,20 +143,20 @@ class EC2Manager(object):
         :param sg_id: GroupId
         :return: SecurityGroupRuleId
         """
-        sg_rules = self.cli.describe_security_group_rules()['SecurityGroupRules']
+        sg_rules: list = self.cli.describe_security_group_rules()['SecurityGroupRules']
 
-        result = [{'sg_rule_id': sg_rule['SecurityGroupRuleId'],
+        result: list = [{'sg_rule_id': sg_rule['SecurityGroupRuleId'],
                    'is_egress': True if sg_rule['IsEgress'] else False}
                   for sg_rule in sg_rules if sg_rule['GroupId'] == sg_id]
         return result
 
-    def delete_sg_rules(self, sg_id: str):
+    def delete_sg_rules(self, sg_id: str) -> None:
         """
         Get rid of security group rule of specific security group.
 
         :param sg_id: GroupId
         """
-        sg_rules = self.get_sg_rules(sg_id)
+        sg_rules: list = self.get_sg_rules(sg_id)
 
         try:
             for sg_rule in sg_rules:
@@ -167,7 +170,7 @@ class EC2Manager(object):
         except:
             print(traceback.format_exc())
 
-    def delete_sgs(self, sg_ids: list):
+    def delete_sgs(self, sg_ids: list) -> None:
         """
         Delete useless and deletable security groups.
 
@@ -181,7 +184,7 @@ class EC2Manager(object):
         except:
             print(traceback.format_exc())
 
-    def delete_sg(self, sg_id: str):
+    def delete_sg(self, sg_id: str) -> None:
         """
         Delete security group.
 
@@ -193,7 +196,7 @@ class EC2Manager(object):
         except:
             print(traceback.format_exc())
 
-    def list_instances_with_status(self, status: str = 'running'):
+    def list_instances_with_status(self, status: str = 'running') -> Optional[list]:
         """
         Describes all instances in specific status (ex: 'running', ...)
 
@@ -206,11 +209,11 @@ class EC2Manager(object):
             print(traceback.format_exc())
             return None
 
-    def delete_unused_key_pairs(self):
+    def delete_unused_key_pairs(self) -> list:
         """
         Delete redundant key pairs (i.e. not related to any instances)
         """
-        key_pairs_redundant = self.list_unused_key_pairs()
+        key_pairs_redundant: set = self.list_unused_key_pairs()
         try:
             for key_pair in key_pairs_redundant:
                 self.cli.delete_key_pair(KeyName=key_pair)
@@ -218,19 +221,19 @@ class EC2Manager(object):
         except:
             print(traceback.format_exc())
 
-    def list_unused_key_pairs(self):
+    def list_unused_key_pairs(self) -> set:
         """
         Describes all disused key pairs
 
         :return: KeyName
         """
-        key_pairs_total = self.list_key_pairs()
+        key_pairs_total: set = self.list_key_pairs()
         instances = [instance['Instances'][0] for instance in self.describe_instances()['Reservations']]
         key_pairs_using = [instance['KeyName'] for instance in instances if 'KeyName' in instance]
 
         return key_pairs_total - set(key_pairs_using)
 
-    def list_key_pairs(self):
+    def list_key_pairs(self) -> set:
         """
         Describes all key pairs
 
@@ -244,6 +247,7 @@ class EC2Manager(object):
         List one or more of your VPCs.
 
         :return: Vpcs
+
         """
         return self.cli.describe_vpcs()['Vpcs']
 
@@ -253,7 +257,7 @@ class EC2Manager(object):
 
         :return: Vpcs.
         """
-        vpc_list = []
+        vpc_list: list = []
         for vpc in self.list_vpcs():
             name = ''
             if 'Tags' in vpc:
@@ -281,7 +285,7 @@ class EC2Manager(object):
 
         :return: Subnets
         """
-        subnet_list = []
+        subnet_list: list = []
         for subnet in self.list_subnets():
             name = ''
             vpc_name = ''
@@ -360,11 +364,11 @@ class EC2Manager(object):
         :param ec2_name: ec2 instance name
         :return:
         """
-        ec2 = boto3.resource('ec2')
+        ec2: Session = boto3.resource('ec2')
         return next(
             i.id for i in ec2.instances.all() if i.state['Name'] == 'running' for t in i.tags if ec2_name == t['Value'])
 
-    def describe_instances(self, instance_id_list: list = None) -> list:
+    def describe_instances(self, instance_id_list: list = None) -> dict:
         """
 
         Retrieve ec2 instance description.
@@ -381,14 +385,14 @@ class EC2Manager(object):
 
         :return: get ec2 instances that support imds_v1.
         """
-        response = self.describe_instances()
+        response: list = self.describe_instances()
         return [i['InstanceId'] for r in response['Reservations']
                 for i in r['Instances']
                 if i['MetadataOptions']['HttpTokens'] != 'required' and i['State']['Name'] == 'running']
 
     def apply_imdsv2_only_mode(self,
                                instances_list: list = None,
-                               http_put_response_hop_limit: int = 1):
+                               http_put_response_hop_limit: int = 1) -> None:
         """
 
         Apply imdsv2 only mode into ec2 instances.
@@ -402,7 +406,7 @@ class EC2Manager(object):
                                                       HttpPutResponseHopLimit=http_put_response_hop_limit,
                                                       HttpEndpoint='enabled')
 
-    def delete_vpc(self, vpc_id: str):
+    def delete_vpc(self, vpc_id: str) -> None:
         """
         Delete vpc with vpc_id.
 

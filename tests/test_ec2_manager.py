@@ -1,6 +1,7 @@
 import json
 from pprint import pprint
 
+import fire
 import pytest
 
 from baram.ec2_manager import EC2Manager

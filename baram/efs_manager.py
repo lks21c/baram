@@ -1,23 +1,27 @@
+from typing import Optional
+
 import boto3
 import traceback
 
+from botocore.client import BaseClient
+from logging import Logger
 from baram.log_manager import LogManager
 
 
 class EFSManager(object):
-    def __init__(self):
-        self.cli = boto3.client('efs')
-        self.logger = LogManager.get_logger()
+    def __init__(self) -> None:
+        self.cli: BaseClient = boto3.client('efs')
+        self.logger: Logger = LogManager.get_logger()
 
-    def list_efs(self):
+    def list_efs(self) -> Optional[list]:
         """
         List one or more of your EFS.
 
         :return:
         """
-        return self.cli.describe_file_systems()['FileSystems']
+        return self.cli.descri_be_file_systems()['FileSystems']
 
-    def list_mount_targets(self, efs_id: str):
+    def list_mount_targets(self, efs_id: str) -> Optional[list]:
         """
         List mount targets of specific file system.
 
@@ -30,7 +34,7 @@ class EFSManager(object):
             print(traceback.format_exc())
             return None
 
-    def list_redundant_efs(self, redundant_sm_domain_ids: list = []):
+    def list_redundant_efs(self, redundant_sm_domain_ids: list = []) -> list:
         """
         Describe redundant file systems
 
@@ -43,7 +47,7 @@ class EFSManager(object):
                              and 'sagemaker' in efs['Tags'][0]['Value']]
         return redundant_efs_ids
 
-    def delete_mount_targets(self, mount_target_id: str):
+    def delete_mount_targets(self, mount_target_id: str) -> None:
         """
         Delete mount targets via its id.
 
@@ -55,7 +59,7 @@ class EFSManager(object):
         except:
             print(traceback.format_exc())
 
-    def delete_efs(self, efs_id: str):
+    def delete_efs(self, efs_id: str) -> None:
         """
         Delete specific file system.
 
