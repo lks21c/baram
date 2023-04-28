@@ -19,6 +19,18 @@ def test_get_role(im):
     assert role is not None
 
 
+def test_list_roles(im):
+    # When
+    roles = im.list_roles()
+
+    # Then
+    if len(roles) > 0:
+        assert 'RoleId' in roles[0]
+    else:
+        print('There is no role')
+    print(json.dumps(roles, indent=4, default=str))
+
+
 def test_list_role_policies(im):
     # Given
     role_name = 'AWSServiceRoleForLakeFormationDataAccess'
@@ -53,13 +65,21 @@ def test_list_policies(im):
     print(json.dumps(policies, indent=4, default=str))
 
 
-def test_list_redundant_policies(im):
+def test_list_unused_policies(im):
     # When
-    redundant_policies = im.list_redundant_policies()
+    unused_policies = im.list_unused_policies()
 
     # Then
-    if len(redundant_policies) > 0:
-        assert 'PolicyId' in redundant_policies[0]
+    if len(unused_policies) > 0:
+        assert 'PolicyId' in unused_policies[0]
     else:
         print('There is no redundant policy')
-    print(json.dumps(redundant_policies, indent=4, default=str))
+    print(json.dumps(unused_policies, indent=4, default=str))
+
+
+def test_delete_unused_policies(im):
+    # When
+    im.delete_unused_policies()
+
+    # Then
+    assert len(im.list_unused_policies()) == 0
