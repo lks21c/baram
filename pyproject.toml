@@ -15,7 +15,6 @@ nest-asyncio = "^1.5.5"
 toml = "^0.10.2"
 ujson = "^5.5.0"
 requests = "^2.28.1"
-pytest = "^7.3.1"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
