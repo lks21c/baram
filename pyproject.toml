@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "baram"
-version = "0.3.2"
+version = "0.3.3"
 description = "AWS Framework for python"
 authors = ["Kwangsik Lee <lks21c@gmail.com>"]
 readme = "readme.md"
 
 [tool.poetry.dependencies]
-python = "~3.9"
+python = "~3.11"
 fire = "^0.4.0"
 pytest-cov = "^3.0.0"
 boto3 = "1.26.74"
