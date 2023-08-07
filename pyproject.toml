@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "baram"
-version = "0.3.1"
+version = "0.3.2"
 description = "AWS Framework for python"
 authors = ["Kwangsik Lee <lks21c@gmail.com>"]
 readme = "readme.md"
 
 [tool.poetry.dependencies]
-python = "^3.7.10"
+python = "~3.9"
 fire = "^0.4.0"
 pytest-cov = "^3.0.0"
 boto3 = "1.26.74"
@@ -15,6 +15,9 @@ nest-asyncio = "^1.5.5"
 toml = "^0.10.2"
 ujson = "^5.5.0"
 requests = "^2.28.1"
+great-expectations = "0.17.8"
+pyathena = "3.0.6"
+sqlalchemy = "1.4.49"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7.1.2"
