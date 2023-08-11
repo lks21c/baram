@@ -22,3 +22,6 @@ class AirflowManager(object):
         :return:
         '''
         self.cli.update_environment(Name=name)
+
+    def list_environment(self):
+        return self.cli.list_environments()

@@ -19,3 +19,9 @@ def am():
 def test_update_environment(am):
     pass
     # am.update_environment('AFlowEnv')
+
+
+def test_list_environment(am):
+    response = am.list_environment()
+    assert response
+    pprint(response)
