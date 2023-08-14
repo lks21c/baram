@@ -1,8 +1,9 @@
 from pprint import pprint
 
 import pytest
-from baram.ge_manager import GEManager
 from great_expectations.core import ExpectationConfiguration
+
+from baram.ge_manager import GEManager
 
 
 @pytest.fixture()
@@ -160,21 +161,6 @@ def test_batch_list(gm, sample):
     assert len(batch_list) > 0
 
 
-# TODO: 편리하게 suite 만들기
-def test_make_convinient_suite(gm, sample, suite_empty):
-    # Given
-    batch_list = gm._get_batch_list(sample['s3_asset_name'])
-    validator = gm._get_validator(batch_list=batch_list, suite=suite_empty)
-
-    # When
-    validator.expect_column_values_to_not_be_null("Age")
-
-    # Then
-    validator.save_expectation_suite()
-    validator.validate()
-    print(suite_empty)
-
-
 def test_validate_s3(gm, sample, suite_one_expectation):
     # Given
     batch_list = gm._get_batch_list(sample['s3_asset_name'])
@@ -233,7 +219,6 @@ def test_profile(gm, sample, suite_profile):
     # Then
     assert profile_suite
     print(f'suite={profile_suite}')
-
 
 # TODO: metric store 체크하기
 # TODO: 거버너 기준 코드 스니펫 작성하기

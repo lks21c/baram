@@ -17,9 +17,13 @@ from great_expectations.validator.validator import Validator
 
 
 class GEManager(object):
-    def __init__(self, gx_s3_bucket_name: str, data_s3_bucket_name: str):
+    def __init__(self,
+                 gx_s3_bucket_name: str,
+                 data_s3_bucket_name: str,
+                 data_s3_bucket_prefix: str = 'incoming'):
         '''
 
+        :param gx_s3_bucket_name:
         :param data_s3_bucket_name:
         '''
 
@@ -29,7 +33,7 @@ class GEManager(object):
         self.DATA_CONNECTOR_NAME = 'default_inferred_data_connector_name'
         self.GX_S3_BUCKET_NAME = gx_s3_bucket_name
         self.DATA_S3_BUCKET_NAME = data_s3_bucket_name
-        self.DATA_S3_BUCKET_PREFIX = 'data/incoming'
+        self.DATA_S3_BUCKET_PREFIX = data_s3_bucket_prefix
         self.S3_EXPECTATION_STORE_DIR = 'expectations'
         self.S3_VALIDATION_STORE_DIR = 'uncommitted/validations'
         self.S3_CHECKPOINT_STORE_DIR = 'checkpoint'
@@ -243,22 +247,22 @@ class GEManager(object):
 
     def _get_batch_list(self,
                         s3_file_name: Optional[str] = None,
-                        pands_or_spark: str = 'pandas',
+                        pandas_or_spark: str = 'pandas',
                         athena_database_name: Optional[str] = None,
                         athena_table_name: Optional[str] = None) -> List[Batch]:
         '''
         get batch list.
 
         :param s3_file_name: s3 file name
-        :param pands_or_spark: pandas or spark, default is pandas
+        :param pandas_or_spark: pandas or spark, default is pandas
         :param athena_database_name: athena database name
         :param athena_table_name: athena table name
         :return:
         '''
         if s3_file_name:
-            if pands_or_spark == 'pandas':
+            if pandas_or_spark == 'pandas':
                 data_asset = self.add_s3_pandas_csv_dataset(s3_file_name)
-            elif pands_or_spark == 'spark':
+            elif pandas_or_spark == 'spark':
                 data_asset = self.add_s3_spark_csv_dataset(s3_file_name)
         if athena_table_name:
             data_asset = self.add_athena_dataset(athena_database_name, athena_table_name)
@@ -271,7 +275,7 @@ class GEManager(object):
     def profile(self,
                 suite: ExpectationSuite,
                 s3_file_name: Optional[str] = None,
-                pands_or_spark: str = 'pandas',
+                pandas_or_spark: str = 'pandas',
                 athena_database_name: Optional[str] = None,
                 athena_table_name: Optional[str] = None) -> ExpectationSuite:
         '''
@@ -279,12 +283,12 @@ class GEManager(object):
 
         :param suite: expectation suite
         :param s3_file_name: s3 file name
-        :param pands_or_spark: pandas or spark, default is pandas
+        :param pandas_or_spark: pandas or spark, default is pandas
         :param athena_database_name: athena database name
         :param athena_table_name: athena table name
         :return:
         '''
-        batch_list = self._get_batch_list(s3_file_name, pands_or_spark, athena_database_name, athena_table_name)
+        batch_list = self._get_batch_list(s3_file_name, pandas_or_spark, athena_database_name, athena_table_name)
         validator = self.context.get_validator(batch_list=batch_list, expectation_suite=suite)
         return self._profile_with_validator(validator)
 
@@ -310,7 +314,7 @@ class GEManager(object):
     def checkpoint(self,
                    suite: ExpectationSuite,
                    s3_file_name: Optional[str] = None,
-                   pands_or_spark: str = 'pandas',
+                   pandas_or_spark: str = 'pandas',
                    athena_database_name: Optional[str] = None,
                    athena_table_name: Optional[str] = None,
                    ) -> CheckpointResult:
@@ -319,12 +323,12 @@ class GEManager(object):
 
         :param suite: expectation suite
         :param s3_file_name: s3 file name
-        :param pands_or_spark: pandas or spark, default is pandas
+        :param pandas_or_spark: pandas or spark, default is pandas
         :param athena_database_name: athena database name
         :param athena_table_name: athena table name
         :return:
         '''
-        batch_list = self._get_batch_list(s3_file_name, pands_or_spark, athena_database_name, athena_table_name)
+        batch_list = self._get_batch_list(s3_file_name, pandas_or_spark, athena_database_name, athena_table_name)
         validator = self.context.get_validator(batch_list=batch_list, expectation_suite=suite)
         return self._checkpoint_with_validator(validator)
 
@@ -350,7 +354,7 @@ class GEManager(object):
             suite_name: str,
             expectation_conf_list: List[ExpectationConfiguration],
             s3_file_name: Optional[str] = None,
-            pands_or_spark: str = 'pandas',
+            pandas_or_spark: str = 'pandas',
             athena_database_name: Optional[str] = None,
             athena_table_name: Optional[str] = None):
         '''
@@ -359,7 +363,7 @@ class GEManager(object):
         :param suite_name: suite name
         :param expectation_conf_list: expectation configuration list
         :param s3_file_name: s3 file name
-        :param pands_or_spark: pandas or spark engine
+        :param pandas_or_spark: pandas or spark engine
         :param athena_database_name: athena database name
         :param athena_table_name: athena table name
         :return:
@@ -368,7 +372,7 @@ class GEManager(object):
         self.make_suite(suite_name)
         suite = self.add_expectations(suite_name, expectation_conf_list)
         self.checkpoint(s3_file_name=s3_file_name,
-                        pands_or_spark=pands_or_spark,
+                        pandas_or_spark=pandas_or_spark,
                         athena_database_name=athena_database_name,
                         athena_table_name=athena_table_name,
                         suite=suite)
