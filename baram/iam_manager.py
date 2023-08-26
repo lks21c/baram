@@ -1,16 +1,13 @@
-from logging import Logger
 
-import fire
 import boto3
-from botocore.client import BaseClient
 
 from baram.log_manager import LogManager
 
 
 class IAMManager(object):
     def __init__(self) -> None:
-        self.cli: BaseClient = boto3.client('iam')
-        self.logger: Logger = LogManager.get_logger()
+        self.cli = boto3.client('iam')
+        self.logger = LogManager.get_logger()
 
     def get_role(self, role_name: str) -> list:
         '''
@@ -76,10 +73,10 @@ class IAMManager(object):
         :param max_result: max number of results (max=1000)
         :return:
         """
-        policies: dict = self.cli.list_policies(Scope=scope, MaxItems=max_result)
-        result: list = policies['Policies']
+        policies = self.cli.list_policies(Scope=scope, MaxItems=max_result)
+        result = policies['Policies']
         while 'Marker' in policies:
-            policies: dict = self.cli.list_policies(Scope=scope, MaxItems=max_result, Marker=policies['Marker'])
+            policies = self.cli.list_policies(Scope=scope, MaxItems=max_result, Marker=policies['Marker'])
             result += policies['Policies']
         return result
 

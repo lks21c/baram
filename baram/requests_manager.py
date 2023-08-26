@@ -1,4 +1,3 @@
-from logging import Logger
 from typing import Optional
 
 import requests
@@ -22,10 +21,10 @@ class RequestsManager(object):
         :param headers: headers
         :return:
         """
-        logger: Logger = LogManager.get_logger()
+        logger = LogManager.get_logger()
         with requests.Session() as s:
             try:
-                response: Response = s.get(url, params=params, cookies=cookies, headers=headers)
+                response = s.get(url, params=params, cookies=cookies, headers=headers)
                 return response
             except Exception as e:
                 logger.info(e)

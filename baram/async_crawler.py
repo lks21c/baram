@@ -1,4 +1,5 @@
 import asyncio
+from typing import Optional
 
 import aiohttp
 import nest_asyncio
@@ -24,7 +25,7 @@ class AsyncCrawler(object):
         finally:
             return loop.run_until_complete(self._fetch_pages(method, urls, **kwargs))
 
-    async def _fetch_pages(self, method: str, urls: list, **kwargs: dict):
+    async def _fetch_pages(self, method: str, urls: list, **kwargs: dict) -> Optional[tuple]:
         async with aiohttp.ClientSession() as session:
             return await asyncio.gather(
                 *[self._fetch_page(session, method, url, **kwargs) for url in urls], return_exceptions=True)

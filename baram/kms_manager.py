@@ -1,12 +1,11 @@
 from typing import Optional
 
 import boto3
-from botocore.client import BaseClient
 
 
 class KMSManager(object):
     def __init__(self) -> None:
-        self.cli: BaseClient = boto3.client('kms')
+        self.cli = boto3.client('kms')
 
     def list_keys(self) -> dict:
         '''

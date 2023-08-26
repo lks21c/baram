@@ -1,6 +1,4 @@
 import os
-from logging import Logger
-
 import ujson as json
 
 from baram.log_manager import LogManager
@@ -16,7 +14,7 @@ class ConfManager(object):
         :return: dict
         """
 
-        logger: Logger = LogManager.get_logger()
+        logger = LogManager.get_logger()
 
         conf_dir_path = os.path.join(os.getcwd(), '..', 'conf') \
             if 'tests' in os.getcwd() \

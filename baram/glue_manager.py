@@ -3,12 +3,10 @@ from pathlib import Path
 from typing import Union
 
 import boto3
-import fire
 
 from baram.s3_manager import S3Manager
 from baram.iam_manager import IAMManager
 from baram.log_manager import LogManager
-from type_ref.type_module import GlueCommand
 
 
 class GlueManager(object):
@@ -57,7 +55,7 @@ class GlueManager(object):
             JobName=name
         )
 
-    def _get_command(self, name: str) -> list:
+    def _get_command(self, name: str) -> dict:
         '''
 
         :param name: get command object when you create or update glue job.
@@ -153,7 +151,7 @@ class GlueManager(object):
             }
         )
 
-    def delete_job(self, name: str) -> dict:
+    def delete_job(self, name: str) -> None:
         '''
 
         :param name: job name
@@ -211,19 +209,19 @@ class GlueManager(object):
         :return:
         '''
 
-        response: list = self.cli.list_jobs(MaxResults=1000)
-        glue_jobs: set = set([f'{jn}.scala' for jn in response['JobNames']])
-        git_jobs: set = set([f for f in os.listdir(code_path)])
+        response = self.cli.list_jobs(MaxResults=1000)
+        glue_jobs = set([f'{jn}.scala' for jn in response['JobNames']])
+        git_jobs = set([f for f in os.listdir(code_path)])
 
-        rest_in_glue: set = glue_jobs - git_jobs
+        rest_in_glue = glue_jobs - git_jobs
         for f in rest_in_glue:
-            name: str = Path(f).stem
+            name = Path(f).stem
             self.delete_job(name)
             self.logger.info(f'{name} deleted.')
 
-        rest_in_git: set = git_jobs - glue_jobs
+        rest_in_git = git_jobs - glue_jobs
         for f in rest_in_git:
-            name: str = Path(f).stem
+            name = Path(f).stem
             if name in exclude_names:
                 continue
             self.create_job(name, package_name, role_name, extra_jars, security_configuration)

@@ -5,7 +5,7 @@ class AirflowManager(object):
     def __init__(self):
         self.cli = boto3.client('mwaa')
 
-    def get_environment(self, name: str):
+    def get_environment(self, name: str) -> dict:
         '''
         Describes an Amazon Managed Workflows for Apache Airflow (MWAA) environment.
 
@@ -14,7 +14,7 @@ class AirflowManager(object):
         '''
         return self.cli.get_environment(Name=name)['Environment']
 
-    def update_environment(self, name: str):
+    def update_environment(self, name: str) -> None:
         '''
         Updates an Amazon Managed Workflows for Apache Airflow (MWAA) environment.
 

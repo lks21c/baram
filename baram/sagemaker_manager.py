@@ -1,33 +1,30 @@
 import time
-from logging import Logger
-from typing import Union, Any, Optional
+from typing import Optional
 
 import boto3
-from botocore.client import BaseClient
 
 from baram.log_manager import LogManager
-from type_ref.type_module import AppType
 
 
 class SagemakerManager(object):
     def __init__(self, domain_id: str = None) -> None:
-        self.cli: BaseClient = boto3.client('sagemaker')
-        self.domain_id: str = domain_id
-        self.logger: Logger = LogManager.get_logger('SagemakerManager')
+        self.cli = boto3.client('sagemaker')
+        self.domain_id = domain_id
+        self.logger = LogManager.get_logger('SagemakerManager')
 
     def describe_user_profile(self, user_profile_name: str) -> dict:
-        response: dict = self.cli.describe_user_profile(DomainId=self.domain_id, UserProfileName=user_profile_name)
+        response = self.cli.describe_user_profile(DomainId=self.domain_id, UserProfileName=user_profile_name)
         return response
 
     def list_apps(self, user_profile_name: str) -> list:
-        response: dict = self.cli.list_apps(DomainIdEquals=self.domain_id,
+        response = self.cli.list_apps(DomainIdEquals=self.domain_id,
                                             UserProfileNameEquals=user_profile_name,
                                             SortBy='CreationTime',
                                             SortOrder='Descending',
                                             MaxResults=100)
         return response['Apps']
 
-    def delete_app(self, user_profile_name: str, app_name: str, app_type: Union[AppType, str]) -> None:
+    def delete_app(self, user_profile_name: str, app_name: str, app_type: str) -> None:
         try:
             self.cli.delete_app(DomainId=self.domain_id,
                                 UserProfileName=user_profile_name,
@@ -36,14 +33,14 @@ class SagemakerManager(object):
         except:
             return None
 
-    def describe_app(self, user_profile_name: str, app_name: str, app_type: Union[AppType, str]) -> dict:
-        response: dict = self.cli.describe_app(DomainId=self.domain_id,
-                                               UserProfileName=user_profile_name,
-                                               AppName=app_name,
-                                               AppType=app_type)
+    def describe_app(self, user_profile_name: str, app_name: str, app_type: str) -> dict:
+        response = self.cli.describe_app(DomainId=self.domain_id,
+                                         UserProfileName=user_profile_name,
+                                         AppName=app_name,
+                                         AppType=app_type)
         return response
 
-    def delete_user(self, user_profile_name: str) -> dict:
+    def delete_user(self, user_profile_name: str) -> Optional[dict]:
         try:
             self.describe_user_profile(user_profile_name)
         except self.cli.exceptions.ResourceNotFound:
@@ -51,7 +48,7 @@ class SagemakerManager(object):
             return
 
         self.logger.info(f'list apps from {user_profile_name}')
-        apps: list = self.list_apps(user_profile_name)
+        apps = self.list_apps(user_profile_name)
         for app in apps:
             try:
                 response = self.describe_app(user_profile_name, app['AppName'], app['AppType'])
@@ -68,7 +65,7 @@ class SagemakerManager(object):
         while delete_cnt < len(apps):
             delete_cnt = 0
             for app in apps:
-                response: dict = self.describe_app(user_profile_name, app['AppName'], app['AppType'])
+                response = self.describe_app(user_profile_name, app['AppName'], app['AppType'])
                 self.logger.info(f'status = {response["Status"]}')
                 if response['Status'] == 'Deleted' or response['Status'] == 'Failed':
                     delete_cnt += 1
@@ -81,7 +78,7 @@ class SagemakerManager(object):
         return self.cli.list_domains()['Domains']
 
     def delete_domain(self) -> dict:
-        response: list = self.cli.delete_domain(DomainId=self.domain_id, RetentionPolicy={'HomeEfsFileSystem': 'Delete'})
+        response = self.cli.delete_domain(DomainId=self.domain_id, RetentionPolicy={'HomeEfsFileSystem': 'Delete'})
         return response
 
     def create_domain(self,
@@ -97,7 +94,7 @@ class SagemakerManager(object):
                       instance_type: str = 'ml.t3.micro') -> dict:
         pass
         # TODO: TBD.
-        response: dict = self.cli.create_domain(
+        response = self.cli.create_domain(
             DomainName=domain_name,
             AuthMode='IAM',
             DefaultUserSettings={

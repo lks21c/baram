@@ -1,10 +1,9 @@
 import os
-from codecs import StreamReader
-from logging import Logger
-from typing import Optional, Union, Any
+from asyncio import StreamReader
+from typing import Optional, Union
 
 import boto3
-from botocore.client import Config, BaseClient
+from botocore.client import Config
 
 from baram.log_manager import LogManager
 from baram.kms_manager import KMSManager
@@ -12,14 +11,14 @@ from baram.kms_manager import KMSManager
 
 class S3Manager(object):
     def __init__(self, bucket_name: str) -> None:
-        self.cli: BaseClient = boto3.client('s3', config=Config(signature_version='s3v4'))
-        self.km: KMSManager = KMSManager()
-        self.logger: Logger = LogManager.get_logger('S3Manager')
-        self.bucket_name: str = bucket_name
+        self.cli = boto3.client('s3', config=Config(signature_version='s3v4'))
+        self.kms = KMSManager()
+        self.logger = LogManager.get_logger('S3Manager')
+        self.bucket_name = bucket_name
         try:
-            bi: Optional[dict] = self.get_bucket_encryption()
-            self.kms_algorithm: Optional[str] = bi['SSEAlgorithm']
-            self.kms_id: Optional[str] = bi['KMSMasterKeyID']
+            bi = self.get_bucket_encryption()
+            self.kms_algorithm = bi['SSEAlgorithm']
+            self.kms_id = bi['KMSMasterKeyID']
         except:
             self.kms_algorithm, self.kms_id = None, None
 
@@ -27,7 +26,7 @@ class S3Manager(object):
         '''
         :return: response
         '''
-        response: dict = self.cli.list_buckets()
+        response = self.cli.list_buckets()
         return response['Buckets'] if 'Buckets' in response else None
 
     def put_object(self, s3_key_id: str, body: Union[bytes, str]) -> dict:
@@ -37,13 +36,13 @@ class S3Manager(object):
         :param body: byte or str data
         :return: response
         '''
-        kwargs: dict = {"Bucket": self.bucket_name,
+        kwargs = {"Bucket": self.bucket_name,
                         "Key": s3_key_id,
                         "Body": body}
         if self.kms_id:
             kwargs['ServerSideEncryption'] = self.kms_algorithm
             kwargs['SSEKMSKeyId'] = self.kms_id
-        response: dict = self.cli.put_object(**kwargs)
+        response = self.cli.put_object(**kwargs)
         return response
 
     def get_object(self, s3_key_id: str) -> Optional[bytes]:
@@ -52,14 +51,14 @@ class S3Manager(object):
         :return: response
         '''
         try:
-            response: dict = self.cli.get_object(Bucket=self.bucket_name,
+            response = self.cli.get_object(Bucket=self.bucket_name,
                                                  Key=s3_key_id)
             return response['Body'].read()
         except self.cli.exceptions.NoSuchKey:
             self.logger.info(f'{s3_key_id} does not exist.')
             return None
 
-    def get_object_by_lines(self, s3_key_id: str) -> StreamReader:
+    def get_object_by_lines(self, s3_key_id: str) -> Optional[StreamReader]:
         '''
         get s3 object line by line.
 
@@ -69,8 +68,8 @@ class S3Manager(object):
 
         try:
             import codecs
-            line_stream: StreamReader = codecs.getreader("utf-8")
-            response: dict = self.cli.get_object(Bucket=self.bucket_name,
+            line_stream = codecs.getreader("utf-8")
+            response = self.cli.get_object(Bucket=self.bucket_name,
                                                  Key=s3_key_id)
             return line_stream(response['Body'])
         except self.cli.exceptions.NoSuchKey:
@@ -106,11 +105,11 @@ class S3Manager(object):
         try:
             for path, subdirs, files in os.walk(local_dir_path):
                 for file in files:
-                    dest_path: str = path.replace(local_dir_path, '')
-                    s3file_path: Union[str, Any] = os.path.normpath(s3_dir_path + '/' + dest_path + '/' + file)
-                    local_file_path: bytes = os.path.join(path, file)
+                    dest_path = path.replace(local_dir_path, '')
+                    s3file_path = os.path.normpath(s3_dir_path + '/' + dest_path + '/' + file)
+                    local_file_path = os.path.join(path, file)
 
-                    extra_args: dict = {'ServerSideEncryption': self.kms_algorithm,
+                    extra_args = {'ServerSideEncryption': self.kms_algorithm,
                                         'SSEKMSKeyId': self.kms_id} if self.kms_id else None
                     self.cli.upload_file(local_file_path,
                                          self.bucket_name,
@@ -132,7 +131,7 @@ class S3Manager(object):
         '''
 
         try:
-            extra_args: dict = {'ServerSideEncryption': self.kms_algorithm,
+            extra_args = {'ServerSideEncryption': self.kms_algorithm,
                           'SSEKMSKeyId': self.kms_id} if self.kms_id else None
             self.cli.upload_file(local_file_path,
                                  self.bucket_name,
@@ -203,7 +202,7 @@ class S3Manager(object):
         :param delimiter: A delimiter is a character you use to group keys.
         :return: response
         '''
-        response: dict = self.cli.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix, Delimiter=delimiter)
+        response = self.cli.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix, Delimiter=delimiter)
         return response['Contents'] if 'Contents' in response else None
 
     def list_dir(self, prefix: str = '', delimiter: str = '/') -> list:
@@ -214,8 +213,8 @@ class S3Manager(object):
         :param delimiter: A delimiter is a character you use to group keys.
         :return: response
         '''
-        response: dict = self.cli.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix, Delimiter=delimiter)
-        list: list = []
+        response = self.cli.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix, Delimiter=delimiter)
+        list = []
         if 'Contents' in response:
             list += [item['Key'] for item in response['Contents'] if 'Key' in item]
         if 'CommonPrefixes' in response:
@@ -236,5 +235,5 @@ class S3Manager(object):
         '''
         :return: KMS ID
         '''
-        conf: dict = self.cli.get_bucket_encryption(Bucket=self.bucket_name)['ServerSideEncryptionConfiguration']
+        conf = self.cli.get_bucket_encryption(Bucket=self.bucket_name)['ServerSideEncryptionConfiguration']
         return conf['Rules'][0]['ApplyServerSideEncryptionByDefault'] if conf else None

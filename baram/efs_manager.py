@@ -3,15 +3,13 @@ from typing import Optional
 import boto3
 import traceback
 
-from botocore.client import BaseClient
-from logging import Logger
 from baram.log_manager import LogManager
 
 
 class EFSManager(object):
     def __init__(self) -> None:
-        self.cli: BaseClient = boto3.client('efs')
-        self.logger: Logger = LogManager.get_logger()
+        self.cli = boto3.client('efs')
+        self.logger = LogManager.get_logger()
 
     def list_efs(self) -> Optional[list]:
         """
