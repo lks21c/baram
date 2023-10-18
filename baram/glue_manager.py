@@ -4,9 +4,9 @@ from pathlib import Path
 import boto3
 import fire
 
-from baram.s3_manager import S3Manager
 from baram.iam_manager import IAMManager
 from baram.log_manager import LogManager
+from baram.s3_manager import S3Manager
 
 
 class GlueManager(object):
@@ -227,6 +227,19 @@ class GlueManager(object):
                 continue
             self.create_job(name, package_name, role_name, extra_jars, security_configuration)
             self.logger.info(f'{name} created.')
+
+    def summary(self):
+        jobs = self.cli.list_jobs()
+        if 'JobNames' in jobs:
+            for j in jobs['JobNames']:
+                r = self.cli.get_job_runs(JobName=j)
+                if 'JobRuns' in r and len(r['JobRuns']) > 0:
+                    last_run = r['JobRuns'][0]
+                    last_run['StartedOn']
+
+                    duration = int((last_run['CompletedOn'] - last_run['StartedOn']).total_seconds())
+                    print(
+                        f"{last_run['JobName']}\t{last_run['AllocatedCapacity']}\t{last_run['StartedOn']}\t{last_run['CompletedOn']}\t{duration}")
 
 
 if __name__ == '__main__':
