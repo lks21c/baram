@@ -27,6 +27,24 @@ class IAMManager(object):
         '''
         return self.get_role(role_name)['Arn']
 
+    def get_user(self, user_name):
+        '''
+        Retrieves information about the specified user.
+
+        :param user_name: user name
+        :return:
+        '''
+        return self.cli.get_user(UserName=user_name)['User']
+
+    def get_user_arn(self, user_name):
+        '''
+        Retrieves user ARN.
+
+        :param user_name: user name
+        :return:
+        '''
+        return self.get_user(user_name)['Arn']
+
     def list_role_policies(self, role_name):
         '''
         Lists the names of the inline policies that are embedded in the specified IAM role.

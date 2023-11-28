@@ -30,12 +30,34 @@ def test_list_role_policies(im):
     assert policies is not None
 
 
-def test_role_arn(im):
+def test_get_role_arn(im):
     # Given
     role_name = 'AWSServiceRoleForLakeFormationDataAccess'
 
     # When
     arn = im.get_role_arn(role_name)
+
+    # Then
+    assert arn is not None
+
+
+def test_get_user(im):
+    # Given
+    user_name = 'sagemaker-test'
+
+    # When
+    arn = im.get_user(user_name)
+
+    # Then
+    assert arn is not None
+
+
+def test_get_user_arn(im):
+    # Given
+    user_name = 'sagemaker-test'
+
+    # When
+    arn = im.get_user_arn(user_name)
 
     # Then
     assert arn is not None
