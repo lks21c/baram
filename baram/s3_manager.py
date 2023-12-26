@@ -3,8 +3,8 @@ import os
 import boto3
 from botocore.client import Config
 
-from baram.log_manager import LogManager
 from baram.kms_manager import KMSManager
+from baram.log_manager import LogManager
 
 
 class S3Manager(object):
@@ -235,3 +235,17 @@ class S3Manager(object):
         '''
         conf = self.cli.get_bucket_encryption(Bucket=self.bucket_name)['ServerSideEncryptionConfiguration']
         return conf['Rules'][0]['ApplyServerSideEncryptionByDefault'] if conf else None
+
+    def copy_object(self, from_key: str, to_key: str):
+        '''
+        Creates a copy of an object that is already stored in Amazon S3.
+
+        :param from_key: origin s3 key
+        :param to_key: destination s3 key
+        :return:
+        '''
+        self.cli.copy_object(
+            Bucket=self.bucket_name,
+            CopySource=f'{self.bucket_name}/{from_key}',
+            Key=to_key
+        )
