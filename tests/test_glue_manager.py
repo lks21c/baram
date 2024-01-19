@@ -53,3 +53,7 @@ def test_refresh_job(gm):
     #                'Glue-developer-role',
     #                's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
     #                'sli-security-configuration')
+
+
+def test_summary(gm):
+    gm.summary()

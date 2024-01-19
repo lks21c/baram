@@ -157,3 +157,16 @@ def test_upload_download_delete_dir(sm, sample):
 
     # delete
     sm.delete_dir(s3_tmp_dir)
+
+# def test_copy():
+#     sm = S3Manager('sli-dst-dlbeta-public')
+#     sm.copy(
+#         from_key='test/case1.csv',
+#         to_key='test/case3.csv')
+#
+#
+# def test_copy_object():
+#     sm = S3Manager('sli-dst-dlprod-public')
+#     sm.copy_object(
+#         from_key='incoming/prod_mydata_master/first/iu001/daily/2023/10/iu001_20231005.csv/part-00000-00aa4d98-f751-4c07-ae08-3e7b7402ed10-c000.csv',
+#         to_key='incoming/prod_mydata_master/first/iu001/daily/2023/10/iu001_20231005_001.csv')
