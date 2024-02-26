@@ -193,16 +193,20 @@ class GlueManager(object):
             Name=table_name
         )
 
-    def list_job_names(self, max_results: int = 50):
+    def list_job_names(self,
+                       max_results: int = 50,
+                       name_filter: str = ''):
         '''
         List glue jobs
 
         :param max_results:
+        :param name_filter:
         :return:
         '''
         max_results = max_results if max_results else self.MAX_RESULTS
+        jobs = self.cli.list_jobs(MaxResults=max_results)['JobNames']
 
-        return self.cli.list_jobs(MaxResults=max_results)['JobNames']
+        return [job for job in jobs if name_filter in jobs]
 
     def refresh_job(self,
                     code_path: str,
