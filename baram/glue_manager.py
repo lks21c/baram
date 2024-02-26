@@ -30,6 +30,7 @@ class GlueManager(object):
         self.s3_path = f's3://{s3_bucket_name}'
         self.sm = S3Manager(s3_bucket_name)
         self.TABLE_PATH_PREFIX = table_path_prefix
+        self.MAX_RESULTS = 1000
 
         # See https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-glue-arguments.html
         self.default_args = {
@@ -192,6 +193,17 @@ class GlueManager(object):
             Name=table_name
         )
 
+    def list_job_names(self, max_results: int = 50):
+        '''
+        List glue jobs
+
+        :param max_results:
+        :return:
+        '''
+        max_results = max_results if max_results else self.MAX_RESULTS
+
+        return self.cli.list_jobs(MaxResults=max_results)['JobNames']
+
     def refresh_job(self,
                     code_path: str,
                     exclude_names: list,
@@ -210,8 +222,7 @@ class GlueManager(object):
         :return:
         '''
 
-        response = self.cli.list_jobs(MaxResults=1000)
-        glue_jobs = set([f'{jn}.scala' for jn in response['JobNames']])
+        glue_jobs = set([f'{jn}.scala' for jn in self.list_job_names()])
         git_jobs = set([f for f in os.listdir(code_path)])
 
         rest_in_glue = glue_jobs - git_jobs
