@@ -11,16 +11,23 @@ class SagemakerManager(object):
         self.domain_id = domain_id
         self.logger = LogManager.get_logger('SagemakerManager')
 
+    def list_user_profiles(self,
+                           **kwargs):
+        response = self.cli.list_user_profiles(DomainIdEquals=self.domain_id,
+                                               **kwargs)
+        return response['UserProfiles']
+
     def describe_user_profile(self, user_profile_name):
         response = self.cli.describe_user_profile(DomainId=self.domain_id, UserProfileName=user_profile_name)
         return response
 
-    def list_apps(self, user_profile_name):
+    def list_apps(self,
+                  **kwargs):
         response = self.cli.list_apps(DomainIdEquals=self.domain_id,
-                                      UserProfileNameEquals=user_profile_name,
                                       SortBy='CreationTime',
                                       SortOrder='Descending',
-                                      MaxResults=100)
+                                      MaxResults=100,
+                                      **kwargs)
         return response['Apps']
 
     def delete_app(self, user_profile_name, app_name, app_type):
@@ -40,6 +47,17 @@ class SagemakerManager(object):
                                          AppType=app_type)
         return response
 
+    def create_user_profile(self,
+                            user_profile_name: str,
+                            execution_role: str,
+                            **kwargs):
+        response = self.cli.create_user_profile(DomainId=self.domain_id,
+                                                UserProfileName=user_profile_name,
+                                                UserSettings={
+                                                    'ExecutionRole': execution_role},
+                                                **kwargs)
+        return response
+
     def delete_user(self, user_profile_name):
         try:
             self.describe_user_profile(user_profile_name)
@@ -48,7 +66,7 @@ class SagemakerManager(object):
             return
 
         self.logger.info(f'list apps from {user_profile_name}')
-        apps = self.list_apps(user_profile_name)
+        apps = self.list_apps(UserProfileNameEquals=user_profile_name)
         for app in apps:
             try:
                 response = self.describe_app(user_profile_name, app['AppName'], app['AppType'])
@@ -86,11 +104,11 @@ class SagemakerManager(object):
                       execution_role_name: str,
                       sg_group: str,
                       s3_kms_id: str,
-                      efs_kms_id:str,
+                      efs_kms_id: str,
                       s3_output_path: str,
-                      vpc_id:str,
-                      subnet_id1:str,
-                      subnet_id2:str,
+                      vpc_id: str,
+                      subnet_id1: str,
+                      subnet_id2: str,
                       instance_type: str = 'ml.t3.micro'):
         pass
         # TODO: TBD.
@@ -185,3 +203,20 @@ class SagemakerManager(object):
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info('ResourceNotFound')
             return None
+
+    # def recreate_all_user_profiles(self):
+    #     user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'])
+    #                      for x in self.list_user_profiles()]
+    #
+    #     for i in user_profiles:
+    #         print(i['UserProfileName'])
+    #         self.delete_user(user_profile_name=i['UserProfileName'])
+    #         while True:
+    #             if i['UserProfileName'] in self.list_user_profiles():
+    #                 time.sleep(5)
+    #             else:
+    #                 print(f"{i['UserProfileName']} deleted")
+    #                 time.sleep(5)
+    #                 break
+    #         self.create_user_profile(user_profile_name=i['UserProfileName'],
+    #                                  execution_role=i['UserSettings']['ExecutionRole'])
