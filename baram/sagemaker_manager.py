@@ -13,27 +13,40 @@ class SagemakerManager(object):
         self.logger = LogManager.get_logger('SagemakerManager')
 
     def list_user_profiles(self,
+                           domain_id: Optional[str] = None,
                            **kwargs):
-        response = self.cli.list_user_profiles(DomainIdEquals=self.domain_id,
+        domain_id = domain_id if domain_id else self.domain_id
+        response = self.cli.list_user_profiles(DomainIdEquals=domain_id,
                                                **kwargs)
         return response['UserProfiles']
 
-    def describe_user_profile(self, user_profile_name):
-        response = self.cli.describe_user_profile(DomainId=self.domain_id, UserProfileName=user_profile_name)
+    def describe_user_profile(self,
+                              user_profile_name: str,
+                              domain_id: Optional[str] = None):
+        domain_id = domain_id if domain_id else self.domain_id
+        response = self.cli.describe_user_profile(DomainId=domain_id,
+                                                  UserProfileName=user_profile_name)
         return response
 
     def list_apps(self,
+                  domain_id: Optional[str] = None,
                   **kwargs):
-        response = self.cli.list_apps(DomainIdEquals=self.domain_id,
+        domain_id = domain_id if domain_id else self.domain_id
+        response = self.cli.list_apps(DomainIdEquals=domain_id,
                                       SortBy='CreationTime',
                                       SortOrder='Descending',
                                       MaxResults=100,
                                       **kwargs)
         return response['Apps']
 
-    def delete_app(self, user_profile_name, app_name, app_type):
+    def delete_app(self,
+                   user_profile_name: str,
+                   app_name: str,
+                   app_type: str,
+                   domain_id: Optional[str] = None):
+        domain_id = domain_id if domain_id else self.domain_id
         try:
-            response = self.cli.delete_app(DomainId=self.domain_id,
+            response = self.cli.delete_app(DomainId=domain_id,
                                            UserProfileName=user_profile_name,
                                            AppName=app_name,
                                            AppType=app_type)
@@ -41,8 +54,13 @@ class SagemakerManager(object):
         except:
             return None
 
-    def describe_app(self, user_profile_name, app_name, app_type):
-        response = self.cli.describe_app(DomainId=self.domain_id,
+    def describe_app(self,
+                     user_profile_name: str,
+                     app_name: str,
+                     app_type: str,
+                     domain_id: Optional[str] = None):
+        domain_id = domain_id if domain_id else self.domain_id
+        response = self.cli.describe_app(DomainId=domain_id,
                                          UserProfileName=user_profile_name,
                                          AppName=app_name,
                                          AppType=app_type)
@@ -51,12 +69,14 @@ class SagemakerManager(object):
     def create_user_profile(self,
                             user_profile_name: str,
                             execution_role: str,
-                            is_sso_domain=False,
+                            domain_id: Optional[str] = None,
+                            is_sso_domain: Optional[bool] = False,
                             sso_user_value: Optional[str] = None,
                             **kwargs):
+        domain_id = domain_id if domain_id else self.domain_id
         self.logger.info(f'start creating {user_profile_name}')
         if is_sso_domain:
-            response = self.cli.create_user_profile(DomainId=self.domain_id,
+            response = self.cli.create_user_profile(DomainId=domain_id,
                                                     UserProfileName=user_profile_name,
                                                     UserSettings={
                                                         'ExecutionRole': execution_role},
@@ -64,27 +84,38 @@ class SagemakerManager(object):
                                                     SingleSignOnUserValue=sso_user_value,
                                                     **kwargs)
         else:
-            response = self.cli.create_user_profile(DomainId=self.domain_id,
+            response = self.cli.create_user_profile(DomainId=domain_id,
                                                     UserProfileName=user_profile_name,
                                                     UserSettings={
                                                         'ExecutionRole': execution_role},
                                                     **kwargs)
         return response
 
-    def delete_user_profile(self, user_profile_name):
+    def delete_user_profile(self,
+                            user_profile_name: str,
+                            domain_id: Optional[str] = None):
+        domain_id = domain_id if domain_id else self.domain_id
         try:
-            self.describe_user_profile(user_profile_name)
+            self.describe_user_profile(user_profile_name=user_profile_name,
+                                       domain_id=domain_id)
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info(f'user {user_profile_name} does not exist.')
             return
 
         self.logger.info(f'list apps from {user_profile_name}')
-        apps = self.list_apps(UserProfileNameEquals=user_profile_name)
+        apps = self.list_apps(domain_id=domain_id,
+                              UserProfileNameEquals=user_profile_name)
         for app in apps:
             try:
-                response = self.describe_app(user_profile_name, app['AppName'], app['AppType'])
+                response = self.describe_app(user_profile_name=user_profile_name,
+                                             app_name=app['AppName'],
+                                             app_type=app['AppType'],
+                                             domain_id=domain_id)
                 if response['Status'] != 'Deleted' and response['Status'] != 'Deleting':
-                    self.delete_app(user_profile_name, app['AppName'], app['AppType'])
+                    self.delete_app(user_profile_name=user_profile_name,
+                                    app_name=app['AppName'],
+                                    app_type=app['AppType'],
+                                    domain_id=domain_id)
             except self.cli.exceptions.ResourceNotFound:
                 pass
             except self.cli.exceptions.ResourceInUse as e:
@@ -96,20 +127,54 @@ class SagemakerManager(object):
         while delete_cnt < len(apps):
             delete_cnt = 0
             for app in apps:
-                response = self.describe_app(user_profile_name, app['AppName'], app['AppType'])
+                response = self.describe_app(user_profile_name=user_profile_name,
+                                             app_name=app['AppName'],
+                                             app_type=app['AppType'],
+                                             domain_id=domain_id)
                 self.logger.info(f'status = {response["Status"]}')
                 if response['Status'] == 'Deleted' or response['Status'] == 'Failed':
                     delete_cnt += 1
             time.sleep(5)
             elapsed_secs += 5
             self.logger.info(f'wait 5 seconds. delete_cnt={delete_cnt}, elapsed_secs={elapsed_secs}')
-        return self.cli.delete_user_profile(DomainId=self.domain_id, UserProfileName=user_profile_name)
+        return self.cli.delete_user_profile(DomainId=domain_id, UserProfileName=user_profile_name)
+
+    def recreate_all_user_profiles(self,
+                                   is_sso_domain: Optional[bool] = False,
+                                   domain_id: Optional[str] = None):
+        domain_id = domain_id if domain_id else self.domain_id
+        user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'], domain_id=domain_id)
+                         for x in self.list_user_profiles(domain_id=domain_id)]
+        self.logger.info(f"user profiles to recreate: {[x['UserProfileName'] for x in user_profiles]}")
+
+        for i in user_profiles:
+            self.logger.info(f"start deleting {i['UserProfileName']}")
+            self.delete_user_profile(user_profile_name=i['UserProfileName'],
+                                     domain_id=domain_id)
+            while i['UserProfileName'] in self.list_user_profiles(domain_id=domain_id):
+                time.sleep(5)
+            else:
+                self.logger.info(f"{i['UserProfileName']} deleted")
+                time.sleep(5)
+                if is_sso_domain:
+                    self.create_user_profile(user_profile_name=i['UserProfileName'],
+                                             execution_role=i['UserSettings']['ExecutionRole'],
+                                             domain_id=domain_id,
+                                             is_sso_domain=is_sso_domain,
+                                             sso_user_value=i['SingleSignOnUserValue'])
+                else:
+                    self.create_user_profile(user_profile_name=i['UserProfileName'],
+                                             execution_role=i['UserSettings']['ExecutionRole'],
+                                             domain_id=domain_id)
+            self.logger.info(f"{i['UserProfileName']} created")
 
     def list_domains(self):
         return self.cli.list_domains()['Domains']
 
-    def delete_domain(self):
-        response = self.cli.delete_domain(DomainId=self.domain_id, RetentionPolicy={'HomeEfsFileSystem': 'Delete'})
+    def delete_domain(self,
+                      domain_id: Optional[str] = None):
+        domain_id = domain_id if domain_id else self.domain_id
+        response = self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': 'Delete'})
         return response
 
     def create_domain(self,
@@ -216,20 +281,3 @@ class SagemakerManager(object):
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info('ResourceNotFound')
             return None
-
-    def recreate_all_user_profiles(self):
-        user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'])
-                         for x in self.list_user_profiles()]
-        self.logger.info(f"user profiles to recreate: {[x['UserProfileName'] for x in user_profiles]}")
-
-        for i in user_profiles:
-            self.logger.info(f"start deleting {i['UserProfileName']}")
-            self.delete_user_profile(user_profile_name=i['UserProfileName'])
-            while i['UserProfileName'] in self.list_user_profiles():
-                time.sleep(5)
-            else:
-                self.logger.info(f"{i['UserProfileName']} deleted")
-                time.sleep(5)
-            self.create_user_profile(user_profile_name=i['UserProfileName'],
-                                     execution_role=i['UserSettings']['ExecutionRole'])
-            self.logger.info(f"{i['UserProfileName']} created")

@@ -14,17 +14,6 @@ def test_list_user_profiles(sm):
     pprint(response)
 
 
-def test_list_apps(sm):
-    # Given
-    user_profile_name = 'test1'
-
-    # When
-    response = sm.list_apps(UserProfileNameEquals=user_profile_name)
-
-    # Then
-    pprint(response)
-
-
 def test_describe_user_profile(sm):
     # Given
     user_profile_name = 'test1'
@@ -36,19 +25,27 @@ def test_describe_user_profile(sm):
     print(response)
 
 
+def test_list_apps(sm):
+    # When
+    response = sm.list_apps()
+
+    # Then
+    pprint(response)
+
+
 # def test_create_user_profile(sm):
 #     # Given
-#     user_profile_name = 'test1'
+#     user_profile_name = 'test4'
 #     execution_role = 'arn:aws:iam::145885190059:role/smbeta-execution-scientist-role'
 #
 #     # When
 #     sm.create_user_profile(user_profile_name=user_profile_name,
 #                            execution_role=execution_role)
-
-
+#
+#
 # def test_delete_user_profile(sm):
 #     # Given
-#     user_profile_name = 'test1'
+#     user_profile_name = 'test4'
 #
 #     # When
 #     sm.delete_user_profile(user_profile_name=user_profile_name)
