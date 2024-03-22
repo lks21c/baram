@@ -220,16 +220,16 @@ class SagemakerManager(object):
     def recreate_all_user_profiles(self):
         user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'])
                          for x in self.list_user_profiles()]
-        print(f"user profiles to recreate: {[x['UserProfileName'] for x in user_profiles]}")
+        self.logger.info(f"user profiles to recreate: {[x['UserProfileName'] for x in user_profiles]}")
 
         for i in user_profiles:
-            print(f"start deleting {i['UserProfileName']}")
+            self.logger.info(f"start deleting {i['UserProfileName']}")
             self.delete_user_profile(user_profile_name=i['UserProfileName'])
             while i['UserProfileName'] in self.list_user_profiles():
                 time.sleep(5)
             else:
-                print(f"{i['UserProfileName']} deleted")
+                self.logger.info(f"{i['UserProfileName']} deleted")
                 time.sleep(5)
             self.create_user_profile(user_profile_name=i['UserProfileName'],
                                      execution_role=i['UserSettings']['ExecutionRole'])
-            print(f"{i['UserProfileName']} created")
+            self.logger.info(f"{i['UserProfileName']} created")
