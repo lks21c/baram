@@ -51,6 +51,7 @@ class SagemakerManager(object):
                             user_profile_name: str,
                             execution_role: str,
                             **kwargs):
+        print(f'start creating {user_profile_name}')
         response = self.cli.create_user_profile(DomainId=self.domain_id,
                                                 UserProfileName=user_profile_name,
                                                 UserSettings={
@@ -204,19 +205,19 @@ class SagemakerManager(object):
             self.logger.info('ResourceNotFound')
             return None
 
-    # def recreate_all_user_profiles(self):
-    #     user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'])
-    #                      for x in self.list_user_profiles()]
-    #
-    #     for i in user_profiles:
-    #         print(i['UserProfileName'])
-    #         self.delete_user(user_profile_name=i['UserProfileName'])
-    #         while True:
-    #             if i['UserProfileName'] in self.list_user_profiles():
-    #                 time.sleep(5)
-    #             else:
-    #                 print(f"{i['UserProfileName']} deleted")
-    #                 time.sleep(5)
-    #                 break
-    #         self.create_user_profile(user_profile_name=i['UserProfileName'],
-    #                                  execution_role=i['UserSettings']['ExecutionRole'])
+    def recreate_all_user_profiles(self):
+        user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'])
+                         for x in self.list_user_profiles()]
+        print(f"user profiles to recreate: {[x['UserProfileName'] for x in user_profiles]}")
+
+        for i in user_profiles:
+            print(f"start deleting {i['UserProfileName']}")
+            self.delete_user_profile(user_profile_name=i['UserProfileName'])
+            while i['UserProfileName'] in self.list_user_profiles():
+                time.sleep(5)
+            else:
+                print(f"{i['UserProfileName']} deleted")
+                time.sleep(5)
+            self.create_user_profile(user_profile_name=i['UserProfileName'],
+                                     execution_role=i['UserSettings']['ExecutionRole'])
+            print(f"{i['UserProfileName']} created")
