@@ -46,12 +46,12 @@ def test_describe_user_profile(sm):
 #                            execution_role=execution_role)
 
 
-# def test_delete_user(sm):
+# def test_delete_user_profile(sm):
 #     # Given
 #     user_profile_name = 'test1'
 #
 #     # When
-#     sm.delete_user(user_profile_name=user_profile_name)
+#     sm.delete_user_profile(user_profile_name=user_profile_name)
 
 
 # def test_recreate_all_user_profiles(sm):

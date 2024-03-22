@@ -58,7 +58,7 @@ class SagemakerManager(object):
                                                 **kwargs)
         return response
 
-    def delete_user(self, user_profile_name):
+    def delete_user_profile(self, user_profile_name):
         try:
             self.describe_user_profile(user_profile_name)
         except self.cli.exceptions.ResourceNotFound:
