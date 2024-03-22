@@ -1,4 +1,5 @@
 import time
+from typing import Optional
 
 import boto3
 
@@ -50,13 +51,24 @@ class SagemakerManager(object):
     def create_user_profile(self,
                             user_profile_name: str,
                             execution_role: str,
+                            is_sso_domain=False,
+                            sso_user_value: Optional[str] = None,
                             **kwargs):
-        print(f'start creating {user_profile_name}')
-        response = self.cli.create_user_profile(DomainId=self.domain_id,
-                                                UserProfileName=user_profile_name,
-                                                UserSettings={
-                                                    'ExecutionRole': execution_role},
-                                                **kwargs)
+        self.logger.info(f'start creating {user_profile_name}')
+        if is_sso_domain:
+            response = self.cli.create_user_profile(DomainId=self.domain_id,
+                                                    UserProfileName=user_profile_name,
+                                                    UserSettings={
+                                                        'ExecutionRole': execution_role},
+                                                    SingleSignOnUserIdentifier='UserName',
+                                                    SingleSignOnUserValue=sso_user_value,
+                                                    **kwargs)
+        else:
+            response = self.cli.create_user_profile(DomainId=self.domain_id,
+                                                    UserProfileName=user_profile_name,
+                                                    UserSettings={
+                                                        'ExecutionRole': execution_role},
+                                                    **kwargs)
         return response
 
     def delete_user_profile(self, user_profile_name):
