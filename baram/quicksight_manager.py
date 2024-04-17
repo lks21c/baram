@@ -94,8 +94,7 @@ class QuicksightManager(object):
         :param dataset_id: ID of QuickSight dataset
         :return:
         '''
-        # return self.cli.list_refresh_schedules(AwsAccountId=account_id, DataSetId=dataset_id)
-        return self.cli.describe_data_set_refresh_properties(AwsAccountId=account_id, DataSetId=dataset_id)
+        return self.cli.list_refresh_schedules(AwsAccountId=account_id, DataSetId=dataset_id)
 
 
 
