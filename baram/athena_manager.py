@@ -12,9 +12,9 @@ class AthenaManager(object):
         self.logger = LogManager.get_logger()
         pass
 
-    def delete_glue_catalog(self, db_name: str, table_name: str):
+    def delete_glue_table(self, db_name: str, table_name: str):
         '''
-        Delete Glue Catalog.
+        Delete Glue Table.
 
         :param db_name: target glue database name
         :param table_name: target glue table name
