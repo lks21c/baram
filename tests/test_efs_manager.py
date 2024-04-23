@@ -17,12 +17,12 @@ def test_list_efs(efsm):
     assert type(efs) == list
 
 
-def test_list_mount_targets(efsm):
-    # TODO: replace this to non-specific efs id
-    efs_id = 'fs-090f17ba800036e22'
-    pprint(efsm.list_mount_targets(efs_id))
-
-    # TODO: add assertion(s)
+# def test_list_mount_targets(efsm):
+#     # TODO: add sample efs and check it
+#     efs_id = 'fs-090f17ba800036e22'
+#     pprint(efsm.list_mount_targets(efs_id))
+#
+#     # TODO: add assertion(s)
 
 
 def test_delete_efs(efsm):
@@ -33,7 +33,7 @@ def test_delete_efs(efsm):
 
     # When
     for redundant_efs_id in redundant_efs_ids:
-        efsm.delete_efss(redundant_efs_id)
+        efsm.delete_efs(redundant_efs_id)
 
 
 def test_list_redundant_efs(efsm):

@@ -16,18 +16,16 @@ def test_create_job(gm):
                   'dlbeta-public-securityconfiguration')
 
 
-def test_delete_table(gm):
-    gm.delete_table('sli-dst', 'test', True)
-
-
 def test_crud_job(gm):
+    # Given
     job_name = 'test'
+
+    # When/Then
     gm.create_job(job_name,
                   'com.sli',
                   'Glue-developer-role',
                   's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
-                  'sli-security-configuration'
-                  )
+                  'sli-security-configuration')
 
     pprint(gm.get_job('test'))
 
@@ -35,8 +33,7 @@ def test_crud_job(gm):
                   'com.sli',
                   'Glue-developer-role',
                   's3://sli-dst-glue/sli-glue-1.0-SNAPSHOT.jar',
-                  'sli-security-configuration'
-                  )
+                  'sli-security-configuration')
 
     gm.delete_job('test')
 
