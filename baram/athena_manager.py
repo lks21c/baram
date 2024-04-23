@@ -47,8 +47,7 @@ class AthenaManager(object):
                                                              workgroup=self.ATHENA_WORKGROUP,
                                                              params=params,
                                                              paramstyle=paramstyle,
-                                                             s3_output=self._get_s3_full_path(self.from_s3_bucket_name,
-                                                                                              'query_results'),
+                                                             s3_output=s3_output,
                                                              database=self.get_db_name(db_name))
 
         res = wr.athena.wait_query(query_execution_id=query_execution_id,
