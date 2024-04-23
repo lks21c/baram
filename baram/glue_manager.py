@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
+from typing import Optional
 
+import awswrangler as wr
 import boto3
 import fire
 
@@ -27,10 +29,13 @@ class GlueManager(object):
         self.max_retries = 0
         self.python_ver = '3'
         self.glue_ver = '3.0'
-        self.s3_path = f's3://{s3_bucket_name}'
-        self.sm = S3Manager(s3_bucket_name)
+        self.s3_bucket_name = s3_bucket_name
+        self.s3_path = f's3://{self.s3_bucket_name}'
+        self.sm = S3Manager(self.s3_bucket_name)
         self.TABLE_PATH_PREFIX = table_path_prefix
         self.MAX_RESULTS = 1000
+        self.GLUE_TYPE_ETL = 'glueetl'
+        self.GLUE_TYPE_PYTHON_SHELL = 'pythonshell'
 
         # See https://docs.aws.amazon.com/glue/latest/dg/aws-glue-programming-etl-glue-arguments.html
         self.default_args = {
@@ -71,9 +76,7 @@ class GlueManager(object):
 
     def create_job(self,
                    name: str,
-                   package_name: str,
                    role_name: str,
-                   extra_jars: str,
                    security_configuration: str):
         '''
 
@@ -85,28 +88,91 @@ class GlueManager(object):
         :return:
         '''
 
-        self.default_args['--class'] = f'{package_name}.{name}'
-        self.default_args['--extra-jars'] = extra_jars
+        kwargs = self._get_create_job_kwargs(name, role_name, security_configuration)
 
         try:
             self.cli.create_job(
-                Name=name,
-                Description='',
-                Role=self.im.get_role_arn(role_name),
-                ExecutionProperty={
-                    'MaxConcurrentRuns': self.max_concurrent_runs
-                },
-                Command=self._get_command(name),
-                DefaultArguments=self.default_args,
-                MaxRetries=self.max_retries,
-                Timeout=self.timeout,
-                SecurityConfiguration=security_configuration,
-                GlueVersion=self.glue_ver,
-                NumberOfWorkers=self.workers_num,
-                WorkerType=self.worker_type
+                **kwargs
             )
         except self.cli.exceptions.IdempotentParameterMismatchException as e:
             self.logger.error(str(e))
+
+    def _get_create_job_kwargs(self,
+                               job_name: str,
+                               role_name: str,
+                               glue_security_conf_name: str,
+                               glue_job_type: str = 'glueetl',
+                               worker_type: str = 'G.1X',
+                               num_of_dpus=None,
+                               python_module: Optional[str] = None,
+                               extra_py_path: Optional[str] = None,
+                               enable_iceberg: bool = True):
+        '''
+
+        :param job_name: glue job name
+        :param role_name: glue role name
+        :param glue_security_conf_name:
+        :param glue_job_type: glue job type. 'glueetl' or 'pythonshell'.
+        :param worker_type: glue worker type
+        :param num_of_dpus: for pythonshell, you can allocate either 0.0625 or 1 DPU. The default is 0.0625 DPU. For glueetl, The default is 2.
+        :param python_module:
+        :param extra_py_path:
+        :param enable_iceberg:
+        :return:
+        '''
+        if num_of_dpus is None:
+            num_of_dpus = 2 if glue_job_type == self.GLUE_TYPE_ETL else float(0.0625)
+
+        create_job_kwargs = {
+            'Name': job_name,
+            'Role': role_name,
+            'SecurityConfiguration': glue_security_conf_name,
+            'Command': {
+                'ScriptLocation': os.path.join(f's3://',
+                                               self.s3_bucket_name,
+                                               'scripts',
+                                               f'{job_name}.py'),
+                'PythonVersion': '3'
+            },
+            'DefaultArguments': {
+                '--job-language': 'python',
+                '--TempDir': os.path.join(f's3://', self.s3_bucket_name, 'temp'),
+                '--enable-continuous-cloudwatch-log': 'true',
+                '--enable-glue-datacatalog': 'true',
+                '--enable-job-insights': 'true',
+                '--enable-metrics': 'true',
+                '--job-bookmark-option': 'job-bookmark-enable'
+            }}
+
+        if python_module:
+            create_job_kwargs['DefaultArguments'].update({'--additional-python-modules': python_module})
+
+        default_args = {}
+        if glue_job_type == self.GLUE_TYPE_ETL:
+            create_job_kwargs['Command']['Name'] = self.GLUE_TYPE_ETL
+            create_job_kwargs.update({
+                'GlueVersion': '4.0',
+                'WorkerType': worker_type,
+                'NumberOfWorkers': int(num_of_dpus)})
+            default_args.update({'--enable-spark-ui': 'true',
+                                 '--spark-event-logs-path': os.path.join(f's3://',
+                                                                         self.s3_bucket_name,
+                                                                         'events/')})
+            if extra_py_path:
+                default_args['--extra-py-files'] = extra_py_path
+            if enable_iceberg:
+                default_args['--datalake-formats'] = 'iceberg'
+
+        elif glue_job_type == self.GLUE_TYPE_PYTHON_SHELL:
+            create_job_kwargs['Command']['Name'] = self.GLUE_TYPE_PYTHON_SHELL
+            create_job_kwargs['Command']['PythonVersion'] = '3.9'
+
+            if extra_py_path:
+                default_args['--extra-py-files'] = extra_py_path
+
+        create_job_kwargs['DefaultArguments'].update(default_args)
+
+        return create_job_kwargs
 
     def get_job(self, job_name: str):
         '''
@@ -192,6 +258,18 @@ class GlueManager(object):
             DatabaseName=db_name,
             Name=table_name
         )
+
+    def get_glue_databases(self, pattern: Optional[str] = None):
+        '''
+
+        :param pattern:
+        :return:
+        '''
+
+        if pattern:
+            return [db['Name'] for db in wr.catalog.get_databases() if pattern in db['Name']]
+        else:
+            return [db['Name'] for db in wr.catalog.get_databases()]
 
     def list_job_names(self,
                        max_results: int = 50,
