@@ -1,5 +1,6 @@
-import pytest
 from pprint import pprint
+
+import pytest
 
 from baram.sagemaker_manager import SagemakerManager
 
@@ -56,10 +57,11 @@ def test_list_apps(sm):
 #     sm.recreate_all_user_profiles()
 
 
-def test_describe_image(sm):
-    response = sm.describe_image('sli-docker')
-    assert response
-    pprint(response)
+# def test_describe_image(sm):
+#     # TODO: create a sample image and check it
+#     response = sm.describe_image('sli-docker')
+#     assert response
+#     pprint(response)
 
 
 def test_list_domains(sm):
@@ -68,7 +70,8 @@ def test_list_domains(sm):
     pprint(response)
 
 
-def test_describe_image_version(sm):
-    response = sm.describe_image_version('sli-docker')
-    assert response['Version']
-    pprint(response['Version'])
+# def test_describe_image_version(sm):
+#     # TODO: create a sample image and check it
+#     response = sm.describe_image_version('sli-docker')
+#     assert response['Version']
+#     pprint(response['Version'])
