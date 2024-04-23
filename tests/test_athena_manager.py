@@ -1,21 +1,39 @@
 import pytest
 
+from baram.s3_manager import S3Manager
 from baram.athena_manager import AthenaManager
 
 
 @pytest.fixture()
 def am():
-    return AthenaManager()
+    return AthenaManager(bucket_name='sli-dst-dlprod-public',
+                         workgroup='adw_etl')
+
+
+@pytest.fixture()
+def sm():
+    return S3Manager(bucket_name='sli-dst-dlprod-public')
 
 
 @pytest.fixture()
 def sample():
-    return {'db_name': 'sample_db', 'table_name': 'sample_table'}
+    return {'db_name': 'sample', 'table_name': 'sample_table'}
 
 
-def test_delete_glue_table(am, sample):
+def test_delete_glue_table(am, sm, sample):
     # Given
-    # TODO: create a table
+    am.fetch_query(sql=f"create external table if not exists {sample['db_name']}.{sample['table_name']}("
+                       f"   col1 string comment 'column1', "
+                       f"   col2 int comment 'column2') "
+                       f"comment 'sample table' "
+                       f"row format delimited fields terminated by ',' "
+                       f"stored as textfile "
+                       f"location '{sm.get_s3_full_path(sm.bucket_name, 'query_results')}' "
+                       f"tblproperties ('classification'='csv');",
+                   db_name=sample['db_name'],
+                   s3_output=sm.get_s3_full_path(sm.bucket_name, 'query_results'))
+
+    assert am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name'])
 
     # When
     am.delete_glue_table(db_name=sample['db_name'],

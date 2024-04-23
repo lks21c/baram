@@ -1,16 +1,21 @@
-from typing import Optional, Union, Dict, Any, List
+from pprint import pprint
+from typing import Optional, Union, Dict, Any, List, Literal
 
-import awswrangler as wr
 import fire
+import awswrangler as wr
 from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
 
+from baram.s3_manager import S3Manager
 from baram.log_manager import LogManager
 
 
 class AthenaManager(object):
-    def __init__(self):
+    def __init__(self,
+                 bucket_name: str,
+                 workgroup: str = 'primary'):
         self.logger = LogManager.get_logger()
-        pass
+        self.ATHENA_WORKGROUP = workgroup
+        self.sm = S3Manager(bucket_name)
 
     def delete_glue_table(self, db_name: str, table_name: str):
         '''
@@ -28,7 +33,7 @@ class AthenaManager(object):
                     sql: str,
                     db_name: Optional[str] = None,
                     params: Union[Dict[str, Any], List[str], None] = None,
-                    paramstyle: str = 'qmark',
+                    paramstyle: Literal['qmark', 'named'] = 'qmark',
                     s3_output: Optional[str] = None,
                     athena_query_wait_polling_delay: float = _QUERY_WAIT_POLLING_DELAY):
         '''
@@ -43,18 +48,19 @@ class AthenaManager(object):
         Interval in seconds for how often the function will check if the Athena query has completed.
         :return: Dictionary with the get_query_execution response. You can obtain query result as csv on S3.
         '''
+        pprint(sql)
         query_execution_id = wr.athena.start_query_execution(sql=sql,
                                                              workgroup=self.ATHENA_WORKGROUP,
                                                              params=params,
                                                              paramstyle=paramstyle,
                                                              s3_output=s3_output,
-                                                             database=self.get_db_name(db_name))
+                                                             database=db_name)
 
         res = wr.athena.wait_query(query_execution_id=query_execution_id,
                                    athena_query_wait_polling_delay=athena_query_wait_polling_delay)
 
         arr = str(res['ResultConfiguration']['OutputLocation']).replace('s3://', '').split('/')
-        print(f"fetch_result_path={self._get_s3_web_url(arr[0], '/'.join(arr[1:]))}")
+        print(f"fetch_result_path={self.sm.get_s3_web_url(arr[0], '/'.join(arr[1:]))}")
         return res
 
     def count_rows_from_table(self, table_name: Optional[str] = None):
