@@ -145,6 +145,8 @@ class AthenaManager(object):
                                       workgroup=workgroup)
         return df
 
+    # TODO: Add a method that dumps athena query result into s3 directly.
+
 
 if __name__ == '__main__':
     fire.Fire(AthenaManager)
