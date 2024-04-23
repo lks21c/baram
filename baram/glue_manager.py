@@ -227,26 +227,6 @@ class GlueManager(object):
         '''
         return self.cli.delete_job(JobName=name)
 
-    def delete_table(self, db_name: str, table_name: str, include_s3: bool = False):
-        '''
-
-        :param db_name: database name
-        :param table_name: job name
-        :param include_s3: delete table including s3 or not
-        :return:
-        '''
-        try:
-            self.cli.delete_table(
-                DatabaseName=db_name,
-                Name=table_name
-            )
-        except Exception as e:
-            pass
-        finally:
-            if include_s3:
-                print(f'delete {os.path.join(self.TABLE_PATH_PREFIX, db_name, table_name)}')
-                self.sm.delete_dir(os.path.join(self.TABLE_PATH_PREFIX, db_name, table_name))
-
     def get_table(self, db_name: str, table_name: str):
         '''
 
