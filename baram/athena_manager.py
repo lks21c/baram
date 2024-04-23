@@ -24,6 +24,8 @@ class AthenaManager(object):
         wr.catalog.delete_table_if_exists(database=db_name, table=table_name)
         print(f'delete {db_name} {table_name} completed')
 
+        # TODO: delete file on s3 using glue metadata
+
     def fetch_query(self,
                     sql: str,
                     db_name: Optional[str] = None,
