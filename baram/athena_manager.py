@@ -35,18 +35,20 @@ class AthenaManager(object):
         :param table_comment: comment for table
         :return:
         '''
-        columns = ' '.join([f'{k} {column_def[k]} comment {column_comments[k]}'
-                            if k in column_comments.keys() else f'{k} {column_def[k]}' for k in column_def])
+        columns = ', '.join([f"{k} {column_def[k]} comment '{column_comments[k]}'"
+                             if k in column_comments.keys() else f"{k} {column_def[k]}" for k in column_def])
 
         sql = f"create external table if not exists {db_name}.{table_name}("\
-              f"{columns}"\
-              f"comment {table_comment} "\
+              f"{columns}) "\
+              f"comment '{table_comment}' "\
               f"row format delimited fields terminated by ',' "\
               f"stored as textfile "\
               f"location '{location}' "\
               f"tblproperties ('classification'='csv');"
 
-        pprint(sql)
+        self.fetch_query(sql=sql,
+                         db_name=db_name,
+                         s3_output=location)
 
     def delete_glue_table(self, db_name: str, table_name: str):
         '''

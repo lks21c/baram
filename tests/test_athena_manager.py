@@ -34,7 +34,7 @@ def test_create_glue_external_table(am, sm, sample):
                                   column_comments=column_comments,
                                   table_comment='table1')
     # Then
-    pass
+    # TODO: use GlueManager to get schema of created table
 
 
 def test_delete_glue_table(am, sm, sample):
