@@ -20,6 +20,23 @@ def sample():
     return {'db_name': 'sample', 'table_name': 'sample_table'}
 
 
+def test_create_glue_external_table(am, sm, sample):
+    # Given
+    column_def = {'col1': 'string', 'col2': 'int'}
+    column_comments = {'col1': 'column1'}
+    location = sm.get_s3_full_path(sm.bucket_name, 'query_results')
+
+    # When
+    am.create_glue_external_table(db_name=sample['db_name'],
+                                  table_name=sample['table_name'],
+                                  column_def=column_def,
+                                  location=location,
+                                  column_comments=column_comments,
+                                  table_comment='table1')
+    # Then
+    pass
+
+
 def test_delete_glue_table(am, sm, sample):
     # Given
     am.fetch_query(sql=f"create external table if not exists {sample['db_name']}.{sample['table_name']}("

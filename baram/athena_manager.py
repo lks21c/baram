@@ -17,6 +17,37 @@ class AthenaManager(object):
         self.ATHENA_WORKGROUP = workgroup
         self.sm = S3Manager(bucket_name)
 
+    def create_glue_external_table(self,
+                                   db_name: str,
+                                   table_name: str,
+                                   column_def: dict,
+                                   location: str,
+                                   column_comments: Optional[dict] = None,
+                                   table_comment: Optional[str] = None):
+        '''
+        Create Glue External Table, without row insertion
+
+        :param db_name: target glue database name
+        :param table_name: target glue table name
+        :param column_def: definition for columns. each key means column name, and its value means column type
+        :param location: s3 location for query saving
+        :param column_comments: comments for columns. each key means column name, and its value means comment
+        :param table_comment: comment for table
+        :return:
+        '''
+        columns = ' '.join([f'{k} {column_def[k]} comment {column_comments[k]}'
+                            if k in column_comments.keys() else f'{k} {column_def[k]}' for k in column_def])
+
+        sql = f"create external table if not exists {db_name}.{table_name}("\
+              f"{columns}"\
+              f"comment {table_comment} "\
+              f"row format delimited fields terminated by ',' "\
+              f"stored as textfile "\
+              f"location '{location}' "\
+              f"tblproperties ('classification'='csv');"
+
+        pprint(sql)
+
     def delete_glue_table(self, db_name: str, table_name: str):
         '''
         Delete Glue Table.
