@@ -7,7 +7,35 @@ from baram.glue_manager import GlueManager
 
 @pytest.fixture()
 def gm():
-    return GlueManager('sli-dst-glue')
+    return GlueManager('sli-dst-dlprod-public')
+
+
+@pytest.fixture()
+def sample():
+    return {'db_name': 'sample', 'table_name': 'sample_table'}
+
+
+def test_get_databases(gm):
+    # Given
+    basic_databases = ['prod_mydata_master', 'sample']
+
+    # When
+    databases = gm.get_glue_databases()
+    print(databases)
+
+    # Then
+    assert set(basic_databases).difference(set(databases)) == set()
+
+
+def test_get_table(gm, sample):
+    # Given
+    db_name, table_name = sample['db_name'], sample['table_name']
+
+    # When
+    table_info = gm.get_table(db_name=db_name, table_name=table_name)
+
+    # Then
+    pprint(table_info['Table'])
 
 
 def test_create_job(gm):

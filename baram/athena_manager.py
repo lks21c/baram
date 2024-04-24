@@ -11,26 +11,28 @@ from baram.log_manager import LogManager
 
 class AthenaManager(object):
     def __init__(self,
-                 bucket_name: str,
+                 query_result_bucket_name: str,
                  workgroup: str = 'primary'):
         self.logger = LogManager.get_logger()
+        self.QUERY_RESULT_BUCKET = query_result_bucket_name
         self.ATHENA_WORKGROUP = workgroup
-        self.sm = S3Manager(bucket_name)
 
-    def create_glue_external_table(self,
-                                   db_name: str,
-                                   table_name: str,
-                                   column_def: dict,
-                                   location: str,
-                                   column_comments: Optional[dict] = None,
-                                   table_comment: Optional[str] = None):
+    def create_external_table(self,
+                              db_name: str,
+                              table_name: str,
+                              column_def: dict,
+                              location: str,
+                              s3_output: str,
+                              column_comments: Optional[dict] = None,
+                              table_comment: Optional[str] = None):
         '''
         Create Glue External Table, without row insertion
 
         :param db_name: target glue database name
         :param table_name: target glue table name
         :param column_def: definition for columns. each key means column name, and its value means column type
-        :param location: s3 location for query saving
+        :param location: location of data for table
+        :param s3_output: s3 location for query saving
         :param column_comments: comments for columns. each key means column name, and its value means comment
         :param table_comment: comment for table
         :return:
@@ -44,13 +46,13 @@ class AthenaManager(object):
               f"row format delimited fields terminated by ',' "\
               f"stored as textfile "\
               f"location '{location}' "\
-              f"tblproperties ('classification'='csv');"
+              f"tblproperties ('classification'='csv', 'skip.header.line.count'='1');"
 
         self.fetch_query(sql=sql,
                          db_name=db_name,
-                         s3_output=location)
+                         s3_output=s3_output)
 
-    def delete_glue_table(self, db_name: str, table_name: str):
+    def delete_table(self, db_name: str, table_name: str):
         '''
         Delete Glue Table.
 
@@ -95,7 +97,9 @@ class AthenaManager(object):
                                    athena_query_wait_polling_delay=athena_query_wait_polling_delay)
 
         arr = str(res['ResultConfiguration']['OutputLocation']).replace('s3://', '').split('/')
-        print(f"fetch_result_path={self.sm.get_s3_web_url(arr[0], '/'.join(arr[1:]))}")
+
+        sm = S3Manager(self.QUERY_RESULT_BUCKET)
+        print(f"fetch_result_path={sm.get_s3_web_url(arr[0], '/'.join(arr[1:]))}")
         return res
 
     def count_rows_from_table(self, table_name: Optional[str] = None):
