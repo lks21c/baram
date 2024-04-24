@@ -56,11 +56,12 @@ def test_create_external_table(am, sm, gm, sample):
     assert am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name'])
 
     result = gm.get_table(db_name=sample['db_name'], table_name=sample['table_name'])['Table']
-    result_col_names = [x['Name'] for x in result['StorageDescriptor']['Columns']]
-    result_col_types = [x['Type'] for x in result['StorageDescriptor']['Columns']]
+    result_cols = result['StorageDescriptor']['Columns']
+    result_col_names, result_col_types = [x['Name'] for x in result_cols], [x['Type'] for x in result_cols]
 
     assert result['DatabaseName'] == sample['db_name']
     assert result['StorageDescriptor']['Location'] == location
+    assert len(result_cols) == len(column_def)
     assert result_col_names == list(column_def.keys())
     assert result_col_types == list(column_def.values())
 
