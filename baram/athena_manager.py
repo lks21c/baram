@@ -2,6 +2,7 @@ from pprint import pprint
 from typing import Optional, Union, Dict, Any, List, Literal
 
 import fire
+import boto3
 import awswrangler as wr
 from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
 
@@ -26,12 +27,12 @@ class AthenaManager(object):
                               column_comments: Optional[dict] = None,
                               table_comment: Optional[str] = None):
         '''
-        Create Glue External Table, without row insertion
+        Create Glue External Table with s3 file
 
         :param db_name: target glue database name
         :param table_name: target glue table name
         :param column_def: definition for columns. each key means column name, and its value means column type
-        :param location: location of data for table
+        :param location: s3 location of data for table
         :param s3_output: s3 location for query saving
         :param column_comments: comments for columns. each key means column name, and its value means comment
         :param table_comment: comment for table
@@ -78,7 +79,8 @@ class AthenaManager(object):
 
         :param sql: sql
         :param db_name: database name
-        :param params: for parametrized query. This should be dictionary for "named" paramstyle and list for "qmark" paramstyle.
+        :param params: for parametrized query.
+                       This should be dictionary for "named" paramstyle and list for "qmark" paramstyle.
         :param paramstyle: "named" or "qmark"
         :param s3_output: You can choose output bucket for query result. default is workgroup s3 bucket.
         :param athena_query_wait_polling_delay: float, default: 0.25 seconds
@@ -174,7 +176,7 @@ class AthenaManager(object):
             query_txt = query_txt.replace(k, v)
         return query_txt
 
-    def from_athena_to_df(self, sql: str, db_name: Optional[str] = None, workgroup: Optional[str] = None):
+    def from_athena_to_df(self, sql: str, db_name: str, workgroup: Optional[str] = None):
         '''
         run query and return data frame.
 
@@ -183,6 +185,7 @@ class AthenaManager(object):
         :param workgroup: athena workgroup
         :return:
         '''
+        workgroup = workgroup if workgroup else self.ATHENA_WORKGROUP
 
         df = wr.athena.read_sql_query(sql=sql,
                                       ctas_approach=False,

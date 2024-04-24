@@ -2,9 +2,9 @@ import os
 from pathlib import Path
 from typing import Optional
 
-import awswrangler as wr
-import boto3
 import fire
+import boto3
+import awswrangler as wr
 
 from baram.iam_manager import IAMManager
 from baram.log_manager import LogManager
@@ -237,7 +237,17 @@ class GlueManager(object):
         return self.cli.get_table(
             DatabaseName=db_name,
             Name=table_name
-        )
+        )['Table']
+
+    def get_tables(self, db_name: str):
+        '''
+
+        :param db_name:
+        :return:
+        '''
+        return self.cli.get_tables(
+            DatabaseName=db_name
+        )['TableList']
 
     def get_glue_databases(self, pattern: Optional[str] = None):
         '''

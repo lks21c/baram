@@ -1,4 +1,5 @@
 import os
+from pprint import pprint
 
 import pytest
 
@@ -25,61 +26,70 @@ def sm():
 
 @pytest.fixture()
 def sample():
-    return {'db_name': 'sample', 'table_name': 'sample_table'}
+    return {'db_name': 'sample',
+            'table_name': 'sample_table',
+            's3_filename': 'sample_table.txt',
+            's3_filepath': 'incoming/sample/third/sample_table/once',
+            'column_def': {'col1': 'string', 'col2': 'int'},
+            'column_comments': {'col1': 'column1'}}
 
 
 def test_create_external_table(am, sm, gm, sample):
     # Given
-    local_filepath = f"{sample['table_name']}.txt"
-    s3_filepath = f"incoming/{sample['db_name']}/third/{sample['table_name']}/once"
+    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_filepath'])]
+    if sample['s3_filename'] not in files:
+        with open(sample['s3_filename'], "w") as file:
+            file.write('col1,col2\ntest,2')
 
-    with open(local_filepath, "w") as file:
-        file.write('col1,col2\ntest,2')
+        sm.upload_file(sample['s3_filename'], f"{sample['s3_filepath']}/{sample['s3_filename']}")
+        os.remove(sample['s3_filename'])
 
-    sm.upload_file(local_filepath, f"{s3_filepath}/{local_filepath}")
-    os.remove(local_filepath)
-
-    column_def, column_comments = {'col1': 'string', 'col2': 'int'}, {'col1': 'column1'}
-    location = sm.get_s3_full_path(sm.bucket_name, s3_filepath)
+    location = sm.get_s3_full_path(sm.bucket_name, sample['s3_filepath'])
     s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET,
                                     f"{am.ATHENA_WORKGROUP}/once/tables/{sample['table_name']}")
 
     # When
     am.create_external_table(db_name=sample['db_name'],
                              table_name=sample['table_name'],
-                             column_def=column_def,
+                             column_def=sample['column_def'],
                              location=location,
                              s3_output=s3_output,
-                             column_comments=column_comments,
+                             column_comments=sample['column_comments'],
                              table_comment='table1')
     # Then
     assert am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name'])
 
-    result = gm.get_table(db_name=sample['db_name'], table_name=sample['table_name'])['Table']
+    result = gm.get_table(db_name=sample['db_name'], table_name=sample['table_name'])
     result_cols = result['StorageDescriptor']['Columns']
     result_col_names, result_col_types = [x['Name'] for x in result_cols], [x['Type'] for x in result_cols]
 
     assert result['DatabaseName'] == sample['db_name']
     assert result['StorageDescriptor']['Location'] == location
-    assert len(result_cols) == len(column_def)
-    assert result_col_names == list(column_def.keys())
-    assert result_col_types == list(column_def.values())
+    assert len(result_cols) == len(sample['column_def'])
+    assert result_col_names == list(sample['column_def'].keys())
+    assert result_col_types == list(sample['column_def'].values())
 
 
 def test_delete_table(am, sm, sample):
     # Given
-    column_def = {'col1': 'string', 'col2': 'int'}
-    column_comments = {'col1': 'column1'}
-    location = sm.get_s3_full_path(sm.bucket_name, 'query_results')
-    s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET, f"{am.ATHENA_WORKGROUP}")
+    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_filepath'])]
+    if sample['s3_filename'] not in files:
+        with open(sample['s3_filename'], "w") as file:
+            file.write('col1,col2\ntest,2')
 
-    am.create_external_table(db_name=sample['db_name'],
-                             table_name=sample['table_name'],
-                             column_def=column_def,
-                             location=location,
-                             s3_output=s3_output,
-                             column_comments=column_comments,
-                             table_comment='table1')
+        sm.upload_file(sample['s3_filename'], f"{sample['s3_filepath']}/{sample['s3_filename']}")
+        os.remove(sample['s3_filename'])
+
+    if not am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name']):
+        location = sm.get_s3_full_path(sm.bucket_name, 'query_results')
+        s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET, f"{am.ATHENA_WORKGROUP}")
+        am.create_external_table(db_name=sample['db_name'],
+                                 table_name=sample['table_name'],
+                                 column_def=sample['column_def'],
+                                 location=location,
+                                 s3_output=s3_output,
+                                 column_comments=sample['column_comments'],
+                                 table_comment='table1')
 
     # When
     am.delete_table(db_name=sample['db_name'],
@@ -89,15 +99,41 @@ def test_delete_table(am, sm, sample):
     assert am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name']) is False
 
 
-def test_fetch_query(am, sample):
+def test_fetch_query(am, sm, sample):
     # Given
-    # TODO: create a table and insert sample data
+    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_filepath'])]
+    if sample['s3_filename'] not in files:
+        with open(sample['s3_filename'], "w") as file:
+            file.write('col1,col2\ntest,2')
+
+        sm.upload_file(sample['s3_filename'], f"{sample['s3_filepath']}/{sample['s3_filename']}")
+        os.remove(sample['s3_filename'])
+
+    s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET, f"{am.ATHENA_WORKGROUP}")
+    if not am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name']):
+        location = sm.get_s3_full_path(sm.bucket_name, 'query_results')
+        am.create_external_table(db_name=sample['db_name'],
+                                 table_name=sample['table_name'],
+                                 column_def=sample['column_def'],
+                                 location=location,
+                                 s3_output=s3_output,
+                                 column_comments=sample['column_comments'],
+                                 table_comment='table1')
+
+    before = am.from_athena_to_df(sql=f"select * from {sample['db_name']}.{sample['table_name']}",
+                                  db_name=sample['db_name'])
 
     # When
-    response = am.fetch_query(f"SELECT * FROM {sample['table_name']}", sample['db_name'])
+    sql = f"insert into {sample['db_name']}.{sample['table_name']} values ('insert test', 99)"
+    response = am.fetch_query(sql=sql, db_name=sample['db_name'], s3_output=s3_output)
+    after = am.from_athena_to_df(sql=f"select * from {sample['db_name']}.{sample['table_name']}",
+                                 db_name=sample['db_name'])
 
     # Then
-    # TODO: assert response
+    assert sql == response['Query']
+    assert before.shape != after.shape
+    assert before.shape[-1] == after.shape[-1]
+    assert abs(before.shape[0] - after.shape[0]) == 1
 
 
 def test_count_rows_from_table(am, sample):

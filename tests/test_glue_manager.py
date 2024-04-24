@@ -32,10 +32,24 @@ def test_get_table(gm, sample):
     db_name, table_name = sample['db_name'], sample['table_name']
 
     # When
-    table_info = gm.get_table(db_name=db_name, table_name=table_name)
+    table = gm.get_table(db_name=db_name, table_name=table_name)
 
     # Then
-    pprint(table_info['Table'])
+    pprint(table)
+
+
+def test_get_tables(gm, sample):
+    # Given
+    db_name, table_name = sample['db_name'], sample['table_name']
+
+    # When
+    tables = gm.get_tables(db_name=db_name)
+
+    # Then
+    table_names = [x['Name'] for x in tables]
+    pprint(table_names)
+    assert table_name in table_names
+
 
 
 def test_create_job(gm):
