@@ -51,7 +51,6 @@ def test_get_tables(gm, sample):
     assert table_name in table_names
 
 
-
 def test_create_job(gm):
     gm.create_job('CreateHiraYearAgeInOut',
                   'dlbeta-public-developer-role',

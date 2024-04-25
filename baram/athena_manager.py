@@ -8,14 +8,17 @@ from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
 
 from baram.s3_manager import S3Manager
 from baram.log_manager import LogManager
+from baram.glue_manager import GlueManager
 
 
 class AthenaManager(object):
     def __init__(self,
                  query_result_bucket_name: str,
+                 output_bucket_name: str,
                  workgroup: str = 'primary'):
         self.logger = LogManager.get_logger()
         self.QUERY_RESULT_BUCKET = query_result_bucket_name
+        self.OUTPUT_BUCKET = output_bucket_name
         self.ATHENA_WORKGROUP = workgroup
 
     def create_external_table(self,
@@ -54,7 +57,6 @@ class AthenaManager(object):
               f"location '{location}' "\
               f"tblproperties ('classification'='csv', 'skip.header.line.count'='1');"
 
-
         self.fetch_query(sql=sql,
                          db_name=db_name,
                          s3_output=s3_output)
@@ -65,13 +67,20 @@ class AthenaManager(object):
 
         :param db_name: target glue database name
         :param table_name: target glue table name
+        :param table_path:
         :return:
         '''
+        sm = S3Manager(self.OUTPUT_BUCKET)
+        gm = GlueManager(self.OUTPUT_BUCKET)
+
+        table = gm.get_table(db_name=db_name, table_name=table_name)
+        location = table['StorageDescriptor']['Location'].replace(f's3://{gm.s3_bucket_name}/', '')
 
         wr.catalog.delete_table_if_exists(database=db_name, table=table_name)
-        print(f'delete {db_name} {table_name} completed')
+        print(f'{db_name}.{table_name} is deleted, on athena')
 
-        # TODO: delete file on s3 using glue metadata
+        sm.delete_dir(s3_dir_path=location)
+        print(f'data of {table_name} in its location {location} is deleted, on s3')
 
     def fetch_query(self,
                     sql: str,
@@ -110,14 +119,14 @@ class AthenaManager(object):
         print(f"fetch_result_path={sm.get_s3_web_url(arr[0], '/'.join(arr[1:]))}")
         return res
 
-    def count_rows_from_table(self, table_name: Optional[str] = None):
+    def count_rows_from_table(self, db_name: str, table_name: str):
         '''
         Return rows from table.
 
         :param table_name:
         :return:
         '''
-        df = self.from_athena_to_df(f'SELECT count(*) as cnt FROM {self.get_table_name(table_name)}')
+        df = self.from_athena_to_df(sql=f'SELECT count(*) as cnt FROM {table_name}', db_name=db_name)
         return int(df['cnt'])
 
     def optimize_and_vacumm_iceberg_table(self, db_name: str, table_name: str):
