@@ -25,7 +25,8 @@ class AthenaManager(object):
                               location: str,
                               s3_output: str,
                               column_comments: Optional[dict] = None,
-                              table_comment: Optional[str] = None):
+                              table_comment: Optional[str] = None,
+                              partition_cols: dict = None):
         '''
         Create Glue External Table with s3 file
 
@@ -36,18 +37,23 @@ class AthenaManager(object):
         :param s3_output: s3 location for query saving
         :param column_comments: comments for columns. each key means column name, and its value means comment
         :param table_comment: comment for table
+        :param partition_cols: same with column_def when do partitioning, None when don't.
         :return:
         '''
         columns = ', '.join([f"{k} {column_def[k]} comment '{column_comments[k]}'"
                              if k in column_comments.keys() else f"{k} {column_def[k]}" for k in column_def])
+        partitions = 'partitioned by (' + ', '.join([f"{k} {partition_cols[k]}"
+                                                    for k in partition_cols]) + ')' if partition_cols else ''
 
         sql = f"create external table if not exists {db_name}.{table_name}("\
               f"{columns}) "\
               f"comment '{table_comment}' "\
+              f"{partitions} " \
               f"row format delimited fields terminated by ',' "\
               f"stored as textfile "\
               f"location '{location}' "\
               f"tblproperties ('classification'='csv', 'skip.header.line.count'='1');"
+
 
         self.fetch_query(sql=sql,
                          db_name=db_name,

@@ -122,9 +122,28 @@ class S3Manager(object):
             self.logger.info(e)
             raise e
 
+    def write_and_upload_file(self, content: str, local_file_path: str, s3file_path: str, do_remove: bool = False):
+        '''
+        Upload file.
+
+        :param content: the content of file. ex) 'col1,col2\nname,height'
+        :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
+        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+        :param do_remove: remove written file
+        :return: response
+        '''
+
+        with open(local_file_path, 'w') as f:
+            f.write(content)
+        self.upload_file(local_file_path, s3file_path)
+
+        if do_remove:
+            os.remove(local_file_path)
+
     def upload_file(self, local_file_path: str, s3file_path: str):
         '''
         Upload file.
+
         :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
         :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data/a.csv
         :return: response

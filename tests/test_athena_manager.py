@@ -1,6 +1,3 @@
-import os
-from pprint import pprint
-
 import pytest
 
 from baram.s3_manager import S3Manager
@@ -27,22 +24,31 @@ def sm():
 @pytest.fixture()
 def sample():
     return {'db_name': 'sample',
+            's3_dirpath': 'incoming/sample/third/',
             'table_name': 'sample_table',
             's3_filename': 'sample_table.txt',
             's3_filepath': 'incoming/sample/third/sample_table/once',
+            'file_content': 'col1,col2\ntest,2',
+            'partitioned_table_name': 'sample_partitioned_table',
+            'partitioned_s3_filename': 'sample_partitioned_table.txt',
+            'partitioned_s3_filepath': 'incoming/sample/third/sample_partitioned_table/once',
+            'partitioned_file_content': 'date,col1,col2\n2024-01-01,test,1\n2024-01-02,test,2',
             'column_def': {'col1': 'string', 'col2': 'int'},
-            'column_comments': {'col1': 'column1'}}
+            'column_comments': {'col1': 'column1'},
+            'parition_cols': {'date': 'date'}}
 
 
 def test_create_external_table(am, sm, gm, sample):
     # Given
-    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_filepath'])]
+    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_dirpath'])]
     if sample['s3_filename'] not in files:
-        with open(sample['s3_filename'], "w") as file:
-            file.write('col1,col2\ntest,2')
-
-        sm.upload_file(sample['s3_filename'], f"{sample['s3_filepath']}/{sample['s3_filename']}")
-        os.remove(sample['s3_filename'])
+        sm.write_and_upload_file(sample['file_content'],
+                                 sample['s3_filename'],
+                                 f"{sample['s3_filepath']}/{sample['s3_filename']}")
+    else:
+        gzs = [x for x in files if x.split('.')[-1] == 'gz']
+        if len(gzs) > 0:
+            sm.delete_objects(s3_keys=[f"{sample['s3_filepath']}/{gz}" for gz in gzs])
 
     location = sm.get_s3_full_path(sm.bucket_name, sample['s3_filepath'])
     s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET,
@@ -60,29 +66,67 @@ def test_create_external_table(am, sm, gm, sample):
     assert am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name'])
 
     result = gm.get_table(db_name=sample['db_name'], table_name=sample['table_name'])
-    result_cols = result['StorageDescriptor']['Columns']
-    result_col_names, result_col_types = [x['Name'] for x in result_cols], [x['Type'] for x in result_cols]
+    rslt_cols = result['StorageDescriptor']['Columns']
 
     assert result['DatabaseName'] == sample['db_name']
     assert result['StorageDescriptor']['Location'] == location
-    assert len(result_cols) == len(sample['column_def'])
-    assert result_col_names == list(sample['column_def'].keys())
-    assert result_col_types == list(sample['column_def'].values())
+    assert {x['Name']: x['Type'] for x in rslt_cols} == sample['column_def']
+
+
+def test_create_external_table_with_partitioning(am, sm, gm, sample):
+    # Given
+    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_dirpath'])]
+    if sample['partitioned_s3_filename'] not in files:
+        sm.write_and_upload_file(sample['partitioned_file_content'],
+                                 sample['partitioned_s3_filename'],
+                                 f"{sample['partitioned_s3_filepath']}/{sample['partitioned_s3_filename']}")
+    else:
+        gzs = [x for x in files if x.split('.')[-1] == 'gz']
+        if len(gzs) > 0:
+            sm.delete_objects(s3_keys=[f"{sample['partitioned_s3_filepath']}/{gz}" for gz in gzs])
+
+    location = sm.get_s3_full_path(sm.bucket_name, sample['partitioned_s3_filepath'])
+    s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET,
+                                    f"{am.ATHENA_WORKGROUP}/once/tables/{sample['partitioned_table_name']}")
+
+    # When
+    am.create_external_table(db_name=sample['db_name'],
+                             table_name=sample['partitioned_table_name'],
+                             column_def=sample['column_def'],
+                             location=location,
+                             s3_output=s3_output,
+                             column_comments=sample['column_comments'],
+                             table_comment='table1',
+                             partition_cols=sample['partition_cols'])
+    # Then
+    assert am.check_table_exists(db_name=sample['db_name'], table_name=sample['partitioned_table_name'])
+
+    result = gm.get_table(db_name=sample['db_name'], table_name=sample['partitioned_table_name'])
+    rslt_cols = result['StorageDescriptor']['Columns']
+    rslt_partitions = result['PartitionKeys']
+
+    assert result['DatabaseName'] == sample['db_name']
+    assert result['StorageDescriptor']['Location'] == location
+    assert {x['Name']: x['Type'] for x in rslt_cols} == sample['column_def']
+    assert {x['Name']: x['Type'] for x in rslt_partitions} == sample['partition_cols']
 
 
 def test_delete_table(am, sm, sample):
     # Given
-    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_filepath'])]
+    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_dirpath'])]
     if sample['s3_filename'] not in files:
-        with open(sample['s3_filename'], "w") as file:
-            file.write('col1,col2\ntest,2')
-
-        sm.upload_file(sample['s3_filename'], f"{sample['s3_filepath']}/{sample['s3_filename']}")
-        os.remove(sample['s3_filename'])
+        sm.write_and_upload_file(sample['file_content'],
+                                 sample['s3_filename'],
+                                 f"{sample['s3_filepath']}/{sample['s3_filename']}")
+    else:
+        gzs = [x for x in files if x.split('.')[-1] == 'gz']
+        if len(gzs) > 0:
+            sm.delete_objects(s3_keys=[f"{sample['s3_filepath']}/{gz}" for gz in gzs])
 
     if not am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name']):
-        location = sm.get_s3_full_path(sm.bucket_name, 'query_results')
-        s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET, f"{am.ATHENA_WORKGROUP}")
+        location = sm.get_s3_full_path(sm.bucket_name, sample['s3_filepath'])
+        s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET,
+                                        f"{am.ATHENA_WORKGROUP}/once/tables/{sample['table_name']}")
         am.create_external_table(db_name=sample['db_name'],
                                  table_name=sample['table_name'],
                                  column_def=sample['column_def'],
@@ -101,17 +145,20 @@ def test_delete_table(am, sm, sample):
 
 def test_fetch_query(am, sm, sample):
     # Given
-    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_filepath'])]
+    files = [x['Key'].split('/')[-1] for x in sm.list_objects(prefix=sample['s3_dirpath'])]
     if sample['s3_filename'] not in files:
-        with open(sample['s3_filename'], "w") as file:
-            file.write('col1,col2\ntest,2')
+        sm.write_and_upload_file(sample['file_content'],
+                                 sample['s3_filename'],
+                                 f"{sample['s3_filepath']}/{sample['s3_filename']}")
+    else:
+        gzs = [x for x in files if x.split('.')[-1] == 'gz']
+        if len(gzs) > 0:
+            sm.delete_objects(s3_keys=[f"{sample['s3_filepath']}/{gz}" for gz in gzs])
 
-        sm.upload_file(sample['s3_filename'], f"{sample['s3_filepath']}/{sample['s3_filename']}")
-        os.remove(sample['s3_filename'])
-
-    s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET, f"{am.ATHENA_WORKGROUP}")
+    s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET,
+                                    f"{am.ATHENA_WORKGROUP}/once/tables/{sample['table_name']}")
     if not am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name']):
-        location = sm.get_s3_full_path(sm.bucket_name, 'query_results')
+        location = sm.get_s3_full_path(sm.bucket_name, sample['s3_filepath'])
         am.create_external_table(db_name=sample['db_name'],
                                  table_name=sample['table_name'],
                                  column_def=sample['column_def'],
