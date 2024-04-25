@@ -61,6 +61,14 @@ class AthenaManager(object):
                          db_name=db_name,
                          s3_output=s3_output)
 
+    def create_iceberg_table_with_query(self):
+        # TODO
+        pass
+
+    def create_iceberg_table_with_dataframe(self):
+        # TODO
+        pass
+
     def delete_table(self, db_name: str, table_name: str):
         '''
         Delete Glue Table.
