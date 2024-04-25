@@ -68,7 +68,7 @@ def test_create_external_table(am, sm, gm, sample):
     assert result['DatabaseName'] == sample['db_name']
     assert result['StorageDescriptor']['Location'] == location
     assert {x['Name']: x['Type'] for x in rslt_cols} == sample['column_def']
-    sm.delete_dir(s3_dir_path=location)
+    sm.delete_dir(sample['s3_filepath'])
 
 
 def test_create_external_table_with_partitioning(am, sm, gm, sample):
@@ -102,7 +102,7 @@ def test_create_external_table_with_partitioning(am, sm, gm, sample):
     assert result['StorageDescriptor']['Location'] == location
     assert {x['Name']: x['Type'] for x in rslt_cols} == sample['column_def']
     assert {x['Name']: x['Type'] for x in rslt_partitions} == sample['partition_cols']
-    sm.delete_dir(s3_dir_path=location)
+    sm.delete_dir(sample['s3_filepath'])
 
 
 def test_delete_table(am, sm, sample):
@@ -125,8 +125,7 @@ def test_delete_table(am, sm, sample):
                                  table_comment='table1')
 
     # When
-    am.delete_table(db_name=sample['db_name'],
-                    table_name=sample['table_name'])
+    am.delete_table(db_name=sample['db_name'], table_name=sample['table_name'])
 
     # Then
     assert sm.list_objects(location) is None
@@ -166,7 +165,7 @@ def test_fetch_query(am, sm, sample):
     assert before.shape != after.shape
     assert before.shape[-1] == after.shape[-1]
     assert abs(before.shape[0] - after.shape[0]) == 1
-    sm.delete_dir(s3_dir_path=location)
+    sm.delete_dir(sample['s3_filepath'])
 
 
 def test_count_rows_from_table(am, sm, sample):
@@ -176,7 +175,7 @@ def test_count_rows_from_table(am, sm, sample):
                              f"{sample['s3_filepath']}/{sample['s3_filename']}")
     os.remove(sample['s3_filename'])
 
-    location = m.get_s3_full_path(sm.bucket_name, sample['s3_filepath'])
+    location = sm.get_s3_full_path(sm.bucket_name, sample['s3_filepath'])
     am.create_external_table(db_name=sample['db_name'],
                              table_name=sample['table_name'],
                              column_def=sample['column_def'],
@@ -188,10 +187,12 @@ def test_count_rows_from_table(am, sm, sample):
 
     # When
     result = am.count_rows_from_table(db_name=sample['db_name'], table_name=sample['table_name'])
+    df = am.from_athena_to_df(sql=f"select * from {sample['db_name']}.{sample['table_name']}",
+                              db_name=sample['db_name'])
 
     # Then
-    assert result == sample['file_content'].count('\n')
-    sm.delete_dir(s3_dir_path=location)
+    assert result == df.shape[0]
+    sm.delete_dir(sample['s3_filepath'])
 
 
 def test_optimize_and_vacumm_iceberg_table(am, sample):
@@ -229,7 +230,7 @@ def test_check_table_exists(am, sm, sample):
 
     # Then
     assert am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name'])
-    sm.delete_dir(s3_dir_path=location)
+    sm.delete_dir(sample['s3_filepath'])
 
 
 def test_read_query_txt(am, sample):
@@ -244,17 +245,17 @@ def test_from_athena_to_df(am, sm, sample):
                              f"{sample['s3_filepath']}/{sample['s3_filename']}")
     os.remove(sample['s3_filename'])
 
+    location = sm.get_s3_full_path(sm.bucket_name, sample['s3_filepath'])
+    print(location)
     s3_output = sm.get_s3_full_path(am.QUERY_RESULT_BUCKET,
                                     f"{am.ATHENA_WORKGROUP}/once/tables/{sample['table_name']}")
-    if not am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name']):
-        location = sm.get_s3_full_path(sm.bucket_name, sample['s3_filepath'])
-        am.create_external_table(db_name=sample['db_name'],
-                                 table_name=sample['table_name'],
-                                 column_def=sample['column_def'],
-                                 location=location,
-                                 s3_output=s3_output,
-                                 column_comments=sample['column_comments'],
-                                 table_comment='table1')
+    am.create_external_table(db_name=sample['db_name'],
+                             table_name=sample['table_name'],
+                             column_def=sample['column_def'],
+                             location=location,
+                             s3_output=s3_output,
+                             column_comments=sample['column_comments'],
+                             table_comment='table1')
 
     # When
     df = am.from_athena_to_df(sql=f"select * from {sample['db_name']}.{sample['table_name']}",
@@ -266,4 +267,4 @@ def test_from_athena_to_df(am, sm, sample):
     assert list(df.columns) == list(sample['column_def'].keys())
     assert df.shape[0] == sample['file_content'].count('\n')
     assert df.shape[1] == len(sample['column_def'].keys())
-    sm.delete_dir(s3_dir_path=location)
+    sm.delete_dir(sample['s3_filepath'])

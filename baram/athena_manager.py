@@ -73,14 +73,19 @@ class AthenaManager(object):
         sm = S3Manager(self.OUTPUT_BUCKET)
         gm = GlueManager(self.OUTPUT_BUCKET)
 
-        table = gm.get_table(db_name=db_name, table_name=table_name)
-        location = table['StorageDescriptor']['Location'].replace(f's3://{gm.s3_bucket_name}/', '')
+        try:
+            table = gm.get_table(db_name=db_name, table_name=table_name)
+            location = table['StorageDescriptor']['Location'].replace(f's3://{gm.s3_bucket_name}/', '')
 
-        wr.catalog.delete_table_if_exists(database=db_name, table=table_name)
-        print(f'{db_name}.{table_name} is deleted, on athena')
+            wr.catalog.delete_table_if_exists(database=db_name, table=table_name)
+            print(f'{db_name}.{table_name} is deleted, on athena')
 
-        sm.delete_dir(s3_dir_path=location)
-        print(f'data of {table_name} in its location {location} is deleted, on s3')
+            sm.delete_dir(s3_dir_path=location)
+            print(f'data of {table_name} in its location {location} is deleted, on s3')
+
+        except Exception as e:
+            self.logger.info(e)
+            raise e
 
     def fetch_query(self,
                     sql: str,
