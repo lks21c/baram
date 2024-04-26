@@ -4,6 +4,7 @@ from typing import Optional
 import boto3
 
 from baram.log_manager import LogManager
+from botocore.exceptions import ClientError
 
 
 class SagemakerManager(object):
@@ -51,8 +52,9 @@ class SagemakerManager(object):
                                            AppName=app_name,
                                            AppType=app_type)
             return response
+        # TODO: add error handling exception
         except:
-            return None
+            pass
 
     def describe_app(self,
                      user_profile_name: str,
@@ -78,19 +80,28 @@ class SagemakerManager(object):
         domain_id = domain_id if domain_id else self.domain_id
         self.logger.info(f'start creating {user_profile_name}')
         if is_sso_domain:
-            response = self.cli.create_user_profile(DomainId=domain_id,
-                                                    UserProfileName=user_profile_name,
-                                                    UserSettings={
-                                                        'ExecutionRole': execution_role},
-                                                    SingleSignOnUserIdentifier='UserName',
-                                                    SingleSignOnUserValue=sso_user_value,
-                                                    **kwargs)
+            try:
+                response = self.cli.create_user_profile(DomainId=domain_id,
+                                                        UserProfileName=user_profile_name,
+                                                        UserSettings={
+                                                            'ExecutionRole': execution_role},
+                                                        SingleSignOnUserIdentifier='UserName',
+                                                        SingleSignOnUserValue=sso_user_value,
+                                                        **kwargs)
+            except self.cli.exceptions.ResourceInUse:
+                self.logger.info(f'{user_profile_name} already exists.')
+                return
         else:
-            response = self.cli.create_user_profile(DomainId=domain_id,
-                                                    UserProfileName=user_profile_name,
-                                                    UserSettings={
-                                                        'ExecutionRole': execution_role},
-                                                    **kwargs)
+            try:
+                response = self.cli.create_user_profile(DomainId=domain_id,
+                                                        UserProfileName=user_profile_name,
+                                                        UserSettings={
+                                                            'ExecutionRole': execution_role},
+                                                        **kwargs)
+            except self.cli.exceptions.ResourceInUse:
+                self.logger.info(f'{user_profile_name} already exists.')
+                return
+
         return response
 
     def delete_user_profile(self,
