@@ -217,6 +217,7 @@ class GlueManager(object):
         except self.cli.exceptions.EntityNotFoundException:
             return None
 
+    # TODO: add more parameters
     def update_job(self,
                    job_name: str,
                    glue_job_type: str = 'glueetl',
@@ -224,8 +225,7 @@ class GlueManager(object):
                    num_of_dpus=None,
                    python_library_path: Optional[str] = None,
                    python_module: Optional[str] = None,
-                   enable_iceberg: bool = True
-                   ):
+                   enable_iceberg: bool = True):
 
         '''
         Updates an existing Glue job with the provided parameters.
@@ -280,6 +280,30 @@ class GlueManager(object):
             JobName=job_name,
             JobUpdate=prev_job['Job']
         )
+
+    def rename_job(self, old_name: str, new_name: str):
+        '''
+
+        :param old_name: old job name
+        :param new_name: new job name
+        :return:
+        '''
+        # Get the old job
+        old_job = self.get_job(old_name)
+        old_job_params = old_job['Job']
+
+        # Remove unnecessary keys
+        old_job_params.pop('Name', None)
+        old_job_params.pop('CreatedOn', None)
+        old_job_params.pop('LastModifiedOn', None)
+        old_job_params.pop('AllocatedCapacity', None)
+        old_job_params.pop('MaxCapacity', None)
+
+        # Create a new job with the new name and the same parameters as the old job
+        self.create_job(job_name=new_name, **old_job_params)
+
+        # Delete the old job
+        self.delete_job(old_name)
 
     def delete_job(self, name: str):
         '''

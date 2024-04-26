@@ -141,3 +141,27 @@ def test_refresh_job(gm):
 
 def test_summary(gm):
     gm.summary()
+
+def test_rename_job(gm, sample):
+    # Given
+    old_job_name = sample['job_name']
+    new_job_name = f"{sample['job_name']}_renamed"
+
+    # Create a job with the old name
+    gm.create_job(job_name=old_job_name,
+                  role_name=sample['role_name'],
+                  glue_security_conf_name=sample['security_conf_name'],
+                  python_library_path=sample['library_path'],
+                  python_module=sample['module'],
+                  enable_iceberg=sample['enable_iceberg'])
+
+    # When
+    gm.rename_job(old_name=old_job_name, new_name=new_job_name)
+
+    # Then
+    assert gm.get_job(old_job_name) is None
+    assert gm.get_job(new_job_name) is not None
+
+    # Cleanup
+    gm.delete_job(new_job_name)
+    assert gm.get_job(new_job_name) is None
