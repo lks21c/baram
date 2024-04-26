@@ -58,12 +58,14 @@ class SagemakerManager(object):
                      user_profile_name: str,
                      app_name: str,
                      app_type: str,
-                     domain_id: Optional[str] = None):
+                     domain_id: Optional[str] = None,
+                     **kwargs):
         domain_id = domain_id if domain_id else self.domain_id
         response = self.cli.describe_app(DomainId=domain_id,
                                          UserProfileName=user_profile_name,
                                          AppName=app_name,
-                                         AppType=app_type)
+                                         AppType=app_type,
+                                         **kwargs)
         return response
 
     def create_user_profile(self,

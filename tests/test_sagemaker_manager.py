@@ -53,13 +53,22 @@ def delete_app(sm):
     # Then
 
 
-def describe_app(sm):
-    pass
+def test_describe_app(sm):
     # Given
+    user_profile_name = 'yoonje-lee'
+    app_name = 'default'
+    app_type = 'JupyterServer'
 
     # When
-
+    response = sm.describe_app(user_profile_name=user_profile_name,
+                               app_name=app_name,
+                               app_type=app_type)
     # Then
+    assert type(response) == dict
+    assert response['UserProfileName'] == user_profile_name
+    assert response['AppName'] == app_name
+    assert response['AppType'] == app_type
+    pprint(response)
 
 
 # def test_create_user_profile(sm):
