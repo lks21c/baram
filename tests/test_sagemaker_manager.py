@@ -2,8 +2,8 @@ from pprint import pprint
 
 import pytest
 
-from baram.sagemaker_manager import SagemakerManager
 from baram.iam_manager import IAMManager
+from baram.sagemaker_manager import SagemakerManager
 
 
 @pytest.fixture()
@@ -113,13 +113,6 @@ def test_recreate_all_user_profiles(sm):
     # When
 
     # Then
-
-
-# def test_describe_image(sm):
-#     # TODO: create a sample image and check it
-#     response = sm.describe_image('sli-docker')
-#     assert response
-#     pprint(response)
 
 
 def test_list_domains(sm):
