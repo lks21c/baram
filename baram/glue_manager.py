@@ -356,6 +356,7 @@ class GlueManager(object):
         :return:
         '''
 
+        # TODO: compare between real job and s3
         glue_jobs = set([f'{jn}.scala' for jn in self.list_job_names()])
         git_jobs = set([f for f in os.listdir(code_path)])
 
