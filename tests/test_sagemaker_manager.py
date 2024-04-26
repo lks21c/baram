@@ -7,11 +7,15 @@ from baram.sagemaker_manager import SagemakerManager
 
 @pytest.fixture()
 def sm():
-    return SagemakerManager(domain_id='d-dwdufhmgqavz')
+    return SagemakerManager(domain_name='smprod-domain')
 
 
 def test_list_user_profiles(sm):
+    # When
     response = sm.list_user_profiles()
+
+    # Then
+    assert type(response) == list
     pprint(response)
 
 
@@ -83,7 +87,10 @@ def describe_app(sm):
 
 
 def test_list_domains(sm):
+    # When
     response = sm.list_domains()
+
+    # Then
     assert type(response) == list
     pprint(response)
 
@@ -97,7 +104,7 @@ def test_get_domain_id(sm):
 
     # Then
     assert type(response) == str
-    assert len(response) == 1
+    pprint(response)
 
 
 def delete_domain(sm):

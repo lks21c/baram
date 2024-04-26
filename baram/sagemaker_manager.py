@@ -7,9 +7,9 @@ from baram.log_manager import LogManager
 
 
 class SagemakerManager(object):
-    def __init__(self, domain_id: str = None):
+    def __init__(self, domain_name: str = None):
         self.cli = boto3.client('sagemaker')
-        self.domain_id = domain_id
+        self.domain_id = self.get_domain_id(domain_name=domain_name)
         self.logger = LogManager.get_logger('SagemakerManager')
 
     def list_user_profiles(self,
