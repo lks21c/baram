@@ -27,7 +27,11 @@ def test_describe_user_profile(sm):
     response = sm.describe_user_profile(user_profile_name=user_profile_name)
 
     # Then
-    print(response)
+    assert type(response) == dict
+    assert response['UserProfileName'] == user_profile_name
+    assert list(response.keys()) == ['DomainId', 'UserProfileArn', 'UserProfileName', 'HomeEfsFileSystemUid', 'Status',
+                                     'LastModifiedTime', 'CreationTime', 'UserSettings', 'ResponseMetadata']
+    pprint(response)
 
 
 def test_list_apps(sm):
@@ -35,7 +39,9 @@ def test_list_apps(sm):
     response = sm.list_apps()
 
     # Then
-    pprint(response)
+    assert type(response) == list
+    for i in response:
+        assert list(i.keys()) == ['DomainId', 'UserProfileName', 'AppType', 'AppName', 'Status', 'CreationTime']
 
 
 def delete_app(sm):
