@@ -4,7 +4,6 @@ from typing import Optional
 import boto3
 
 from baram.log_manager import LogManager
-from botocore.exceptions import ClientError
 
 
 class SagemakerManager(object):
