@@ -171,6 +171,17 @@ class SagemakerManager(object):
     def list_domains(self):
         return self.cli.list_domains()['Domains']
 
+    def get_domain_id(self,
+                      domain_name: str):
+        """
+        :param domain_name: sagemaker domain's name
+        :return:
+        """
+        response = self.list_domains()
+        for i in response:
+            if domain_name == i['DomainName']:
+                return i['DomainId']
+
     def delete_domain(self,
                       domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id

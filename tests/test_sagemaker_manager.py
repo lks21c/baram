@@ -34,6 +34,24 @@ def test_list_apps(sm):
     pprint(response)
 
 
+def delete_app(sm):
+    pass
+    # Given
+
+    # When
+
+    # Then
+
+
+def describe_app(sm):
+    pass
+    # Given
+
+    # When
+
+    # Then
+
+
 # def test_create_user_profile(sm):
 #     # Given
 #     user_profile_name = 'test4'
@@ -69,6 +87,35 @@ def test_list_domains(sm):
     assert type(response) == list
     pprint(response)
 
+
+def test_get_domain_id(sm):
+    # Given
+    domain_name = 'smbeta-domain'
+
+    # When
+    response = sm.get_domain_id(domain_name=domain_name)
+
+    # Then
+    assert type(response) == str
+    assert len(response) == 1
+
+
+def delete_domain(sm):
+    pass
+    # Given
+
+    # When
+
+    # Then
+
+
+def create_domain(sm):
+    pass
+    # Given
+
+    # When
+
+    # Then
 
 # def test_describe_image_version(sm):
 #     # TODO: create a sample image and check it
