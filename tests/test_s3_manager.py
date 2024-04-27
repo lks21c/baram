@@ -136,17 +136,23 @@ def test_delete_objects(sm, sample):
     assert sm.get_object(s3_tmp_file2) is None
 
 
-def test_list_dir(sm, sample):
+def test_list_dir(sm):
     # Given
-    # TODO: Create Dirs.
+    s3_dir = 'temp_dir/'
+    s3_key_id = f'{s3_dir}temp_file.txt'
+    s3_body = 'hello world'
+
+    sm.put_object(s3_key_id, s3_body)
 
     # When
-    for dir in sm.list_dir('dirs/', '/'):
-        assert dir
-        print(dir)
+    response = sm.list_dir(prefix=s3_dir)
 
     # Then
-    # TODO: Check dirs.
+    assert len(response) == 1
+    assert response[0] == s3_key_id
+    print(response)
+
+    sm.delete_dir(s3_key_id)
 
 
 def test_get_s3_arn(sm):
@@ -206,9 +212,19 @@ def test_check_s3_object_exists(sm, sample):
     sm.delete_object(sample['s3_key'])
 
 
-def test_rename_file(sm):
-    # TODO: change tc using temp file.
-    assert False
+def test_rename_file(sm, sample):
+    # Given
+    s3_body = 'hello world'
+    sm.put_object(sample['s3_key'], s3_body)
+    to_file_path = 'readme_2.md'
+
+    # When
+    sm.rename_file(from_file_path=sample['s3_key'],
+                   to_file_path=to_file_path)
+
+    # Then
+    check = sm.check_s3_object_exists(sample['s3_bucket_name'], to_file_path)
+    assert check
 
 
 def test_count_csv_row_count(sm):
