@@ -256,16 +256,23 @@ def test_copy(sm, sample):
     sm.delete_objects([from_key, to_key])
 
 
-def test_copy_object(sm):
-    # TODO: change tc using temp file.
-
+def test_copy_object(sm, sample):
     # Given
-    assert False
+    s3_body = 'hello world'
+    from_key = sample['s3_key']
+    to_key = 'readme_2.md'
+
+    sm.put_object(from_key, s3_body)
 
     # When
-    sm.copy_object(
-        from_key='incoming/prod_mydata_master/first/iu001/daily/2023/10/iu001_20231005.csv/part-00000-00aa4d98-f751-4c07-ae08-3e7b7402ed10-c000.csv',
-        to_key='incoming/prod_mydata_master/first/iu001/daily/2023/10/iu001_20231005_001.csv')
+    sm.copy_object(from_key=from_key,
+                   to_key=to_key)
 
     # Then
-    # TODO: TBD
+    from_check = sm.check_s3_object_exists(sample['s3_bucket_name'], from_key)
+    assert from_check
+
+    to_check = sm.check_s3_object_exists(sample['s3_bucket_name'], to_key)
+    assert to_check
+
+    sm.delete_objects([from_key, to_key])
