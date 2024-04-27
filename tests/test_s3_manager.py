@@ -230,8 +230,30 @@ def test_rename_file(sm, sample):
 
 
 def test_count_csv_row_count(sm):
-    # TODO: change tc using temp file.
-    assert False
+    # Given
+    import csv
+
+    local_tmp_file = 'tmp.csv'
+    header = ['col1', 'col2']
+    data = [['a', 1], ['b', 2], ['c', 3], ['d', 4]]
+
+    with open(local_tmp_file, 'w') as f:
+        w = csv.writer(f)
+        w.writerow(header)
+        for row in data:
+            w.writerow(row)
+
+    s3_tmp_file = 'tmp_file'
+    sm.upload_file(local_tmp_file, s3_tmp_file)
+
+    # When
+    s3_tmp_row_cnt = sm.count_csv_row_count(csv_path=s3_tmp_file)
+
+    # Then
+    assert s3_tmp_row_cnt == len(data)
+
+    os.remove(local_tmp_file)
+    sm.delete_object(s3_tmp_file)
 
 
 def test_copy(sm, sample):
