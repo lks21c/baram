@@ -342,7 +342,7 @@ class S3Manager(object):
         self.delete_dir(from_file_path)
 
     def count_csv_row_count(self, csv_path: str, distinct_col_name: Optional[str] = None):
-        df = wr.s3.read_csv(path=f's3://{self.from_s3_bucket_name}/{csv_path}', index_col=False,
+        df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{csv_path}', index_col=False,
                             keep_default_na=False)
         import pandas as pd
 
