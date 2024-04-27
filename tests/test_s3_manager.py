@@ -62,9 +62,8 @@ def test_upload_download_delete_dir(sm, sample):
     s3_tmp_dir = 'tmp_dir'
 
     # When/Then
-    sm.upload_dir(
-        temp_dir,
-        s3_tmp_dir)
+    sm.upload_dir(temp_dir,
+                  s3_tmp_dir)
 
     file_exist = False
     for f in sm.list_objects(f'{s3_tmp_dir}/'):
@@ -77,7 +76,7 @@ def test_upload_download_delete_dir(sm, sample):
     shutil.rmtree(s3_tmp_dir)
 
     sm.delete_dir(s3_tmp_dir)
-    # TODO: check delete dir
+    assert len(sm.list_dir(prefix=s3_tmp_dir)) == 0
 
 
 def test_upload_download_delete_file(sm, sample):
@@ -86,9 +85,7 @@ def test_upload_download_delete_file(sm, sample):
     s3_tmp_file = 'tmp_file'
 
     # When
-    sm.upload_file(
-        temp_file[1],
-        s3_tmp_file)
+    sm.upload_file(temp_file[1], s3_tmp_file)
 
     # Then
     for obj in sm.list_objects(s3_tmp_file):
@@ -102,9 +99,24 @@ def test_upload_download_delete_file(sm, sample):
     assert sm.get_object(s3_tmp_file) is None
 
 
-# TODO
 def test_write_and_upload_file(sm):
-    pass
+    # Given
+    content = 'hello world'
+    local_file_path = '/Users/samsung/Documents/tmp_file.txt'
+    s3_file_path = 'tmp_file'
+
+    # When
+    sm.write_and_upload_file(content=content,
+                             local_file_path=local_file_path,
+                             s3_file_path=s3_file_path)
+
+    # Then
+    assert os.path.exists(local_file_path)
+    os.remove(local_file_path)
+
+    for obj in sm.list_objects(s3_file_path):
+        assert obj['Key'] == s3_file_path
+    sm.delete_object(s3_file_path)
 
 
 def test_delete_objects(sm, sample):
@@ -112,13 +124,9 @@ def test_delete_objects(sm, sample):
     temp_file, temp_file2 = tempfile.mkstemp(), tempfile.mkstemp()
     s3_tmp_file, s3_tmp_file2 = 'tmp_file', 'tmp_file2'
 
-    sm.upload_file(
-        temp_file[1],
-        s3_tmp_file)
+    sm.upload_file(temp_file[1], s3_tmp_file)
 
-    sm.upload_file(
-        temp_file2[1],
-        s3_tmp_file2)
+    sm.upload_file(temp_file2[1], s3_tmp_file2)
 
     # When
     sm.delete_objects([s3_tmp_file, s3_tmp_file2])
