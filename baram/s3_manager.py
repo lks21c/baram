@@ -132,6 +132,7 @@ class S3Manager(object):
 
         with open(local_file_path, 'w') as f:
             f.write(content)
+        assert os.path.exists(local_file_path)
         self.upload_file(local_file_path, s3_file_path)
 
         if do_remove:

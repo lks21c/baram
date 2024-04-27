@@ -108,14 +108,13 @@ def test_write_and_upload_file(sm):
     # When
     sm.write_and_upload_file(content=content,
                              local_file_path=local_file_path,
-                             s3_file_path=s3_file_path)
+                             s3_file_path=s3_file_path,
+                             do_remove=True)
 
     # Then
-    assert os.path.exists(local_file_path)
-    os.remove(local_file_path)
-
     for obj in sm.list_objects(s3_file_path):
         assert obj['Key'] == s3_file_path
+
     sm.delete_object(s3_file_path)
 
 
