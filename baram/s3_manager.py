@@ -112,51 +112,45 @@ class S3Manager(object):
 
                     extra_args = {'ServerSideEncryption': self.kms_algorithm,
                                   'SSEKMSKeyId': self.kms_id} if self.kms_id else None
-                    self.cli.upload_file(local_file_path,
-                                         self.bucket_name,
-                                         s3file_path,
-                                         ExtraArgs=extra_args)
+                    self.cli.upload_file(local_file_path, self.bucket_name)
                     self.logger.info(
                         f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3file_path} Success.')
         except Exception as e:
             self.logger.info(e)
             raise e
 
-    def write_and_upload_file(self, content: str, local_file_path: str, s3file_path: str, do_remove: bool = False):
+    def write_and_upload_file(self, content: str, local_file_path: str, s3_file_path: str, do_remove: bool = False):
         '''
         Upload file.
 
         :param content: the content of file. ex) 'col1,col2\nname,height'
         :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+        :param s3_file_path: s3 path. ex) nylon-detector/crawl_data/a.csv
         :param do_remove: remove written file
         :return: response
         '''
 
         with open(local_file_path, 'w') as f:
             f.write(content)
-        self.upload_file(local_file_path, s3file_path)
+        self.upload_file(local_file_path, s3_file_path)
 
         if do_remove:
             os.remove(local_file_path)
 
-    def upload_file(self, local_file_path: str, s3file_path: str):
+    def upload_file(self, local_file_path: str, s3_file_path: str):
         '''
         Upload file.
 
         :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+        :param s3_file_path: s3 path. ex) nylon-detector/crawl_data/a.csv
         :return: response
         '''
 
         try:
             extra_args = {'ServerSideEncryption': self.kms_algorithm,
                           'SSEKMSKeyId': self.kms_id} if self.kms_id else None
-            self.cli.upload_file(local_file_path,
-                                 self.bucket_name,
-                                 s3file_path,
-                                 ExtraArgs=extra_args)
-            self.logger.info(f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3file_path} Success.')
+            self.cli.upload_file(local_file_path, self.bucket_name, s3_file_path, ExtraArgs=extra_args)
+            self.logger.info(f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3_file_path} Success.')
         except Exception as e:
             self.logger.info(e)
             raise e
