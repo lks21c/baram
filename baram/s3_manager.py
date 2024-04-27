@@ -107,14 +107,14 @@ class S3Manager(object):
             for path, subdirs, files in os.walk(local_dir_path):
                 for file in files:
                     dest_path = path.replace(local_dir_path, '')
-                    s3file_path = os.path.normpath(s3_dir_path + '/' + dest_path + '/' + file)
+                    s3_file_path = os.path.normpath(s3_dir_path + '/' + dest_path + '/' + file)
                     local_file_path = os.path.join(path, file)
 
                     extra_args = {'ServerSideEncryption': self.kms_algorithm,
                                   'SSEKMSKeyId': self.kms_id} if self.kms_id else None
-                    self.cli.upload_file(local_file_path, self.bucket_name)
+                    self.cli.upload_file(local_file_path, self.bucket_name, s3_file_path, ExtraArgs=extra_args)
                     self.logger.info(
-                        f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3file_path} Success.')
+                        f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3_file_path} Success.')
         except Exception as e:
             self.logger.info(e)
             raise e
