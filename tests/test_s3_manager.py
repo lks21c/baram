@@ -19,7 +19,10 @@ def sample():
 
 def test_list_buckets(sm):
     # When
-    for b in sm.list_buckets():
+    response = sm.list_buckets()
+
+    # Then
+    for b in response:
         assert b['Name']
         print(f'BucketName: b{b["Name"]}, CreationDate: {b["CreationDate"]}')
 
@@ -74,6 +77,7 @@ def test_upload_download_delete_dir(sm, sample):
     shutil.rmtree(s3_tmp_dir)
 
     sm.delete_dir(s3_tmp_dir)
+    # TODO: check delete dir
 
 
 def test_upload_download_delete_file(sm, sample):
@@ -96,6 +100,11 @@ def test_upload_download_delete_file(sm, sample):
 
     sm.delete_object(s3_tmp_file)
     assert sm.get_object(s3_tmp_file) is None
+
+
+# TODO
+def test_write_and_upload_file(sm):
+    pass
 
 
 def test_delete_objects(sm, sample):
@@ -130,6 +139,16 @@ def test_list_dir(sm, sample):
 
     # Then
     # TODO: Check dirs.
+
+
+def test_get_s3_arn(sm):
+    # Given
+    bucket_name = 'sli-dst-dlbeta-public'
+    # When
+    response = sm.get_s3_arn(bucket_name)
+
+    # Then
+    assert response == f'arn:aws:s3:::{bucket_name}'
 
 
 def test_get_bucket_encryption(sm, sample):
