@@ -226,24 +226,34 @@ def test_rename_file(sm, sample):
     check = sm.check_s3_object_exists(sample['s3_bucket_name'], to_file_path)
     assert check
 
+    sm.delete_object(to_file_path)
+
 
 def test_count_csv_row_count(sm):
     # TODO: change tc using temp file.
     assert False
 
 
-def test_copy(sm):
-    # TODO: change tc using temp file.
+def test_copy(sm, sample):
     # Given
-    assert False
+    s3_body = 'hello world'
+    from_key = sample['s3_key']
+    to_key = 'readme_2.md'
+
+    sm.put_object(from_key, s3_body)
 
     # When
-    sm.copy(
-        from_key='test/case1.csv',
-        to_key='test/case3.csv')
+    sm.copy(from_key=from_key,
+            to_key=to_key)
 
     # Then
-    # TODO: TBD
+    from_check = sm.check_s3_object_exists(sample['s3_bucket_name'], from_key)
+    assert from_check
+
+    to_check = sm.check_s3_object_exists(sample['s3_bucket_name'], to_key)
+    assert to_check
+
+    sm.delete_objects([from_key, to_key])
 
 
 def test_copy_object(sm):
