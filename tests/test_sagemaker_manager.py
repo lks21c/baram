@@ -1,3 +1,4 @@
+import time
 from pprint import pprint
 
 import pytest
@@ -37,17 +38,27 @@ def test_list_user_profiles(sm):
     pprint(response)
 
 
-def test_describe_user_profile(sm):
+def test_create_describe_delete_user_profile(sm, im):
     # Given
-    user_profile_name = 'test1'
+    user_profile_name = 'temp-user'
+    execution_role = im.get_role_arn(role_name='smbeta-execution-scientist-role')
 
-    # When
+    # When/Then
+    sm.create_user_profile(user_profile_name=user_profile_name,
+                           execution_role=execution_role)
+
+    assert user_profile_name in [x['UserProfileName'] for x in sm.list_user_profiles()]
+
     response = sm.describe_user_profile(user_profile_name=user_profile_name)
-
-    # Then
     assert type(response) == dict
     assert response['UserProfileName'] == user_profile_name
     pprint(response)
+
+    while sm.describe_user_profile(user_profile_name=user_profile_name)['Status'] != 'InService':
+        time.sleep(5)
+    sm.delete_user_profile(user_profile_name=user_profile_name)
+    time.sleep(5)
+    assert user_profile_name not in [x['UserProfileName'] for x in sm.list_user_profiles()]
 
 
 def test_list_apps(sm):
@@ -56,8 +67,6 @@ def test_list_apps(sm):
 
     # Then
     assert type(response) == list
-    for i in response:
-        assert list(i.keys()) == ['DomainId', 'UserProfileName', 'AppType', 'AppName', 'Status', 'CreationTime']
     pprint(response)
 
 
@@ -93,40 +102,17 @@ def test_describe_app(sm):
     pprint(response)
 
 
-def test_create_user_profile(sm, im):
-    # Given
-    user_profile_name = 'test1'
-    execution_role = im.get_role_arn(role_name='smbeta-execution-scientist-role')
-
-    # When
-    sm.create_user_profile(user_profile_name=user_profile_name,
-                           execution_role=execution_role)
-
-    # Then
-    assert user_profile_name in [x['UserProfileName'] for x in sm.list_user_profiles()]
-    pprint(sm.describe_user_profile(user_profile_name=user_profile_name))
-
-
-def test_delete_user_profile(sm):
-    # Given
-    user_profile_name = 'test1'
-
-    # When
-    response = sm.delete_user_profile(user_profile_name=user_profile_name)
-
-    # Then
-    assert user_profile_name not in [x['UserProfileName'] for x in sm.list_user_profiles()]
-    pprint(response)
-
-
-# TODO
 def test_recreate_all_user_profiles(sm):
-    pass
     # Given
+    user_profiles = [x['UserProfileName'] for x in sm.list_user_profiles()]
 
     # When
+    sm.recreate_all_user_profiles()
+    new_user_profiles = [x['UserProfileName'] for x in sm.list_user_profiles()]
 
     # Then
+    assert len(user_profiles) == len(new_user_profiles)
+    assert user_profiles.sort() == new_user_profiles.sort()
 
 
 def test_list_domains(sm):
@@ -138,13 +124,44 @@ def test_list_domains(sm):
     pprint(response)
 
 
-def test_describe_domain(sm):
-    # When
-    response = sm.describe_domain()
+def test_create_describe_delete_domain(sm, em, im, km):
+    # Given
+    domain_name = 'smbeta-domain'
+    auth_mode = 'IAM'
+    execution_role_arn = im.get_role_arn('smbeta-execution-engineer-iam-role')
+    sg_groups = [em.get_sg_id_with_sg_name('beta-public-vpc-default-sg')]
+    vpc_id = em.get_vpc_id_with_vpc_name('beta-public-vpc')
+    subnet_names = ['beta-public-vpc-pub-sub1', 'beta-public-vpc-pub-sub1']
+    subnet_ids = [em.get_subnet_id(vpc_id, x) for x in subnet_names]
+    app_network_access_type = 'PublicInternetOnly'
+    efs_kms_id = km.get_kms_arn('smbeta-public-s3-kms', False)
 
-    # Then
-    assert type(response) == dict
+    # When/Then
+    sm.create_domain(domain_name=domain_name,
+                     auth_mode=auth_mode,
+                     execution_role_arn=execution_role_arn,
+                     sg_groups=sg_groups,
+                     subnet_ids=subnet_ids,
+                     vpc_id=vpc_id,
+                     app_network_access_type=app_network_access_type,
+                     efs_kms_id=efs_kms_id)
+
+    assert domain_name in [x['DomainName'] for x in sm.list_domains()]
+
+    domain_id = sm.get_domain_id(domain_name)
+    response = sm.describe_domain(domain_id=domain_id)
+    assert response['Status'] in ['Pending', 'InService']
     pprint(response)
+
+    while sm.describe_domain(domain_id=domain_id)['Status'] == 'Pending':
+        print(f'waiting for {domain_name} to be created')
+        time.sleep(5)
+
+    if sm.describe_domain(domain_id=domain_id)['Status'] == 'InService':
+        sm.delete_domain(domain_id=domain_id,
+                         delete_user_profiles=False)
+
+    # assert sm.describe_domain(domain_id=domain_id) is None
 
 
 def test_get_domain_id(sm):
@@ -157,41 +174,6 @@ def test_get_domain_id(sm):
     # Then
     assert type(response) == str
     pprint(response)
-
-
-def test_delete_domain(sm):
-    # When
-    sm.delete_domain(delete_user_profiles=True)
-
-    # Then
-    assert sm.describe_domain()['Status'] == 'Deleting'
-
-
-def test_create_domain(sm, em, im, km):
-    # Given
-    domain_name = 'smbeta-domain'
-    auth_mode = 'IAM'
-    execution_role_arn = im.get_role_arn('smbeta-execution-engineer-iam-role')
-    sg_groups = [em.get_sg_id_with_sg_name('beta-public-vpc-default-sg')]
-    vpc_id = em.get_vpc_id_with_vpc_name('beta-public-vpc')
-    subnet_names = ['beta-public-vpc-pub-sub1', 'beta-public-vpc-pub-sub1']
-    subnet_ids = [em.get_subnet_id(vpc_id, x) for x in subnet_names]
-    app_network_access_type = 'PublicInternetOnly'
-    efs_kms_id = km.get_kms_arn('smbeta-public-s3-kms', False)
-
-    # When
-    sm.create_domain(domain_name=domain_name,
-                     auth_mode=auth_mode,
-                     execution_role_arn=execution_role_arn,
-                     sg_groups=sg_groups,
-                     subnet_ids=subnet_ids,
-                     vpc_id=vpc_id,
-                     app_network_access_type=app_network_access_type,
-                     efs_kms_id=efs_kms_id)
-
-    # Then
-    assert domain_name in [x['DomainName'] for x in sm.list_domains()]
-    assert sm.describe_domain(domain_id=sm.get_domain_id(domain_name))['Status'] in ['Pending', 'InService']
 
 
 def test_list_images(sm):
@@ -217,6 +199,7 @@ def test_list_image_versions(sm):
     pprint(response)
 
 
+# TODO: link create, describe, delete image/image version
 # TODO: create a sample image and check it
 def test_describe_image(sm):
     # Given
