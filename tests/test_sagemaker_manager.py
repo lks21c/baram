@@ -161,12 +161,12 @@ def test_create_describe_delete_domain(sm, em, im, km):
         sm.delete_domain(domain_id=domain_id,
                          delete_user_profiles=False)
 
-    # assert sm.describe_domain(domain_id=domain_id) is None
+    assert sm.describe_domain(domain_id=domain_id) is None
 
 
 def test_get_domain_id(sm):
     # Given
-    domain_name = 'smprod-domain'
+    domain_name = 'smbeta-domain'
 
     # When
     response = sm.get_domain_id(domain_name=domain_name)
@@ -199,37 +199,9 @@ def test_list_image_versions(sm):
     pprint(response)
 
 
-# TODO: link create, describe, delete image/image version
-# TODO: create a sample image and check it
-def test_describe_image(sm):
+def test_create_describe_delete_image(sm, im):
     # Given
-    image_name = 'sm-image'
-
-    # Given
-    response = sm.describe_image(image_name)
-
-    # Then
-    assert image_name == response['ImageName']
-    pprint(response)
-
-
-# TODO: create a sample image and check it
-def test_describe_image_version(sm):
-    # Given
-    image_name = 'sm-image'
-
-    # When
-    response = sm.describe_image_version(image_name)
-
-    # THen
-    assert response['ImageArn'].split('/')[-1] == image_name
-    assert response['Version']
-    pprint(response)
-
-
-def test_create_image(sm, im):
-    # Given
-    image_name = 'sm-image'
+    image_name = 'temp-image'
     role_arn = im.get_role_arn(role_name='smbeta-execution-engineer-iam-role')
 
     # When
@@ -241,41 +213,31 @@ def test_create_image(sm, im):
     assert response['ImageName'] == image_name
     assert response['ImageStatus'] in ['CREATING', 'CREATED']
 
+    while sm.describe_image(image_name=image_name)['ImageStatus'] == 'Creating':
+        time.sleep(3)
 
-def test_create_image_version(sm):
+    sm.delete_image(image_name=image_name)
+    assert image_name not in sm.list_images()
+
+
+def test_create_describe_delete_image_version(sm, im):
     # Given
-    base_image_url = '145885190059.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker_image:latest'
     image_name = 'sm-image'
+    role_arn = im.get_role_arn(role_name='smbeta-execution-engineer-iam-role')
+    sm.create_image(image_name=image_name, role_arn=role_arn)
 
-    # When
+    base_image_url = '145885190059.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker_image:latest'
+
+    # When/Then
     sm.create_image_version(base_image_uri=base_image_url,
                             image_name=image_name)
 
-    # Then
     response = sm.describe_image_version(image_name)
+    assert response['Version']
     assert response['BaseImage'] == base_image_url
     assert response['ImageVersionStatus'] in ['CREATING', 'CREATED']
     pprint(response)
 
-
-def test_delete_image(sm):
-    # Given
-    image_name = 'sm-image'
-
-    # When
-    sm.delete_image(image_name=image_name)
-
-    # Then
-    assert image_name not in sm.list_images()
-
-
-def test_delete_image_version(sm):
-    # Given
-    image_name = 'sm-image'
-    version = 3
-
-    # When
-    sm.delete_image_version(image_name=image_name, version=version)
-
-    # Then
-    # TODO
+    while sm.describe_image_version(image_name) == 'CREATING':
+        time.sleep(3)
+    sm.delete_image_version(image_name=image_name)
