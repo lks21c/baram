@@ -70,36 +70,42 @@ def test_list_apps(sm):
     pprint(response)
 
 
-def test_delete_app(sm):
+def test_create_describe_delete_app(sm):
     # Given
-    user_profile_name = 'test-user'
-    app_name = 'default'
+    user_profile_name = 'test-user1'
     app_type = 'JupyterServer'
-
-    # When
-    response = sm.delete_app(user_profile_name=user_profile_name,
-                             app_name=app_name,
-                             app_type=app_type)
-    # Then
-    pprint(response)
-
-
-def test_describe_app(sm):
-    # Given
-    user_profile_name = 'test1'
     app_name = 'default'
-    app_type = 'JupyterServer'
 
-    # When
+    # When/Then
+    sm.create_app(user_profile_name=user_profile_name,
+                  app_type=app_type,
+                  app_name=app_name)
+
+    # When/Then
     response = sm.describe_app(user_profile_name=user_profile_name,
                                app_name=app_name,
                                app_type=app_type)
-    # Then
+
     assert type(response) == dict
     assert response['UserProfileName'] == user_profile_name
     assert response['AppName'] == app_name
     assert response['AppType'] == app_type
     pprint(response)
+
+    while sm.describe_app(user_profile_name=user_profile_name, app_name=app_name,
+                          app_type=app_type)['Status'] == 'Pending':
+        time.sleep(5)
+
+    sm.delete_app(user_profile_name=user_profile_name,
+                  app_name=app_name,
+                  app_type=app_type)
+
+    while sm.describe_app(user_profile_name=user_profile_name, app_name=app_name,
+                          app_type=app_type)['Status'] == 'Deleting':
+        time.sleep(5)
+
+    assert sm.describe_app(user_profile_name=user_profile_name, app_name=app_name,
+                           app_type=app_type)['Status'] == 'Deleted'
 
 
 def test_recreate_all_user_profiles(sm):
@@ -161,6 +167,8 @@ def test_create_describe_delete_domain(sm, em, im, km):
         sm.delete_domain(domain_id=domain_id,
                          delete_user_profiles=False)
 
+    while sm.describe_domain(domain_id=domain_id)['Deleting']:
+        time.sleep(5)
     assert sm.describe_domain(domain_id=domain_id) is None
 
 
@@ -213,8 +221,8 @@ def test_create_describe_delete_image(sm, im):
     assert response['ImageName'] == image_name
     assert response['ImageStatus'] in ['CREATING', 'CREATED']
 
-    while sm.describe_image(image_name=image_name)['ImageStatus'] == 'Creating':
-        time.sleep(3)
+    while sm.describe_image(image_name=image_name)['ImageStatus'] == 'CREATING':
+        time.sleep(5)
 
     sm.delete_image(image_name=image_name)
     assert image_name not in sm.list_images()
@@ -222,10 +230,11 @@ def test_create_describe_delete_image(sm, im):
 
 def test_create_describe_delete_image_version(sm, im):
     # Given
-    image_name = 'sm-image'
+    image_name = 'temp-image'
     role_arn = im.get_role_arn(role_name='smbeta-execution-engineer-iam-role')
     sm.create_image(image_name=image_name, role_arn=role_arn)
-
+    while sm.describe_image(image_name=image_name)['ImageStatus'] == 'CREATING':
+        time.sleep(5)
     base_image_url = '145885190059.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker_image:latest'
 
     # When/Then
@@ -233,11 +242,16 @@ def test_create_describe_delete_image_version(sm, im):
                             image_name=image_name)
 
     response = sm.describe_image_version(image_name)
-    assert response['Version']
     assert response['BaseImage'] == base_image_url
     assert response['ImageVersionStatus'] in ['CREATING', 'CREATED']
     pprint(response)
 
-    while sm.describe_image_version(image_name) == 'CREATING':
-        time.sleep(3)
-    sm.delete_image_version(image_name=image_name)
+    while sm.describe_image_version(image_name=image_name, Version=1) == 'CREATING':
+        time.sleep(5)
+
+    sm.delete_image_version(image_name=image_name, version=1)
+    while sm.describe_image_version(image_name) == 'DELETING':
+        time.sleep(5)
+    assert sm.describe_image_version(image_name=image_name, Version=1) is None
+
+    sm.delete_image(image_name=image_name)
