@@ -13,12 +13,9 @@ class SagemakerManager(object):
         self.logger = LogManager.get_logger('SagemakerManager')
 
     def list_user_profiles(self,
-                           domain_id: Optional[str] = None,
-                           **kwargs):
+                           domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id
-        response = self.cli.list_user_profiles(DomainIdEquals=domain_id,
-                                               **kwargs)
-        return response['UserProfiles']
+        return self.cli.list_user_profiles(DomainIdEquals=domain_id)['UserProfiles']
 
     def describe_user_profile(self,
                               user_profile_name: str,
@@ -29,14 +26,12 @@ class SagemakerManager(object):
         return response
 
     def list_apps(self,
-                  domain_id: Optional[str] = None,
-                  **kwargs):
+                  domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id
         response = self.cli.list_apps(DomainIdEquals=domain_id,
                                       SortBy='CreationTime',
                                       SortOrder='Descending',
-                                      MaxResults=100,
-                                      **kwargs)
+                                      MaxResults=100)
         return response['Apps']
 
     def delete_app(self,
@@ -46,13 +41,12 @@ class SagemakerManager(object):
                    domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id
         try:
-            response = self.cli.delete_app(DomainId=domain_id,
-                                           UserProfileName=user_profile_name,
-                                           AppName=app_name,
-                                           AppType=app_type)
-            return response
-        # TODO: add error handling exception
-        except:
+            return self.cli.delete_app(DomainId=domain_id,
+                                       UserProfileName=user_profile_name,
+                                       AppName=app_name,
+                                       AppType=app_type)
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'{user_profile_name}: {app_name} does not exist')
             pass
 
     def describe_app(self,
@@ -89,7 +83,7 @@ class SagemakerManager(object):
                                                         **kwargs)
             except self.cli.exceptions.ResourceInUse:
                 self.logger.info(f'{user_profile_name} already exists.')
-                return
+                return None
         else:
             try:
                 response = self.cli.create_user_profile(DomainId=domain_id,
@@ -99,7 +93,7 @@ class SagemakerManager(object):
                                                         **kwargs)
             except self.cli.exceptions.ResourceInUse:
                 self.logger.info(f'{user_profile_name} already exists.')
-                return
+                return None
 
         return response
 
@@ -183,6 +177,16 @@ class SagemakerManager(object):
     def list_domains(self):
         return self.cli.list_domains()['Domains']
 
+    def describe_domain(self,
+                        domain_id: Optional[str] = None):
+        domain_id = domain_id if domain_id else self.domain_id
+
+        try:
+            return self.cli.describe_domain(DomainId=domain_id)
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'domain {domain_id} does not exist')
+            return None
+
     def get_domain_id(self,
                       domain_name: str):
         """
@@ -196,7 +200,8 @@ class SagemakerManager(object):
 
     def delete_domain(self,
                       domain_id: Optional[str] = None,
-                      delete_user_profiles: Optional[bool] = True):
+                      delete_user_profiles: Optional[bool] = True,
+                      retention_policy: Optional[str] = 'Delete'):
         domain_id = domain_id if domain_id else self.domain_id
 
         if delete_user_profiles:
@@ -204,78 +209,51 @@ class SagemakerManager(object):
             for i in user_profiles:
                 self.delete_user_profile(user_profile_name=i['UserProfileName'], domain_id=domain_id)
 
-        self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': 'Delete'})
+        try:
+            return self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': retention_policy})
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'{domain_id} does not exist')
+            return None
 
     def create_domain(self,
                       domain_name: str,
-                      execution_role_name: str,
-                      sg_group: str,
-                      s3_kms_id: str,
-                      efs_kms_id: str,
-                      s3_output_path: str,
+                      auth_mode: str,
+                      execution_role_arn: str,
+                      sg_groups: list,
+                      subnet_ids: list,
                       vpc_id: str,
-                      subnet_id1: str,
-                      subnet_id2: str,
-                      instance_type: str = 'ml.t3.micro'):
-        pass
-        # TODO: TBD.
-        response = self.cli.create_domain(
-            DomainName=domain_name,
-            AuthMode='IAM',
-            DefaultUserSettings={
-                'ExecutionRole': execution_role_name,
-                'SecurityGroups': [
-                    sg_group,
-                ],
-                'SharingSettings': {
-                    'NotebookOutputOption': 'Allowed',
-                    'S3OutputPath': s3_output_path,
-                    'S3KmsKeyId': s3_kms_id
-                },
-                'JupyterServerAppSettings': {
-                    'DefaultResourceSpec': {
-                        'SageMakerImageArn': 'string',
-                        'SageMakerImageVersionArn': 'string',
-                        'InstanceType': instance_type
-                    }
-                },
-                'KernelGatewayAppSettings': {
-                    'DefaultResourceSpec': {
-                        'SageMakerImageArn': 'string',
-                        'SageMakerImageVersionArn': 'string',
-                        'InstanceType': instance_type
-                    },
-                    'CustomImages': [
-                        {
-                            'ImageName': 'string',
-                            'ImageVersionNumber': 1,
-                            'AppImageConfigName': 'string'
-                        },
-                    ],
-                    'LifecycleConfigArns': [
-                        'string',
-                    ]
-                }
-            },
-            SubnetIds=[
-                'string',
-            ],
-            VpcId=vpc_id,
-            Tags=[
-                {
-                    'Key': 'string',
-                    'Value': 'string'
-                },
-            ],
-            AppNetworkAccessType='VpcOnly',
-            KmsKeyId=efs_kms_id,
-            AppSecurityGroupManagement='Service' | 'Customer',
-            DomainSettings={
-                'SecurityGroupIds': [
-                    'string',
-                ]
-            }
-        )
+                      app_network_access_type: str,
+                      efs_kms_id: str,
+                      **kwargs):
+        """
+
+        :param domain_name: sagemaker domain name
+        :param auth_mode: SSO' or 'IAM'
+        :param execution_role_arn: execution IAM role's arn
+        :param sg_groups: list of security groups
+        :param subnet_ids: list of subnet ids
+        :param vpc_id: vpc id in which the domain uses for communication
+        :param app_network_access_type: 'PublicInternetOnly' or 'VpcOnly'
+        :param efs_kms_id: kms key id of related efs
+        :param kwargs: additional keyword arguments
+        :return:
+        """
+        try:
+            self.cli.create_domain(DomainName=domain_name,
+                                   AuthMode=auth_mode,
+                                   DefaultUserSettings={
+                                       'ExecutionRole': execution_role_arn,
+                                       'SecurityGroups': sg_groups},
+                                   SubnetIds=subnet_ids,
+                                   VpcId=vpc_id,
+                                   AppNetworkAccessType=app_network_access_type,
+                                   KmsKeyId=efs_kms_id,
+                                   DomainSettings={
+                                       'SecurityGroupIds': sg_groups},
+                                   **kwargs)
+        except self.cli.exceptions.ResourceInUse:
+            self.logger.info(f'domain {domain_name} already exists')
+            return None
 
     def list_images(self,
                     max_results: Optional[int] = 100):
