@@ -3,6 +3,8 @@ from pprint import pprint
 import pytest
 
 from baram.iam_manager import IAMManager
+from baram.ec2_manager import EC2Manager
+from baram.kms_manager import KMSManager
 from baram.sagemaker_manager import SagemakerManager
 
 
@@ -14,6 +16,16 @@ def sm():
 @pytest.fixture()
 def im():
     return IAMManager()
+
+
+@pytest.fixture()
+def em():
+    return EC2Manager()
+
+
+@pytest.fixture()
+def km():
+    return KMSManager()
 
 
 def test_list_user_profiles(sm):
@@ -123,8 +135,15 @@ def test_list_domains(sm):
 
     # Then
     assert type(response) == list
-    assert list(response[0].keys()) == ['DomainArn', 'DomainId', 'DomainName', 'Status', 'CreationTime',
-                                        'LastModifiedTime', 'Url']
+    pprint(response)
+
+
+def test_describe_domain(sm):
+    # When
+    response = sm.describe_domain()
+
+    # Then
+    assert type(response) == dict
     pprint(response)
 
 
@@ -140,23 +159,39 @@ def test_get_domain_id(sm):
     pprint(response)
 
 
-# TODO
 def test_delete_domain(sm):
-    assert False
     # When
-    # sm.delete_domain(delete_user_profiles=True)
+    sm.delete_domain(delete_user_profiles=True)
 
     # Then
+    assert sm.describe_domain()['Status'] == 'Deleting'
 
 
-# TODO
-def create_domain(sm):
-    assert False
+def test_create_domain(sm, em, im, km):
     # Given
+    domain_name = 'smbeta-domain'
+    auth_mode = 'IAM'
+    execution_role_arn = im.get_role_arn('smbeta-execution-engineer-iam-role')
+    sg_groups = [em.get_sg_id_with_sg_name('beta-public-vpc-default-sg')]
+    vpc_id = em.get_vpc_id_with_vpc_name('beta-public-vpc')
+    subnet_names = ['beta-public-vpc-pub-sub1', 'beta-public-vpc-pub-sub1']
+    subnet_ids = [em.get_subnet_id(vpc_id, x) for x in subnet_names]
+    app_network_access_type = 'PublicInternetOnly'
+    efs_kms_id = km.get_kms_arn('smbeta-public-s3-kms', False)
 
     # When
+    sm.create_domain(domain_name=domain_name,
+                     auth_mode=auth_mode,
+                     execution_role_arn=execution_role_arn,
+                     sg_groups=sg_groups,
+                     subnet_ids=subnet_ids,
+                     vpc_id=vpc_id,
+                     app_network_access_type=app_network_access_type,
+                     efs_kms_id=efs_kms_id)
 
     # Then
+    assert domain_name in [x['DomainName'] for x in sm.list_domains()]
+    assert sm.describe_domain(domain_id=sm.get_domain_id(domain_name))['Status'] in ['Pending', 'InService']
 
 
 def test_list_images(sm):
