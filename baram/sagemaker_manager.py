@@ -152,8 +152,8 @@ class SagemakerManager(object):
         return self.cli.delete_user_profile(DomainId=domain_id, UserProfileName=user_profile_name)
 
     def recreate_all_user_profiles(self,
-                                   is_sso_domain: Optional[bool] = False,
-                                   domain_id: Optional[str] = None):
+                                   domain_id: Optional[str] = None,
+                                   is_sso_domain: Optional[bool] = False):
         domain_id = domain_id if domain_id else self.domain_id
         user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'], domain_id=domain_id)
                          for x in self.list_user_profiles(domain_id=domain_id)]
@@ -195,10 +195,16 @@ class SagemakerManager(object):
                 return i['DomainId']
 
     def delete_domain(self,
-                      domain_id: Optional[str] = None):
+                      domain_id: Optional[str] = None,
+                      delete_user_profiles: Optional[bool] = True):
         domain_id = domain_id if domain_id else self.domain_id
-        response = self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': 'Delete'})
-        return response
+
+        if delete_user_profiles:
+            user_profiles = self.list_user_profiles(domain_id=domain_id)
+            for i in user_profiles:
+                self.delete_user_profile(user_profile_name=i['UserProfileName'], domain_id=domain_id)
+
+        self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': 'Delete'})
 
     def create_domain(self,
                       domain_name: str,
@@ -271,34 +277,66 @@ class SagemakerManager(object):
             }
         )
 
-    def describe_image(self, image_name):
+    def list_images(self,
+                    max_results: Optional[int] = 100):
+        return self.cli.list_images(MaxResults=max_results)['Images']
+
+    def list_image_versions(self,
+                            image_name: str,
+                            max_results: Optional[int] = 100):
+        try:
+            return self.cli.list_image_versions(ImageName=image_name, MaxResults=max_results)['ImageVersions']
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'image {image_name} does not exist')
+            return None
+
+    def describe_image(self,
+                       image_name: str):
         try:
             return self.cli.describe_image(ImageName=image_name)
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info('ResourceNotFound')
             return None
 
-    def describe_image_version(self, image_name):
+    def describe_image_version(self,
+                               image_name: str):
         try:
             return self.cli.describe_image_version(ImageName=image_name)
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info('ResourceNotFound')
             return None
 
-    def create_image_version(self, image_uri: str, name: str):
-        return self.cli.create_image_version(
-            BaseImage=image_uri,
-            ImageName=name
-        )
+    def create_image(self,
+                     image_name: str,
+                     role_arn: str):
+        try:
+            self.cli.create_image(ImageName=image_name,
+                                  RoleArn=role_arn)
+        except self.cli.exceptions.ResourceInUse:
+            self.logger.info(f'image {image_name} already exists')
+            return None
 
-    def delete_image(self, image_name):
+    def create_image_version(self,
+                             base_image_uri: str,
+                             image_name: str):
+        try:
+            self.cli.create_image_version(BaseImage=base_image_uri,
+                                          ImageName=image_name)
+        except self.cli.exceptions.ResourceInUse:
+            self.logger.info(f'image version from {base_image_uri} already exists')
+            return None
+
+    def delete_image(self,
+                     image_name: str):
         try:
             return self.cli.delete_image(ImageName=image_name)
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info('ResourceNotFound')
             return None
 
-    def delete_image_version(self, image_name, version):
+    def delete_image_version(self,
+                             image_name: str,
+                             version: int):
         try:
             return self.cli.delete_image_version(ImageName=image_name, Version=version)
         except self.cli.exceptions.ResourceNotFound:
