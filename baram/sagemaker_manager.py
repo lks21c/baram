@@ -39,6 +39,23 @@ class SagemakerManager(object):
                                       **kwargs)
         return response['Apps']
 
+    def create_app(self,
+                   user_profile_name: str,
+                   app_type: str,
+                   app_name: str,
+                   domain_id: Optional[str] = None,
+                   **kwargs):
+        domain_id = domain_id if domain_id else self.domain_id
+        try:
+            return self.cli.create_app(DomainId=domain_id,
+                                       UserProfileName=user_profile_name,
+                                       AppType=app_type,
+                                       AppName=app_name,
+                                       **kwargs)
+        except self.cli.exceptions.ResourceInUse:
+            self.logger.info(f'{user_profile_name}: {app_name} already exists')
+            return None
+
     def delete_app(self,
                    user_profile_name: str,
                    app_name: str,
@@ -261,7 +278,8 @@ class SagemakerManager(object):
             return None
 
     def describe_image_version(self,
-                               image_name: str):
+                               image_name: str,
+                               **kwargs):
         try:
             return self.cli.describe_image_version(ImageName=image_name)
         except self.cli.exceptions.ResourceNotFound:
@@ -304,7 +322,7 @@ class SagemakerManager(object):
                              image_name: str,
                              version: int):
         try:
-            return self.cli.delete_image_version(ImageName=image_name, Version=version)
+            self.cli.delete_image_version(ImageName=image_name, Version=version)
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info('ResourceNotFound')
             return None
