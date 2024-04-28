@@ -7,7 +7,7 @@ from baram.log_manager import LogManager
 
 
 class SagemakerManager(object):
-    def __init__(self, domain_name: str = None):
+    def __init__(self, domain_name: str):
         self.cli = boto3.client('sagemaker')
         self.domain_id = self.get_domain_id(domain_name=domain_name)
         self.logger = LogManager.get_logger('SagemakerManager')
@@ -21,17 +21,22 @@ class SagemakerManager(object):
                               user_profile_name: str,
                               domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id
-        response = self.cli.describe_user_profile(DomainId=domain_id,
+        try:
+            return self.cli.describe_user_profile(DomainId=domain_id,
                                                   UserProfileName=user_profile_name)
-        return response
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'{user_profile_name} does not exist')
+            return None
 
     def list_apps(self,
-                  domain_id: Optional[str] = None):
+                  domain_id: Optional[str] = None,
+                  **kwargs):
         domain_id = domain_id if domain_id else self.domain_id
         response = self.cli.list_apps(DomainIdEquals=domain_id,
                                       SortBy='CreationTime',
                                       SortOrder='Descending',
-                                      MaxResults=100)
+                                      MaxResults=100,
+                                      **kwargs)
         return response['Apps']
 
     def delete_app(self,
@@ -47,7 +52,7 @@ class SagemakerManager(object):
                                        AppType=app_type)
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info(f'{user_profile_name}: {app_name} does not exist')
-            pass
+            return None
 
     def describe_app(self,
                      user_profile_name: str,
@@ -56,46 +61,31 @@ class SagemakerManager(object):
                      domain_id: Optional[str] = None,
                      **kwargs):
         domain_id = domain_id if domain_id else self.domain_id
-        response = self.cli.describe_app(DomainId=domain_id,
+        try:
+            return self.cli.describe_app(DomainId=domain_id,
                                          UserProfileName=user_profile_name,
                                          AppName=app_name,
                                          AppType=app_type,
                                          **kwargs)
-        return response
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'{user_profile_name}: {app_name} does not exist')
+            return None
 
     def create_user_profile(self,
                             user_profile_name: str,
                             execution_role: str,
                             domain_id: Optional[str] = None,
-                            is_sso_domain: Optional[bool] = False,
-                            sso_user_value: Optional[str] = None,
                             **kwargs):
         domain_id = domain_id if domain_id else self.domain_id
-        self.logger.info(f'start creating {user_profile_name}')
-        if is_sso_domain:
-            try:
-                response = self.cli.create_user_profile(DomainId=domain_id,
-                                                        UserProfileName=user_profile_name,
-                                                        UserSettings={
-                                                            'ExecutionRole': execution_role},
-                                                        SingleSignOnUserIdentifier='UserName',
-                                                        SingleSignOnUserValue=sso_user_value,
-                                                        **kwargs)
-            except self.cli.exceptions.ResourceInUse:
-                self.logger.info(f'{user_profile_name} already exists.')
-                return None
-        else:
-            try:
-                response = self.cli.create_user_profile(DomainId=domain_id,
-                                                        UserProfileName=user_profile_name,
-                                                        UserSettings={
-                                                            'ExecutionRole': execution_role},
-                                                        **kwargs)
-            except self.cli.exceptions.ResourceInUse:
-                self.logger.info(f'{user_profile_name} already exists.')
-                return None
-
-        return response
+        try:
+            return self.cli.create_user_profile(DomainId=domain_id,
+                                                UserProfileName=user_profile_name,
+                                                UserSettings={
+                                                    'ExecutionRole': execution_role},
+                                                **kwargs)
+        except self.cli.exceptions.ResourceInUse:
+            self.logger.info(f'{user_profile_name} already exists.')
+            return None
 
     def delete_user_profile(self,
                             user_profile_name: str,
@@ -106,7 +96,7 @@ class SagemakerManager(object):
                                        domain_id=domain_id)
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info(f'user {user_profile_name} does not exist.')
-            return
+            return None
 
         self.logger.info(f'list apps from {user_profile_name}')
         apps = self.list_apps(domain_id=domain_id,
