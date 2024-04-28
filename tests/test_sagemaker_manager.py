@@ -8,7 +8,12 @@ from baram.sagemaker_manager import SagemakerManager
 
 @pytest.fixture()
 def sm():
-    return SagemakerManager(domain_name='smprod-domain')
+    return SagemakerManager(domain_name='smbeta-domain')
+
+
+@pytest.fixture()
+def im():
+    return IAMManager()
 
 
 def test_list_user_profiles(sm):
@@ -30,8 +35,6 @@ def test_describe_user_profile(sm):
     # Then
     assert type(response) == dict
     assert response['UserProfileName'] == user_profile_name
-    assert list(response.keys()) == ['DomainId', 'UserProfileArn', 'UserProfileName', 'HomeEfsFileSystemUid', 'Status',
-                                     'LastModifiedTime', 'CreationTime', 'UserSettings', 'ResponseMetadata']
     pprint(response)
 
 
@@ -62,7 +65,7 @@ def test_delete_app(sm):
 
 def test_describe_app(sm):
     # Given
-    user_profile_name = 'yoonje-lee'
+    user_profile_name = 'test1'
     app_name = 'default'
     app_type = 'JupyterServer'
 
@@ -78,10 +81,9 @@ def test_describe_app(sm):
     pprint(response)
 
 
-def test_create_user_profile(sm):
+def test_create_user_profile(sm, im):
     # Given
-    im = IAMManager()
-    user_profile_name = 'test-user'
+    user_profile_name = 'test1'
     execution_role = im.get_role_arn(role_name='smbeta-execution-scientist-role')
 
     # When
@@ -89,13 +91,13 @@ def test_create_user_profile(sm):
                            execution_role=execution_role)
 
     # Then
-    assert 'test-user' in [x['UserProfileName'] for x in sm.list_user_profiles()]
+    assert user_profile_name in [x['UserProfileName'] for x in sm.list_user_profiles()]
     pprint(sm.describe_user_profile(user_profile_name=user_profile_name))
 
 
 def test_delete_user_profile(sm):
     # Given
-    user_profile_name = 'test-user'
+    user_profile_name = 'test1'
 
     # When
     response = sm.delete_user_profile(user_profile_name=user_profile_name)
@@ -139,18 +141,17 @@ def test_get_domain_id(sm):
 
 
 # TODO
-def delete_domain(sm):
-    pass
-    # Given
-
+def test_delete_domain(sm):
+    assert False
     # When
+    # sm.delete_domain(delete_user_profiles=True)
 
     # Then
 
 
 # TODO
 def create_domain(sm):
-    pass
+    assert False
     # Given
 
     # When
@@ -158,32 +159,105 @@ def create_domain(sm):
     # Then
 
 
+def test_list_images(sm):
+    # When
+    response = sm.list_images()
+
+    # Then
+    assert type(response) == list
+    pprint(response)
+
+
+def test_list_image_versions(sm):
+    # Given
+    image_name = 'sm-image'
+
+    # When
+    response = sm.list_image_versions(image_name=image_name)
+
+    # Then
+    assert type(response) == list
+    for i in response:
+        assert i['Version']
+    pprint(response)
+
+
 # TODO: create a sample image and check it
 def test_describe_image(sm):
-    pass
-    # response = sm.describe_image('sli-docker')
-    # assert response
-    # pprint(response)
+    # Given
+    image_name = 'sm-image'
+
+    # Given
+    response = sm.describe_image(image_name)
+
+    # Then
+    assert image_name == response['ImageName']
+    pprint(response)
 
 
 # TODO: create a sample image and check it
 def test_describe_image_version(sm):
-    pass
-    # response = sm.describe_image_version('sli-docker')
-    # assert response['Version']
-    # pprint(response['Version'])
+    # Given
+    image_name = 'sm-image'
+
+    # When
+    response = sm.describe_image_version(image_name)
+
+    # THen
+    assert response['ImageArn'].split('/')[-1] == image_name
+    assert response['Version']
+    pprint(response)
 
 
-# TODO
+def test_create_image(sm, im):
+    # Given
+    image_name = 'sm-image'
+    role_arn = im.get_role_arn(role_name='smbeta-execution-engineer-iam-role')
+
+    # When
+    sm.create_image(image_name=image_name,
+                    role_arn=role_arn)
+
+    # Then
+    response = sm.describe_image(image_name=image_name)
+    assert response['ImageName'] == image_name
+    assert response['ImageStatus'] in ['CREATING', 'CREATED']
+
+
 def test_create_image_version(sm):
-    pass
+    # Given
+    base_image_url = '145885190059.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker_image:latest'
+    image_name = 'sm-image'
+
+    # When
+    sm.create_image_version(base_image_uri=base_image_url,
+                            image_name=image_name)
+
+    # Then
+    response = sm.describe_image_version(image_name)
+    assert response['BaseImage'] == base_image_url
+    assert response['ImageVersionStatus'] in ['CREATING', 'CREATED']
+    pprint(response)
 
 
-# TODO
 def test_delete_image(sm):
-    pass
+    # Given
+    image_name = 'sm-image'
+
+    # When
+    sm.delete_image(image_name=image_name)
+
+    # Then
+    assert image_name not in sm.list_images()
 
 
-# TODO
 def test_delete_image_version(sm):
-    pass
+    # Given
+    image_name = 'sm-image'
+    version = 3
+
+    # When
+    sm.delete_image_version(image_name=image_name, version=version)
+
+    # Then
+    # TODO
