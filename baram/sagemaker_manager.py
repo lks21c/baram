@@ -270,20 +270,24 @@ class SagemakerManager(object):
 
     def create_image(self,
                      image_name: str,
-                     role_arn: str):
+                     role_arn: str,
+                     **kwargs):
         try:
             self.cli.create_image(ImageName=image_name,
-                                  RoleArn=role_arn)
+                                  RoleArn=role_arn,
+                                  **kwargs)
         except self.cli.exceptions.ResourceInUse:
             self.logger.info(f'image {image_name} already exists')
             return None
 
     def create_image_version(self,
                              base_image_uri: str,
-                             image_name: str):
+                             image_name: str,
+                             **kwargs):
         try:
             self.cli.create_image_version(BaseImage=base_image_uri,
-                                          ImageName=image_name)
+                                          ImageName=image_name,
+                                          **kwargs)
         except self.cli.exceptions.ResourceInUse:
             self.logger.info(f'image version from {base_image_uri} already exists')
             return None
