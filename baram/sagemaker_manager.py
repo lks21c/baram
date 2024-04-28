@@ -137,7 +137,7 @@ class SagemakerManager(object):
 
     def recreate_all_user_profiles(self,
                                    domain_id: Optional[str] = None,
-                                   is_sso_domain: Optional[bool] = False):
+                                   **kwargs):
         domain_id = domain_id if domain_id else self.domain_id
         user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'], domain_id=domain_id)
                          for x in self.list_user_profiles(domain_id=domain_id)]
@@ -152,16 +152,10 @@ class SagemakerManager(object):
             else:
                 self.logger.info(f"{i['UserProfileName']} deleted")
                 time.sleep(5)
-                if is_sso_domain:
-                    self.create_user_profile(user_profile_name=i['UserProfileName'],
-                                             execution_role=i['UserSettings']['ExecutionRole'],
-                                             domain_id=domain_id,
-                                             is_sso_domain=is_sso_domain,
-                                             sso_user_value=i['SingleSignOnUserValue'])
-                else:
-                    self.create_user_profile(user_profile_name=i['UserProfileName'],
-                                             execution_role=i['UserSettings']['ExecutionRole'],
-                                             domain_id=domain_id)
+                self.create_user_profile(user_profile_name=i['UserProfileName'],
+                                         execution_role=i['UserSettings']['ExecutionRole'],
+                                         domain_id=domain_id,
+                                         **kwargs)
             self.logger.info(f"{i['UserProfileName']} created")
 
     def list_domains(self):
