@@ -290,10 +290,8 @@ def test_copy_object(sm, sample):
                    to_key=to_key)
 
     # Then
-    from_check = sm.check_s3_object_exists(sample['s3_bucket_name'], from_key)
-    assert from_check
+    assert sm.check_s3_object_exists(sample['s3_bucket_name'], from_key)
 
-    to_check = sm.check_s3_object_exists(sample['s3_bucket_name'], to_key)
-    assert to_check
+    assert sm.check_s3_object_exists(sample['s3_bucket_name'], to_key)
 
     sm.delete_objects([from_key, to_key])
