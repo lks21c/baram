@@ -12,64 +12,93 @@ class SagemakerManager(object):
         self.domain_id = self.get_domain_id(domain_name=domain_name)
         self.logger = LogManager.get_logger('SagemakerManager')
 
-    def list_apps(self,
-                  domain_id: Optional[str] = None,
-                  **kwargs):
-        domain_id = domain_id if domain_id else self.domain_id
-        response = self.cli.list_apps(DomainIdEquals=domain_id,
-                                      SortBy='CreationTime',
-                                      SortOrder='Descending',
-                                      MaxResults=100,
-                                      **kwargs)
-        return response['Apps']
+    def get_domain_id(self,
+                      domain_name: str):
+        """
+        :param domain_name: sagemaker domain's name
+        :return:
+        """
+        response = self.list_domains()
+        for i in response:
+            if domain_name == i['DomainName']:
+                return i['DomainId']
 
-    def describe_app(self,
-                     user_profile_name: str,
-                     app_name: str,
-                     app_type: str,
-                     domain_id: Optional[str] = None,
-                     **kwargs):
+    def list_domains(self):
+        return self.cli.list_domains()['Domains']
+
+    def describe_domain(self,
+                        domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id
+
         try:
-            return self.cli.describe_app(DomainId=domain_id,
-                                         UserProfileName=user_profile_name,
-                                         AppName=app_name,
-                                         AppType=app_type,
-                                         **kwargs)
+            return self.cli.describe_domain(DomainId=domain_id)
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'{user_profile_name}: {app_name} does not exist')
+            self.logger.info(f'domain {domain_id} does not exist')
             return None
 
-    def create_app(self,
-                   user_profile_name: str,
-                   app_type: str,
-                   app_name: str,
-                   domain_id: Optional[str] = None,
-                   **kwargs):
-        domain_id = domain_id if domain_id else self.domain_id
+    def create_domain(self,
+                      domain_name: str,
+                      auth_mode: str,
+                      execution_role_arn: str,
+                      sg_groups: list,
+                      subnet_ids: list,
+                      vpc_id: str,
+                      app_network_access_type: str,
+                      efs_kms_id: str,
+                      **kwargs):
+        """
+
+        :param domain_name: sagemaker domain name
+        :param auth_mode: SSO' or 'IAM'
+        :param execution_role_arn: execution IAM role's arn
+        :param sg_groups: list of security groups
+        :param subnet_ids: list of subnet ids
+        :param vpc_id: vpc id in which the domain uses for communication
+        :param app_network_access_type: 'PublicInternetOnly' or 'VpcOnly'
+        :param efs_kms_id: kms key id of related efs
+        :param kwargs: additional keyword arguments
+        :return:
+        """
         try:
-            return self.cli.create_app(DomainId=domain_id,
-                                       UserProfileName=user_profile_name,
-                                       AppType=app_type,
-                                       AppName=app_name,
-                                       **kwargs)
+            self.cli.create_domain(DomainName=domain_name,
+                                   AuthMode=auth_mode,
+                                   DefaultUserSettings={
+                                       'ExecutionRole': execution_role_arn,
+                                       'SecurityGroups': sg_groups},
+                                   SubnetIds=subnet_ids,
+                                   VpcId=vpc_id,
+                                   AppNetworkAccessType=app_network_access_type,
+                                   KmsKeyId=efs_kms_id,
+                                   DomainSettings={
+                                       'SecurityGroupIds': sg_groups},
+                                   **kwargs)
+            domain_id = self.get_domain_id(domain_name)
+            while self.describe_domain(domain_id=domain_id)['Status'] == 'Pending':
+                time.sleep(10)
+            self.logger.info(f'{domain_name} created')
         except self.cli.exceptions.ResourceInUse:
-            self.logger.info(f'{user_profile_name}: {app_name} already exists')
+            self.logger.info(f'{domain_name} already exists')
             return None
 
-    def delete_app(self,
-                   user_profile_name: str,
-                   app_name: str,
-                   app_type: str,
-                   domain_id: Optional[str] = None):
+    def delete_domain(self,
+                      domain_id: Optional[str] = None,
+                      delete_user_profiles: Optional[bool] = True,
+                      retention_policy: Optional[str] = 'Delete'):
         domain_id = domain_id if domain_id else self.domain_id
+
+        if delete_user_profiles:
+            user_profiles = self.list_user_profiles(domain_id=domain_id)
+            for i in user_profiles:
+                self.delete_user_profile(user_profile_name=i['UserProfileName'], domain_id=domain_id)
+        domain_name = self.describe_domain(domain_id=domain_id)['DomainName']
+
         try:
-            return self.cli.delete_app(DomainId=domain_id,
-                                       UserProfileName=user_profile_name,
-                                       AppName=app_name,
-                                       AppType=app_type)
+            self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': retention_policy})
+            while domain_id in [x['DomainId'] for x in self.list_domains()]:
+                time.sleep(10)
+            self.logger.info(f'{domain_name} deleted')
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'{user_profile_name}: {app_name} does not exist')
+            self.logger.info(f'{domain_name} does not exist')
             return None
 
     def list_user_profiles(self,
@@ -175,93 +204,64 @@ class SagemakerManager(object):
                                          **kwargs)
             self.logger.info(f"{i['UserProfileName']} created")
 
-    def get_domain_id(self,
-                      domain_name: str):
-        """
-        :param domain_name: sagemaker domain's name
-        :return:
-        """
-        response = self.list_domains()
-        for i in response:
-            if domain_name == i['DomainName']:
-                return i['DomainId']
-
-    def list_domains(self):
-        return self.cli.list_domains()['Domains']
-
-    def describe_domain(self,
-                        domain_id: Optional[str] = None):
+    def list_apps(self,
+                  domain_id: Optional[str] = None,
+                  **kwargs):
         domain_id = domain_id if domain_id else self.domain_id
+        response = self.cli.list_apps(DomainIdEquals=domain_id,
+                                      SortBy='CreationTime',
+                                      SortOrder='Descending',
+                                      MaxResults=100,
+                                      **kwargs)
+        return response['Apps']
 
+    def describe_app(self,
+                     user_profile_name: str,
+                     app_name: str,
+                     app_type: str,
+                     domain_id: Optional[str] = None,
+                     **kwargs):
+        domain_id = domain_id if domain_id else self.domain_id
         try:
-            return self.cli.describe_domain(DomainId=domain_id)
+            return self.cli.describe_app(DomainId=domain_id,
+                                         UserProfileName=user_profile_name,
+                                         AppName=app_name,
+                                         AppType=app_type,
+                                         **kwargs)
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'domain {domain_id} does not exist')
+            self.logger.info(f'{user_profile_name}: {app_name} does not exist')
             return None
 
-    def create_domain(self,
-                      domain_name: str,
-                      auth_mode: str,
-                      execution_role_arn: str,
-                      sg_groups: list,
-                      subnet_ids: list,
-                      vpc_id: str,
-                      app_network_access_type: str,
-                      efs_kms_id: str,
-                      **kwargs):
-        """
-
-        :param domain_name: sagemaker domain name
-        :param auth_mode: SSO' or 'IAM'
-        :param execution_role_arn: execution IAM role's arn
-        :param sg_groups: list of security groups
-        :param subnet_ids: list of subnet ids
-        :param vpc_id: vpc id in which the domain uses for communication
-        :param app_network_access_type: 'PublicInternetOnly' or 'VpcOnly'
-        :param efs_kms_id: kms key id of related efs
-        :param kwargs: additional keyword arguments
-        :return:
-        """
+    def create_app(self,
+                   user_profile_name: str,
+                   app_type: str,
+                   app_name: str,
+                   domain_id: Optional[str] = None,
+                   **kwargs):
+        domain_id = domain_id if domain_id else self.domain_id
         try:
-            self.cli.create_domain(DomainName=domain_name,
-                                   AuthMode=auth_mode,
-                                   DefaultUserSettings={
-                                       'ExecutionRole': execution_role_arn,
-                                       'SecurityGroups': sg_groups},
-                                   SubnetIds=subnet_ids,
-                                   VpcId=vpc_id,
-                                   AppNetworkAccessType=app_network_access_type,
-                                   KmsKeyId=efs_kms_id,
-                                   DomainSettings={
-                                       'SecurityGroupIds': sg_groups},
-                                   **kwargs)
-            domain_id = self.get_domain_id(domain_name)
-            while self.describe_domain(domain_id=domain_id)['Status'] == 'Pending':
-                time.sleep(10)
-            self.logger.info(f'{domain_name} created')
+            return self.cli.create_app(DomainId=domain_id,
+                                       UserProfileName=user_profile_name,
+                                       AppType=app_type,
+                                       AppName=app_name,
+                                       **kwargs)
         except self.cli.exceptions.ResourceInUse:
-            self.logger.info(f'{domain_name} already exists')
+            self.logger.info(f'{user_profile_name}: {app_name} already exists')
             return None
 
-    def delete_domain(self,
-                      domain_id: Optional[str] = None,
-                      delete_user_profiles: Optional[bool] = True,
-                      retention_policy: Optional[str] = 'Delete'):
+    def delete_app(self,
+                   user_profile_name: str,
+                   app_name: str,
+                   app_type: str,
+                   domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id
-
-        if delete_user_profiles:
-            user_profiles = self.list_user_profiles(domain_id=domain_id)
-            for i in user_profiles:
-                self.delete_user_profile(user_profile_name=i['UserProfileName'], domain_id=domain_id)
-        domain_name = self.describe_domain(domain_id=domain_id)['DomainName']
-
         try:
-            self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': retention_policy})
-            while domain_id in [x['DomainId'] for x in self.list_domains()]:
-                time.sleep(10)
-            self.logger.info(f'{domain_name} deleted')
+            return self.cli.delete_app(DomainId=domain_id,
+                                       UserProfileName=user_profile_name,
+                                       AppName=app_name,
+                                       AppType=app_type)
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'{domain_name} does not exist')
+            self.logger.info(f'{user_profile_name}: {app_name} does not exist')
             return None
 
     def list_images(self,
