@@ -62,8 +62,7 @@ def test_upload_download_delete_dir(sm, sample):
     s3_tmp_dir = 'tmp_dir'
 
     # When/Then
-    sm.upload_dir(temp_dir,
-                  s3_tmp_dir)
+    sm.upload_dir(temp_dir, s3_tmp_dir)
 
     file_exist = False
     for f in sm.list_objects(f'{s3_tmp_dir}/'):
