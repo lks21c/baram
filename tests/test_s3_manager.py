@@ -102,7 +102,8 @@ def test_upload_download_delete_file(sm, sample):
 def test_write_and_upload_file(sm):
     # Given
     content = 'hello world'
-    local_file_path = '/Users/samsung/Documents/tmp_file.txt'
+    tmp_dir = tempfile.mkdtemp()
+    local_file_path = os.path.join(tmp_dir, 'tmp_file.txt')
     s3_file_path = 'tmp_file'
 
     # When
