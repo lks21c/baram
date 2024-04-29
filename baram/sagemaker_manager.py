@@ -276,20 +276,22 @@ class SagemakerManager(object):
             self.cli.create_image(ImageName=image_name,
                                   RoleArn=role_arn,
                                   **kwargs)
-            waiter = self.cli.get_waiter('image_created')
-            waiter.wait(ImageName=image_name, WaiterConfig={'Delay': 5, 'MaxAttempts': 60})
+            while self.describe_image(image_name=image_name)['ImageStatus'] == 'CREATING':
+                time.sleep(5)
+            self.logger.info(f'{image_name} created')
         except self.cli.exceptions.ResourceInUse:
-            self.logger.info(f'image {image_name} already exists')
+            self.logger.info(f'{image_name} already exists')
             return None
 
     def delete_image(self,
                      image_name: str):
         try:
             self.cli.delete_image(ImageName=image_name)
-            waiter = self.cli.get_waiter('image_deleted')
-            waiter.wait(ImageName=image_name, WaiterConfig={'Delay': 5, 'MaxAttempts': 60})
+            while image_name in [x['ImageName'] for x in self.list_images()]:
+                time.sleep(5)
+            self.logger.info(f'{image_name} deleted')
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info('ResourceNotFound')
+            self.logger.info(f'{image_name} does not exist')
             return None
 
     def list_image_versions(self,
@@ -298,16 +300,16 @@ class SagemakerManager(object):
         try:
             return self.cli.list_image_versions(ImageName=image_name, MaxResults=max_results)['ImageVersions']
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'image {image_name} does not exist')
+            self.logger.info(f'{image_name} does not exist')
             return None
 
     def describe_image_version(self,
                                image_name: str,
                                **kwargs):
         try:
-            return self.cli.describe_image_version(ImageName=image_name)
+            return self.cli.describe_image_version(ImageName=image_name, **kwargs)
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info('ResourceNotFound')
+            self.logger.info(f'image version of {image_name} does not exist')
             return None
 
     def create_image_version(self,
@@ -318,10 +320,13 @@ class SagemakerManager(object):
             self.cli.create_image_version(BaseImage=base_image_uri,
                                           ImageName=image_name,
                                           **kwargs)
-            waiter = self.cli.get_waiter('image_version_created')
-            waiter.wait(ImageName=image_name, WaiterConfig={'Delay': 5, 'MaxAttempts': 60})
+            while self.describe_image_version(image_name=image_name)['ImageVersionStatus'] == 'CREATING':
+                time.sleep(5)
+            self.logger.info(f"{image_name}: version {self.describe_image_version(image_name=image_name)['Version']}"
+                             f" created")
         except self.cli.exceptions.ResourceInUse:
-            self.logger.info(f'image version from {base_image_uri} already exists')
+            self.logger.info(f"{image_name}: version {self.describe_image_version(image_name=image_name)['Version']}"
+                             f"already exists")
             return None
 
     def delete_image_version(self,
@@ -329,8 +334,9 @@ class SagemakerManager(object):
                              version: int):
         try:
             self.cli.delete_image_version(ImageName=image_name, Version=version)
-            waiter = self.cli.get_waiter('image_deleted')
-            waiter.wait(ImageName=image_name, Version=version, WaiterConfig={'Delay': 5, 'MaxAttempts': 60})
+            while version in [x['Version'] for x in self.list_image_versions(image_name=image_name)]:
+                time.sleep(5)
+            self.logger.info(f'{image_name}: version {version} deleted')
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info('ResourceNotFound')
+            self.logger.info(f'{image_name}: version {version} does not exist')
             return None

@@ -219,23 +219,19 @@ def test_create_describe_delete_image(sm, im):
     # Then
     response = sm.describe_image(image_name=image_name)
     assert response['ImageName'] == image_name
-    assert response['ImageStatus'] in ['CREATING', 'CREATED']
-
-    while sm.describe_image(image_name=image_name)['ImageStatus'] == 'CREATING':
-        time.sleep(5)
+    assert response['ImageStatus'] == 'CREATED'
+    pprint(response)
 
     sm.delete_image(image_name=image_name)
-    assert image_name not in sm.list_images()
+    assert sm.describe_image(image_name=image_name) is None
 
 
 def test_create_describe_delete_image_version(sm, im):
     # Given
     image_name = 'temp-image'
     role_arn = im.get_role_arn(role_name='smbeta-execution-engineer-iam-role')
-    sm.create_image(image_name=image_name, role_arn=role_arn)
-    while sm.describe_image(image_name=image_name)['ImageStatus'] == 'CREATING':
-        time.sleep(5)
     base_image_url = '145885190059.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker_image:latest'
+    sm.create_image(image_name=image_name, role_arn=role_arn)
 
     # When/Then
     sm.create_image_version(base_image_uri=base_image_url,
@@ -243,15 +239,11 @@ def test_create_describe_delete_image_version(sm, im):
 
     response = sm.describe_image_version(image_name)
     assert response['BaseImage'] == base_image_url
-    assert response['ImageVersionStatus'] in ['CREATING', 'CREATED']
+    assert response['ImageVersionStatus'] == 'CREATED'
     pprint(response)
 
-    while sm.describe_image_version(image_name=image_name, Version=1) == 'CREATING':
-        time.sleep(5)
-
-    sm.delete_image_version(image_name=image_name, version=1)
-    while sm.describe_image_version(image_name) == 'DELETING':
-        time.sleep(5)
-    assert sm.describe_image_version(image_name=image_name, Version=1) is None
+    version = sm.describe_image_version(image_name)['Version']
+    sm.delete_image_version(image_name=image_name, version=version)
+    assert sm.describe_image_version(image_name=image_name, Version=version) is None
 
     sm.delete_image(image_name=image_name)
