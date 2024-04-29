@@ -12,22 +12,6 @@ class SagemakerManager(object):
         self.domain_id = self.get_domain_id(domain_name=domain_name)
         self.logger = LogManager.get_logger('SagemakerManager')
 
-    def list_user_profiles(self,
-                           domain_id: Optional[str] = None):
-        domain_id = domain_id if domain_id else self.domain_id
-        return self.cli.list_user_profiles(DomainIdEquals=domain_id)['UserProfiles']
-
-    def describe_user_profile(self,
-                              user_profile_name: str,
-                              domain_id: Optional[str] = None):
-        domain_id = domain_id if domain_id else self.domain_id
-        try:
-            return self.cli.describe_user_profile(DomainId=domain_id,
-                                                  UserProfileName=user_profile_name)
-        except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'{user_profile_name} does not exist')
-            return None
-
     def list_apps(self,
                   domain_id: Optional[str] = None,
                   **kwargs):
@@ -38,6 +22,23 @@ class SagemakerManager(object):
                                       MaxResults=100,
                                       **kwargs)
         return response['Apps']
+
+    def describe_app(self,
+                     user_profile_name: str,
+                     app_name: str,
+                     app_type: str,
+                     domain_id: Optional[str] = None,
+                     **kwargs):
+        domain_id = domain_id if domain_id else self.domain_id
+        try:
+            return self.cli.describe_app(DomainId=domain_id,
+                                         UserProfileName=user_profile_name,
+                                         AppName=app_name,
+                                         AppType=app_type,
+                                         **kwargs)
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'{user_profile_name}: {app_name} does not exist')
+            return None
 
     def create_app(self,
                    user_profile_name: str,
@@ -71,21 +72,20 @@ class SagemakerManager(object):
             self.logger.info(f'{user_profile_name}: {app_name} does not exist')
             return None
 
-    def describe_app(self,
-                     user_profile_name: str,
-                     app_name: str,
-                     app_type: str,
-                     domain_id: Optional[str] = None,
-                     **kwargs):
+    def list_user_profiles(self,
+                           domain_id: Optional[str] = None):
+        domain_id = domain_id if domain_id else self.domain_id
+        return self.cli.list_user_profiles(DomainIdEquals=domain_id)['UserProfiles']
+
+    def describe_user_profile(self,
+                              user_profile_name: str,
+                              domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id
         try:
-            return self.cli.describe_app(DomainId=domain_id,
-                                         UserProfileName=user_profile_name,
-                                         AppName=app_name,
-                                         AppType=app_type,
-                                         **kwargs)
+            return self.cli.describe_user_profile(DomainId=domain_id,
+                                                  UserProfileName=user_profile_name)
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'{user_profile_name}: {app_name} does not exist')
+            self.logger.info(f'{user_profile_name} does not exist')
             return None
 
     def create_user_profile(self,
@@ -175,19 +175,6 @@ class SagemakerManager(object):
                                          **kwargs)
             self.logger.info(f"{i['UserProfileName']} created")
 
-    def list_domains(self):
-        return self.cli.list_domains()['Domains']
-
-    def describe_domain(self,
-                        domain_id: Optional[str] = None):
-        domain_id = domain_id if domain_id else self.domain_id
-
-        try:
-            return self.cli.describe_domain(DomainId=domain_id)
-        except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'domain {domain_id} does not exist')
-            return None
-
     def get_domain_id(self,
                       domain_name: str):
         """
@@ -199,21 +186,17 @@ class SagemakerManager(object):
             if domain_name == i['DomainName']:
                 return i['DomainId']
 
-    def delete_domain(self,
-                      domain_id: Optional[str] = None,
-                      delete_user_profiles: Optional[bool] = True,
-                      retention_policy: Optional[str] = 'Delete'):
+    def list_domains(self):
+        return self.cli.list_domains()['Domains']
+
+    def describe_domain(self,
+                        domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id
 
-        if delete_user_profiles:
-            user_profiles = self.list_user_profiles(domain_id=domain_id)
-            for i in user_profiles:
-                self.delete_user_profile(user_profile_name=i['UserProfileName'], domain_id=domain_id)
-
         try:
-            return self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': retention_policy})
+            return self.cli.describe_domain(DomainId=domain_id)
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'{domain_id} does not exist')
+            self.logger.info(f'domain {domain_id} does not exist')
             return None
 
     def create_domain(self,
@@ -256,32 +239,31 @@ class SagemakerManager(object):
             self.logger.info(f'domain {domain_name} already exists')
             return None
 
+    def delete_domain(self,
+                      domain_id: Optional[str] = None,
+                      delete_user_profiles: Optional[bool] = True,
+                      retention_policy: Optional[str] = 'Delete'):
+        domain_id = domain_id if domain_id else self.domain_id
+
+        if delete_user_profiles:
+            user_profiles = self.list_user_profiles(domain_id=domain_id)
+            for i in user_profiles:
+                self.delete_user_profile(user_profile_name=i['UserProfileName'], domain_id=domain_id)
+
+        try:
+            return self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': retention_policy})
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'{domain_id} does not exist')
+            return None
+
     def list_images(self,
                     max_results: Optional[int] = 100):
         return self.cli.list_images(MaxResults=max_results)['Images']
-
-    def list_image_versions(self,
-                            image_name: str,
-                            max_results: Optional[int] = 100):
-        try:
-            return self.cli.list_image_versions(ImageName=image_name, MaxResults=max_results)['ImageVersions']
-        except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'image {image_name} does not exist')
-            return None
 
     def describe_image(self,
                        image_name: str):
         try:
             return self.cli.describe_image(ImageName=image_name)
-        except self.cli.exceptions.ResourceNotFound:
-            self.logger.info('ResourceNotFound')
-            return None
-
-    def describe_image_version(self,
-                               image_name: str,
-                               **kwargs):
-        try:
-            return self.cli.describe_image_version(ImageName=image_name)
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info('ResourceNotFound')
             return None
@@ -294,8 +276,38 @@ class SagemakerManager(object):
             self.cli.create_image(ImageName=image_name,
                                   RoleArn=role_arn,
                                   **kwargs)
+            waiter = self.cli.get_waiter('image_created')
+            waiter.wait(ImageName=image_name, WaiterConfig={'Delay': 5, 'MaxAttempts': 60})
         except self.cli.exceptions.ResourceInUse:
             self.logger.info(f'image {image_name} already exists')
+            return None
+
+    def delete_image(self,
+                     image_name: str):
+        try:
+            self.cli.delete_image(ImageName=image_name)
+            waiter = self.cli.get_waiter('image_deleted')
+            waiter.wait(ImageName=image_name, WaiterConfig={'Delay': 5, 'MaxAttempts': 60})
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info('ResourceNotFound')
+            return None
+
+    def list_image_versions(self,
+                            image_name: str,
+                            max_results: Optional[int] = 100):
+        try:
+            return self.cli.list_image_versions(ImageName=image_name, MaxResults=max_results)['ImageVersions']
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'image {image_name} does not exist')
+            return None
+
+    def describe_image_version(self,
+                               image_name: str,
+                               **kwargs):
+        try:
+            return self.cli.describe_image_version(ImageName=image_name)
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info('ResourceNotFound')
             return None
 
     def create_image_version(self,
@@ -306,16 +318,10 @@ class SagemakerManager(object):
             self.cli.create_image_version(BaseImage=base_image_uri,
                                           ImageName=image_name,
                                           **kwargs)
+            waiter = self.cli.get_waiter('image_version_created')
+            waiter.wait(ImageName=image_name, WaiterConfig={'Delay': 5, 'MaxAttempts': 60})
         except self.cli.exceptions.ResourceInUse:
             self.logger.info(f'image version from {base_image_uri} already exists')
-            return None
-
-    def delete_image(self,
-                     image_name: str):
-        try:
-            return self.cli.delete_image(ImageName=image_name)
-        except self.cli.exceptions.ResourceNotFound:
-            self.logger.info('ResourceNotFound')
             return None
 
     def delete_image_version(self,
@@ -323,6 +329,8 @@ class SagemakerManager(object):
                              version: int):
         try:
             self.cli.delete_image_version(ImageName=image_name, Version=version)
+            waiter = self.cli.get_waiter('image_deleted')
+            waiter.wait(ImageName=image_name, Version=version, WaiterConfig={'Delay': 5, 'MaxAttempts': 60})
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info('ResourceNotFound')
             return None
