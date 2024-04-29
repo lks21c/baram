@@ -32,4 +32,3 @@ sm.download_dir(s3_dir_path="s3_directory_path",
 # Copy S3 object
 sm.copy_object(from_key="from_s3_key",
                to_key="to_s3_key")
-          
