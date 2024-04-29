@@ -29,6 +29,61 @@ def km():
     return KMSManager()
 
 
+def test_get_domain_id(sm):
+    # Given
+    domain_name = 'smbeta-domain'
+
+    # When
+    response = sm.get_domain_id(domain_name=domain_name)
+
+    # Then
+    assert type(response) == str
+    pprint(response)
+
+
+def test_list_domains(sm):
+    # When
+    response = sm.list_domains()
+
+    # Then
+    assert type(response) == list
+    pprint(response)
+
+
+def test_create_describe_delete_domain(sm, em, im, km):
+    # Given
+    domain_name = 'temp-domain'
+    auth_mode = 'IAM'
+    execution_role_arn = im.get_role_arn('smbeta-execution-engineer-iam-role')
+    sg_groups = [em.get_sg_id_with_sg_name('beta-public-vpc-default-sg')]
+    vpc_id = em.get_vpc_id_with_vpc_name('beta-public-vpc')
+    subnet_names = ['beta-public-vpc-pub-sub1', 'beta-public-vpc-pub-sub1']
+    subnet_ids = [em.get_subnet_id(vpc_id, x) for x in subnet_names]
+    app_network_access_type = 'PublicInternetOnly'
+    efs_kms_id = km.get_kms_arn('smbeta-public-s3-kms', False)
+
+    # When/Then
+    sm.create_domain(domain_name=domain_name,
+                     auth_mode=auth_mode,
+                     execution_role_arn=execution_role_arn,
+                     sg_groups=sg_groups,
+                     subnet_ids=subnet_ids,
+                     vpc_id=vpc_id,
+                     app_network_access_type=app_network_access_type,
+                     efs_kms_id=efs_kms_id)
+
+    assert domain_name in [x['DomainName'] for x in sm.list_domains()]
+
+    domain_id = sm.get_domain_id(domain_name)
+    response = sm.describe_domain(domain_id=domain_id)
+    assert response['Status'] in ['Pending', 'InService']
+    pprint(response)
+
+    sm.delete_domain(domain_id=domain_id,
+                     delete_user_profiles=False)
+    assert sm.describe_domain(domain_id=domain_id) is None
+
+
 def test_list_user_profiles(sm):
     # When
     response = sm.list_user_profiles()
@@ -59,6 +114,19 @@ def test_create_describe_delete_user_profile(sm, im):
     sm.delete_user_profile(user_profile_name=user_profile_name)
     time.sleep(5)
     assert user_profile_name not in [x['UserProfileName'] for x in sm.list_user_profiles()]
+
+
+def test_recreate_all_user_profiles(sm):
+    # Given
+    user_profiles = [x['UserProfileName'] for x in sm.list_user_profiles()]
+
+    # When
+    sm.recreate_all_user_profiles()
+    new_user_profiles = [x['UserProfileName'] for x in sm.list_user_profiles()]
+
+    # Then
+    assert len(user_profiles) == len(new_user_profiles)
+    assert user_profiles.sort() == new_user_profiles.sort()
 
 
 def test_list_apps(sm):
@@ -106,74 +174,6 @@ def test_create_describe_delete_app(sm):
 
     assert sm.describe_app(user_profile_name=user_profile_name, app_name=app_name,
                            app_type=app_type)['Status'] == 'Deleted'
-
-
-def test_recreate_all_user_profiles(sm):
-    # Given
-    user_profiles = [x['UserProfileName'] for x in sm.list_user_profiles()]
-
-    # When
-    sm.recreate_all_user_profiles()
-    new_user_profiles = [x['UserProfileName'] for x in sm.list_user_profiles()]
-
-    # Then
-    assert len(user_profiles) == len(new_user_profiles)
-    assert user_profiles.sort() == new_user_profiles.sort()
-
-
-def test_list_domains(sm):
-    # When
-    response = sm.list_domains()
-
-    # Then
-    assert type(response) == list
-    pprint(response)
-
-
-def test_create_describe_delete_domain(sm, em, im, km):
-    # Given
-    domain_name = 'temp-domain'
-    auth_mode = 'IAM'
-    execution_role_arn = im.get_role_arn('smbeta-execution-engineer-iam-role')
-    sg_groups = [em.get_sg_id_with_sg_name('beta-public-vpc-default-sg')]
-    vpc_id = em.get_vpc_id_with_vpc_name('beta-public-vpc')
-    subnet_names = ['beta-public-vpc-pub-sub1', 'beta-public-vpc-pub-sub1']
-    subnet_ids = [em.get_subnet_id(vpc_id, x) for x in subnet_names]
-    app_network_access_type = 'PublicInternetOnly'
-    efs_kms_id = km.get_kms_arn('smbeta-public-s3-kms', False)
-
-    # When/Then
-    sm.create_domain(domain_name=domain_name,
-                     auth_mode=auth_mode,
-                     execution_role_arn=execution_role_arn,
-                     sg_groups=sg_groups,
-                     subnet_ids=subnet_ids,
-                     vpc_id=vpc_id,
-                     app_network_access_type=app_network_access_type,
-                     efs_kms_id=efs_kms_id)
-
-    assert domain_name in [x['DomainName'] for x in sm.list_domains()]
-
-    domain_id = sm.get_domain_id(domain_name)
-    response = sm.describe_domain(domain_id=domain_id)
-    assert response['Status'] in ['Pending', 'InService']
-    pprint(response)
-
-    sm.delete_domain(domain_id=domain_id,
-                     delete_user_profiles=False)
-    assert sm.describe_domain(domain_id=domain_id) is None
-
-
-def test_get_domain_id(sm):
-    # Given
-    domain_name = 'smbeta-domain'
-
-    # When
-    response = sm.get_domain_id(domain_name=domain_name)
-
-    # Then
-    assert type(response) == str
-    pprint(response)
 
 
 def test_list_images(sm):
