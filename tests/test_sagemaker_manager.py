@@ -107,26 +107,29 @@ def test_create_describe_delete_user_profile(sm, im):
     response = sm.describe_user_profile(user_profile_name=user_profile_name)
     assert type(response) == dict
     assert response['UserProfileName'] == user_profile_name
+    assert response['Status'] == 'InService'
     pprint(response)
 
-    while sm.describe_user_profile(user_profile_name=user_profile_name)['Status'] != 'InService':
-        time.sleep(5)
     sm.delete_user_profile(user_profile_name=user_profile_name)
-    time.sleep(5)
-    assert user_profile_name not in [x['UserProfileName'] for x in sm.list_user_profiles()]
+    assert sm.describe_user_profile(user_profile_name=user_profile_name) is None
 
 
 def test_recreate_all_user_profiles(sm):
     # Given
-    user_profiles = [x['UserProfileName'] for x in sm.list_user_profiles()]
+    old_user_profiles = [x['UserProfileName'] for x in sm.list_user_profiles()]
+    old_user_profile_execution_roles = [sm.describe_user_profile(user_profile_name=x)
+                                        ['UserSettings']['ExecutionRole'] for x in old_user_profiles]
 
     # When
     sm.recreate_all_user_profiles()
     new_user_profiles = [x['UserProfileName'] for x in sm.list_user_profiles()]
+    new_user_profile_execution_roles = [sm.describe_user_profile(user_profile_name=x)
+                                        ['UserSettings']['ExecutionRole'] for x in new_user_profiles]
 
     # Then
-    assert len(user_profiles) == len(new_user_profiles)
-    assert user_profiles.sort() == new_user_profiles.sort()
+    assert len(old_user_profiles) == len(new_user_profiles)
+    assert old_user_profiles.sort() == new_user_profiles.sort()
+    assert old_user_profile_execution_roles.sort() == new_user_profile_execution_roles.sort()
 
 
 def test_list_apps(sm):

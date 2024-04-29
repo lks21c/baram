@@ -124,11 +124,14 @@ class SagemakerManager(object):
                             **kwargs):
         domain_id = domain_id if domain_id else self.domain_id
         try:
-            return self.cli.create_user_profile(DomainId=domain_id,
-                                                UserProfileName=user_profile_name,
-                                                UserSettings={
-                                                    'ExecutionRole': execution_role},
-                                                **kwargs)
+            self.cli.create_user_profile(DomainId=domain_id,
+                                         UserProfileName=user_profile_name,
+                                         UserSettings={
+                                             'ExecutionRole': execution_role},
+                                         **kwargs)
+            while self.describe_user_profile(user_profile_name=user_profile_name)['Status'] == 'Pending':
+                time.sleep(5)
+            self.logger.info(f'{user_profile_name} created')
         except self.cli.exceptions.ResourceInUse:
             self.logger.info(f'{user_profile_name} already exists.')
             return None
@@ -179,30 +182,31 @@ class SagemakerManager(object):
             time.sleep(5)
             elapsed_secs += 5
             self.logger.info(f'wait 5 seconds. delete_cnt={delete_cnt}, elapsed_secs={elapsed_secs}')
-        return self.cli.delete_user_profile(DomainId=domain_id, UserProfileName=user_profile_name)
+        self.cli.delete_user_profile(DomainId=domain_id, UserProfileName=user_profile_name)
+        while user_profile_name in [x['UserProfileName'] for x in self.list_user_profiles()]:
+            time.sleep(5)
+        self.logger.info(f'{user_profile_name} deleted')
 
     def recreate_all_user_profiles(self,
                                    domain_id: Optional[str] = None,
                                    **kwargs):
         domain_id = domain_id if domain_id else self.domain_id
-        user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'], domain_id=domain_id)
-                         for x in self.list_user_profiles(domain_id=domain_id)]
-        self.logger.info(f"user profiles to recreate: {[x['UserProfileName'] for x in user_profiles]}")
+        try:
+            user_profiles = [self.describe_user_profile(user_profile_name=x['UserProfileName'], domain_id=domain_id)
+                             for x in self.list_user_profiles(domain_id=domain_id)]
+        except self.cli.exceptions.ResourceNotFound:
+            self.logger.info(f'There are no user profiles to recreated in {domain_id}')
+            return None
+
+        self.logger.info(f"User profiles to recreate: {[x['UserProfileName'] for x in user_profiles]}")
 
         for i in user_profiles:
-            self.logger.info(f"start deleting {i['UserProfileName']}")
             self.delete_user_profile(user_profile_name=i['UserProfileName'],
                                      domain_id=domain_id)
-            while i['UserProfileName'] in self.list_user_profiles(domain_id=domain_id):
-                time.sleep(5)
-            else:
-                self.logger.info(f"{i['UserProfileName']} deleted")
-                time.sleep(5)
-                self.create_user_profile(user_profile_name=i['UserProfileName'],
-                                         execution_role=i['UserSettings']['ExecutionRole'],
-                                         domain_id=domain_id,
-                                         **kwargs)
-            self.logger.info(f"{i['UserProfileName']} created")
+            self.create_user_profile(user_profile_name=i['UserProfileName'],
+                                     execution_role=i['UserSettings']['ExecutionRole'],
+                                     domain_id=domain_id,
+                                     **kwargs)
 
     def list_apps(self,
                   domain_id: Optional[str] = None,
