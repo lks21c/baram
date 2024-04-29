@@ -244,13 +244,17 @@ class SagemakerManager(object):
                    **kwargs):
         domain_id = domain_id if domain_id else self.domain_id
         try:
-            return self.cli.create_app(DomainId=domain_id,
-                                       UserProfileName=user_profile_name,
-                                       AppType=app_type,
-                                       AppName=app_name,
-                                       **kwargs)
+            self.cli.create_app(DomainId=domain_id,
+                                UserProfileName=user_profile_name,
+                                AppType=app_type,
+                                AppName=app_name,
+                                **kwargs)
+            while self.describe_app(user_profile_name=user_profile_name, app_name=app_name,
+                                    app_type=app_type)['Status'] == 'Pending':
+                time.sleep(10)
+            self.logger.info(f'{user_profile_name}: {app_type}-{app_name} created')
         except self.cli.exceptions.ResourceInUse:
-            self.logger.info(f'{user_profile_name}: {app_name} already exists')
+            self.logger.info(f'{user_profile_name}: {app_type}-{app_name} already exists')
             return None
 
     def delete_app(self,
@@ -260,12 +264,16 @@ class SagemakerManager(object):
                    domain_id: Optional[str] = None):
         domain_id = domain_id if domain_id else self.domain_id
         try:
-            return self.cli.delete_app(DomainId=domain_id,
-                                       UserProfileName=user_profile_name,
-                                       AppName=app_name,
-                                       AppType=app_type)
+            self.cli.delete_app(DomainId=domain_id,
+                                UserProfileName=user_profile_name,
+                                AppName=app_name,
+                                AppType=app_type)
+            while self.describe_app(user_profile_name=user_profile_name, app_name=app_name,
+                                    app_type=app_type)['Status'] != 'Deleted':
+                time.sleep(10)
+            self.logger.info(f'{user_profile_name}: {app_type}-{app_name} deleted')
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'{user_profile_name}: {app_name} does not exist')
+            self.logger.info(f'{user_profile_name}: {app_type}-{app_name} does not exist')
             return None
 
     def list_images(self,

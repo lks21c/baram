@@ -141,18 +141,20 @@ def test_list_apps(sm):
     pprint(response)
 
 
-def test_create_describe_delete_app(sm):
+def test_create_describe_delete_app(sm, im):
     # Given
-    user_profile_name = 'test-user1'
+    user_profile_name = 'temp-user'
+    execution_role = im.get_role_arn(role_name='smbeta-execution-scientist-role')
     app_type = 'JupyterServer'
-    app_name = 'default'
+    app_name = 'temp'
+    sm.create_user_profile(user_profile_name=user_profile_name,
+                           execution_role=execution_role)
 
     # When/Then
     sm.create_app(user_profile_name=user_profile_name,
                   app_type=app_type,
                   app_name=app_name)
 
-    # When/Then
     response = sm.describe_app(user_profile_name=user_profile_name,
                                app_name=app_name,
                                app_type=app_type)
@@ -163,20 +165,13 @@ def test_create_describe_delete_app(sm):
     assert response['AppType'] == app_type
     pprint(response)
 
-    while sm.describe_app(user_profile_name=user_profile_name, app_name=app_name,
-                          app_type=app_type)['Status'] == 'Pending':
-        time.sleep(5)
-
     sm.delete_app(user_profile_name=user_profile_name,
                   app_name=app_name,
                   app_type=app_type)
-
-    while sm.describe_app(user_profile_name=user_profile_name, app_name=app_name,
-                          app_type=app_type)['Status'] == 'Deleting':
-        time.sleep(5)
-
     assert sm.describe_app(user_profile_name=user_profile_name, app_name=app_name,
                            app_type=app_type)['Status'] == 'Deleted'
+
+    sm.delete_user_profile(user_profile_name=user_profile_name)
 
 
 def test_list_images(sm):
