@@ -220,6 +220,7 @@ def test_create_describe_delete_image_version(sm, im):
     # Given
     image_name = 'temp-image'
     role_arn = im.get_role_arn(role_name='smbeta-execution-engineer-iam-role')
+    # TODO: change to infer image url
     base_image_url = '145885190059.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker_image:latest'
     sm.create_image(image_name=image_name, role_arn=role_arn)
 
