@@ -235,8 +235,12 @@ class SagemakerManager(object):
                                    DomainSettings={
                                        'SecurityGroupIds': sg_groups},
                                    **kwargs)
+            domain_id = self.get_domain_id(domain_name)
+            while self.describe_domain(domain_id=domain_id)['Status'] == 'Pending':
+                time.sleep(10)
+            self.logger.info(f'{domain_name} created')
         except self.cli.exceptions.ResourceInUse:
-            self.logger.info(f'domain {domain_name} already exists')
+            self.logger.info(f'{domain_name} already exists')
             return None
 
     def delete_domain(self,
@@ -249,11 +253,15 @@ class SagemakerManager(object):
             user_profiles = self.list_user_profiles(domain_id=domain_id)
             for i in user_profiles:
                 self.delete_user_profile(user_profile_name=i['UserProfileName'], domain_id=domain_id)
+        domain_name = self.describe_domain(domain_id=domain_id)['DomainName']
 
         try:
-            return self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': retention_policy})
+            self.cli.delete_domain(DomainId=domain_id, RetentionPolicy={'HomeEfsFileSystem': retention_policy})
+            while domain_id in [x['DomainId'] for x in self.list_domains()]:
+                time.sleep(10)
+            self.logger.info(f'{domain_name} deleted')
         except self.cli.exceptions.ResourceNotFound:
-            self.logger.info(f'{domain_id} does not exist')
+            self.logger.info(f'{domain_name} does not exist')
             return None
 
     def list_images(self,

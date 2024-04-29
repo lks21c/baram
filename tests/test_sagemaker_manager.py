@@ -132,7 +132,7 @@ def test_list_domains(sm):
 
 def test_create_describe_delete_domain(sm, em, im, km):
     # Given
-    domain_name = 'smbeta-domain'
+    domain_name = 'temp-domain'
     auth_mode = 'IAM'
     execution_role_arn = im.get_role_arn('smbeta-execution-engineer-iam-role')
     sg_groups = [em.get_sg_id_with_sg_name('beta-public-vpc-default-sg')]
@@ -159,16 +159,8 @@ def test_create_describe_delete_domain(sm, em, im, km):
     assert response['Status'] in ['Pending', 'InService']
     pprint(response)
 
-    while sm.describe_domain(domain_id=domain_id)['Status'] == 'Pending':
-        print(f'waiting for {domain_name} to be created')
-        time.sleep(5)
-
-    if sm.describe_domain(domain_id=domain_id)['Status'] == 'InService':
-        sm.delete_domain(domain_id=domain_id,
-                         delete_user_profiles=False)
-
-    while sm.describe_domain(domain_id=domain_id)['Deleting']:
-        time.sleep(5)
+    sm.delete_domain(domain_id=domain_id,
+                     delete_user_profiles=False)
     assert sm.describe_domain(domain_id=domain_id) is None
 
 
