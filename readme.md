@@ -68,6 +68,10 @@ sm.copy_object(from_key="from_s3_key",
 
 # write dataframe to Another Athena Table without schema input.
 
+# Batching(Good for restricted memory environments), https://aws-sdk-pandas.readthedocs.io/en/stable/tutorials/006%20-%20Amazon%20Athena.html
+
+# big table dump to s3
+
 ```
 
 ## For Data Engineer
