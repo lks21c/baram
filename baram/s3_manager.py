@@ -1,7 +1,9 @@
 import os
 from typing import Optional
 
+import awswrangler as wr
 import boto3
+import botocore
 from botocore.client import Config
 
 from baram.kms_manager import KMSManager
@@ -105,37 +107,51 @@ class S3Manager(object):
             for path, subdirs, files in os.walk(local_dir_path):
                 for file in files:
                     dest_path = path.replace(local_dir_path, '')
-                    s3file_path = os.path.normpath(s3_dir_path + '/' + dest_path + '/' + file)
+                    s3_file_path = os.path.normpath(s3_dir_path + '/' + dest_path + '/' + file)
                     local_file_path = os.path.join(path, file)
 
                     extra_args = {'ServerSideEncryption': self.kms_algorithm,
                                   'SSEKMSKeyId': self.kms_id} if self.kms_id else None
-                    self.cli.upload_file(local_file_path,
-                                         self.bucket_name,
-                                         s3file_path,
-                                         ExtraArgs=extra_args)
+                    self.cli.upload_file(local_file_path, self.bucket_name, s3_file_path, ExtraArgs=extra_args)
                     self.logger.info(
-                        f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3file_path} Success.')
+                        f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3_file_path} Success.')
         except Exception as e:
             self.logger.info(e)
             raise e
 
-    def upload_file(self, local_file_path: str, s3file_path: str):
+    def write_and_upload_file(self, content: str, local_file_path: str, s3_file_path: str, do_remove: bool = False):
         '''
         Upload file.
+
+        :param content: the content of file. ex) 'col1,col2\nname,height'
         :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+        :param s3_file_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+        :param do_remove: remove written file
+        :return: response
+        '''
+
+        with open(local_file_path, 'w') as f:
+            f.write(content)
+        assert os.path.exists(local_file_path)
+        self.upload_file(local_file_path, s3_file_path)
+
+        if do_remove:
+            os.remove(local_file_path)
+
+    def upload_file(self, local_file_path: str, s3_file_path: str):
+        '''
+        Upload file.
+
+        :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
+        :param s3_file_path: s3 path. ex) nylon-detector/crawl_data/a.csv
         :return: response
         '''
 
         try:
             extra_args = {'ServerSideEncryption': self.kms_algorithm,
                           'SSEKMSKeyId': self.kms_id} if self.kms_id else None
-            self.cli.upload_file(local_file_path,
-                                 self.bucket_name,
-                                 s3file_path,
-                                 ExtraArgs=extra_args)
-            self.logger.info(f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3file_path} Success.')
+            self.cli.upload_file(local_file_path, self.bucket_name, s3_file_path, ExtraArgs=extra_args)
+            self.logger.info(f'upload : {local_file_path} to Target: s3://{self.bucket_name}/{s3_file_path} Success.')
         except Exception as e:
             self.logger.info(e)
             raise e
@@ -267,3 +283,71 @@ class S3Manager(object):
             CopySource=f'{self.bucket_name}/{from_key}',
             Key=to_key
         )
+
+    def get_s3_web_url(self, s3_bucket_name, path: str, region: str = 'ap-northeast-2'):
+        '''
+        get s3 web url
+
+        :param s3_bucket_name: s3 bucket name
+        :param path: s3 path
+        :param region: s3 region
+        :return:
+        '''
+        return f'https://s3.console.aws.amazon.com/s3/buckets/{s3_bucket_name}?region={region}&prefix={path}'
+
+    def convert_s3_path_to_web_url(self, s3_path: str):
+        '''
+        Convert s3 url to web url
+
+        :param s3_path:
+        :return:
+        '''
+        token = s3_path.replace('s3://', '').split('/')
+        return self.get_s3_web_url(token[0], '/'.join(token[1:]))
+
+    def get_s3_full_path(self, s3_bucket_name: str, path: str):
+        '''
+        Get s3 full path.
+
+        :param s3_bucket_name: bucket name
+        :param path: path
+        :return:
+        '''
+        return f's3://{s3_bucket_name}/{path}'
+
+    def check_s3_object_exists(self, s3_bucket_name: str, path: str):
+        '''
+        Check if s3 object exists.
+
+        :param s3_bucket_name: s3 bucket name
+        :param path:  path
+        :return:
+        '''
+        try:
+            self.cli.head_object(Bucket=s3_bucket_name,
+                                 Key=path)
+            return True
+        except botocore.exceptions.ClientError as e:
+            pass
+        return False
+
+    def rename_file(self, from_file_path: str, to_file_path: str):
+        '''
+        Rename s3 obj.
+
+        :param from_file_path:
+        :param to_file_path:
+        :return:
+        '''
+        self.copy_object(from_key=from_file_path, to_key=to_file_path)
+        self.delete_dir(from_file_path)
+
+    def count_csv_row_count(self, csv_path: str, distinct_col_name: Optional[str] = None):
+        df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{csv_path}', index_col=False,
+                            keep_default_na=False)
+        import pandas as pd
+
+        if distinct_col_name:
+            return len(pd.unique(df[distinct_col_name]))
+        else:
+            return df.shape[0]

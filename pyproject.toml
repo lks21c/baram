@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "baram"
-version = "0.4.4"
+version = "0.4.5"
 description = "AWS Framework for python"
 authors = ["Kwangsik Lee <lks21c@gmail.com>"]
 readme = "readme.md"
@@ -16,6 +16,8 @@ toml = "^0.10.2"
 ujson = "^5.5.0"
 requests = "^2.28.1"
 awswrangler = { version = "3.5.2", extras = ["modin"] }
+tzlocal = "^5.2"
+six = "^1.16.0"
 
 
 [tool.poetry.dev-dependencies]

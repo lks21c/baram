@@ -1,9 +1,8 @@
-import tzlocal
 from datetime import datetime
-
-from typing import Optional, Union, Type, Literal
+from typing import Union, Type
 
 import boto3
+import tzlocal
 
 
 class QuicksightManager(object):

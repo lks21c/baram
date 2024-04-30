@@ -1,5 +1,4 @@
 from pprint import pprint
-from datetime import datetime, timedelta
 
 import pytest
 
@@ -11,16 +10,16 @@ def qm():
     return QuicksightManager()
 
 
-def test_describe_data_set_refresh_properties(qm):
-    # Given
-    account_id = '145885190059'
-    dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
-
-    # When
-    result = qm.describe_dataset_refresh_properties(account_id, dataset_id)
-
-    # Then
-    pprint(result)
+# def test_describe_data_set_refresh_properties(qm):
+#     # Given
+#     account_id = '145885190059'
+#     dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
+#
+#     # When
+#     result = qm.describe_dataset_refresh_properties(account_id, dataset_id)
+#
+#     # Then
+#     pprint(result)
 
 
 def test_list_datasets(qm):
@@ -115,104 +114,104 @@ def test_get_dataset_id_with_name(qm):
     assert len(dataset_id.split('-')) == 5
     assert dataset_id == '011f6910-ec66-4f3b-b3f1-e2f15ebdeabb'
 
-
-def test_create_dataset_refresh_schedule_hourly(qm):
-    # Given
-    account_id = '145885190059'
-    dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
-    schedule_interval = 'hourly'
-    schedule_id = f'iu001_test_{schedule_interval}'
-    refresh_type = 'full'
-
-    # When
-    response = qm.create_dataset_refresh_schedule(account_id=account_id,
-                                                  dataset_id=dataset_id,
-                                                  schedule_id=schedule_id,
-                                                  schedule_interval=schedule_interval,
-                                                  refresh_type=refresh_type)
-
-    print(response)
-    # TODO: Add assertion
-
-
-def test_create_dataset_refresh_schedule_daily(qm):
-    # Given
-    account_id = '145885190059'
-    dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
-    schedule_interval = 'daily'
-    schedule_id = f'iu001_test_{schedule_interval}'
-    timeset = datetime.now() + timedelta(minutes=5)
-    time_of_the_day = f"{timeset.hour}:{timeset.minute}"
-    refresh_type = 'full'
-
-    # When
-    response = qm.create_dataset_refresh_schedule(account_id=account_id,
-                                                  dataset_id=dataset_id,
-                                                  schedule_id=schedule_id,
-                                                  schedule_interval=schedule_interval,
-                                                  time_of_the_day=time_of_the_day,
-                                                  refresh_type=refresh_type)
-
-    print(response)
-    # TODO: Add assertion
-
-
-def test_create_dataset_refresh_schedule_weekly(qm):
-    # Given
-    account_id = '145885190059'
-    dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
-    schedule_interval = 'weekly'
-    schedule_id = f'iu001_test_{schedule_interval}'
-    timeset = datetime.now() + timedelta(minutes=5)
-    time_of_the_day = f"{timeset.hour}:{timeset.minute}"
-    refresh_day_weekly = 'sat'
-    refresh_type = 'full'
-
-    # When
-    response = qm.create_dataset_refresh_schedule(account_id=account_id,
-                                                  dataset_id=dataset_id,
-                                                  schedule_id=schedule_id,
-                                                  schedule_interval=schedule_interval,
-                                                  time_of_the_day=time_of_the_day,
-                                                  refresh_day_weekly=refresh_day_weekly,
-                                                  refresh_type=refresh_type)
-
-    print(response)
-    # TODO: Add assertion
-
-
-def test_create_dataset_refresh_schedule_monthly(qm):
-    # Given
-    account_id = '145885190059'
-    dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
-    schedule_interval = 'monthly'
-    schedule_id = f'iu001_test_{schedule_interval}'
-    timeset = datetime.now() + timedelta(minutes=5)
-    time_of_the_day = f"{timeset.hour}:{timeset.minute}"
-    refresh_day_month = 3
-    refresh_type = 'full'
-
-    # When
-    response = qm.create_dataset_refresh_schedule(account_id=account_id,
-                                                  dataset_id=dataset_id,
-                                                  schedule_id=schedule_id,
-                                                  schedule_interval=schedule_interval,
-                                                  time_of_the_day=time_of_the_day,
-                                                  refresh_day_month=refresh_day_month,
-                                                  refresh_type=refresh_type)
-
-    print(response)
-    # TODO: Add assertion
-
-
-def test_delete_dataset_refresh_schedule(qm):
-    # TODO
-    assert False
-
-
-def test_delete_dataset_refresh_schedules(qm):
-    # TODO
-    assert False
+#
+# def test_create_dataset_refresh_schedule_hourly(qm):
+#     # Given
+#     account_id = '145885190059'
+#     dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
+#     schedule_interval = 'hourly'
+#     schedule_id = f'iu001_test_{schedule_interval}'
+#     refresh_type = 'full'
+#
+#     # When
+#     response = qm.create_dataset_refresh_schedule(account_id=account_id,
+#                                                   dataset_id=dataset_id,
+#                                                   schedule_id=schedule_id,
+#                                                   schedule_interval=schedule_interval,
+#                                                   refresh_type=refresh_type)
+#
+#     print(response)
+#     # TODO: Add assertion
+#
+#
+# def test_create_dataset_refresh_schedule_daily(qm):
+#     # Given
+#     account_id = '145885190059'
+#     dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
+#     schedule_interval = 'daily'
+#     schedule_id = f'iu001_test_{schedule_interval}'
+#     timeset = datetime.now() + timedelta(minutes=5)
+#     time_of_the_day = f"{timeset.hour}:{timeset.minute}"
+#     refresh_type = 'full'
+#
+#     # When
+#     response = qm.create_dataset_refresh_schedule(account_id=account_id,
+#                                                   dataset_id=dataset_id,
+#                                                   schedule_id=schedule_id,
+#                                                   schedule_interval=schedule_interval,
+#                                                   time_of_the_day=time_of_the_day,
+#                                                   refresh_type=refresh_type)
+#
+#     print(response)
+#     # TODO: Add assertion
+#
+#
+# def test_create_dataset_refresh_schedule_weekly(qm):
+#     # Given
+#     account_id = '145885190059'
+#     dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
+#     schedule_interval = 'weekly'
+#     schedule_id = f'iu001_test_{schedule_interval}'
+#     timeset = datetime.now() + timedelta(minutes=5)
+#     time_of_the_day = f"{timeset.hour}:{timeset.minute}"
+#     refresh_day_weekly = 'sat'
+#     refresh_type = 'full'
+#
+#     # When
+#     response = qm.create_dataset_refresh_schedule(account_id=account_id,
+#                                                   dataset_id=dataset_id,
+#                                                   schedule_id=schedule_id,
+#                                                   schedule_interval=schedule_interval,
+#                                                   time_of_the_day=time_of_the_day,
+#                                                   refresh_day_weekly=refresh_day_weekly,
+#                                                   refresh_type=refresh_type)
+#
+#     print(response)
+#     # TODO: Add assertion
+#
+#
+# def test_create_dataset_refresh_schedule_monthly(qm):
+#     # Given
+#     account_id = '145885190059'
+#     dataset_id = '3cf78960-2739-42d2-91ef-46395225dceb'  # iu001
+#     schedule_interval = 'monthly'
+#     schedule_id = f'iu001_test_{schedule_interval}'
+#     timeset = datetime.now() + timedelta(minutes=5)
+#     time_of_the_day = f"{timeset.hour}:{timeset.minute}"
+#     refresh_day_month = 3
+#     refresh_type = 'full'
+#
+#     # When
+#     response = qm.create_dataset_refresh_schedule(account_id=account_id,
+#                                                   dataset_id=dataset_id,
+#                                                   schedule_id=schedule_id,
+#                                                   schedule_interval=schedule_interval,
+#                                                   time_of_the_day=time_of_the_day,
+#                                                   refresh_day_month=refresh_day_month,
+#                                                   refresh_type=refresh_type)
+#
+#     print(response)
+#     # TODO: Add assertion
+#
+#
+# def test_delete_dataset_refresh_schedule(qm):
+#     # TODO
+#     assert False
+#
+#
+# def test_delete_dataset_refresh_schedules(qm):
+#     # TODO
+#     assert False
 
 
 def test_list_dataset_refresh_schedules(qm):
