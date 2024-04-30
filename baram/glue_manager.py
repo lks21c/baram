@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from pprint import pprint
 from typing import Optional
 
 import awswrangler as wr
@@ -35,6 +36,7 @@ class GlueManager(object):
         self.TABLE_PATH_PREFIX = table_path_prefix
         self.MAX_RESULTS = 1000
         self.GLUE_TYPE_ETL = 'glueetl'
+        self.GLUE_TYPE_ETL_PYTHON_VERSION = '3'
         self.GLUE_TYPE_PYTHON_SHELL = 'pythonshell'
         self.GLUE_TYPE_PYTHON_SHELL_PYTHON_VERSION = '3.9'
 
@@ -162,7 +164,7 @@ class GlueManager(object):
             'SecurityConfiguration': glue_security_conf_name,
             'Command': {
                 'ScriptLocation': script_location,
-                'PythonVersion': '3'
+                'PythonVersion': self.GLUE_TYPE_ETL_PYTHON_VERSION
             },
             'DefaultArguments': {
                 '--job-language': 'python',
@@ -264,6 +266,7 @@ class GlueManager(object):
         else:
             prev_job['Job']['WorkerType'] = worker_type
             prev_job['Job']['NumberOfWorkers'] = num_of_dpus
+            prev_job['Job']['Command']['PythonVersion'] = self.GLUE_TYPE_ETL_PYTHON_VERSION
 
         if python_library_path:
             prev_job['Job']['DefaultArguments']['--extra-py-files'] = python_library_path
@@ -292,15 +295,23 @@ class GlueManager(object):
         old_job = self.get_job(old_name)
         old_job_params = old_job['Job']
 
-        # Remove unnecessary keys
-        old_job_params.pop('Name', None)
-        old_job_params.pop('CreatedOn', None)
-        old_job_params.pop('LastModifiedOn', None)
-        old_job_params.pop('AllocatedCapacity', None)
-        old_job_params.pop('MaxCapacity', None)
+        if old_job_params['Command']['Name'] == self.GLUE_TYPE_PYTHON_SHELL:
+            dpu = old_job_params['MaxCapacity']
+        else:
+            dpu = old_job_params['AllocatedCapacity']
+        pprint(old_job_params)
 
         # Create a new job with the new name and the same parameters as the old job
-        self.create_job(job_name=new_name, **old_job_params)
+        self.create_job(job_name=new_name,
+                        role_name=old_job_params['Role'],
+                        glue_security_conf_name=old_job_params['SecurityConfiguration'],
+                        glue_job_type=old_job_params['Command']['Name'],
+                        num_of_dpus=dpu,
+                        worker_type=old_job_params['WorkerType'],
+                        script_location=old_job_params['Command']['ScriptLocation'],
+                        python_library_path=old_job_params['DefaultArguments']['--additional-python-modules'],
+                        python_module=old_job_params['DefaultArguments']['--extra-py-files'],
+                        enable_iceberg='--datalake-formats' in old_job_params['DefaultArguments'])
 
         # Delete the old job
         self.delete_job(old_name)
