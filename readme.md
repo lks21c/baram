@@ -10,7 +10,7 @@ Baram means "wind" in Korean which makes cloud move conveniently.
 - Convenient S3 Usage(KMS setting, delete directory ...)
 - Athena Iceberg
 - Athena Performance Management(cache, ctas_approach control)
-
+- Glue Job Management
 
 ## Quick Start
 
