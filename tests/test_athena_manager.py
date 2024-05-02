@@ -233,8 +233,13 @@ def test_check_table_exists(am, sm, sample):
     sm.delete_dir(sample['s3_filepath'])
 
 
-def test_read_query_txt(am, sample):
+def test_read_query_txt(am, sm, sample):
+    # Given
     # TODO: TBD, create temp table/data and check it
+
+    # When
+
+    # Then
     assert False
 
 

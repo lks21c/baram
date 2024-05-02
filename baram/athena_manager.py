@@ -181,7 +181,7 @@ class AthenaManager(object):
 
     def check_table_exists(self, db_name: str, table_name: str):
         '''
-        return table exists or not.
+        Return table exists or not.
 
         :param db_name: database name
         :param table_name: table name
@@ -189,20 +189,19 @@ class AthenaManager(object):
         '''
         return wr.catalog.does_table_exist(db_name, table_name)
 
-    def read_query_txt(self, filepath: str, replacements: dict):
+    def read_query_txt(self,
+                       bucket_name: str,
+                       filepath: str,
+                       replacements: Optional[dict] = None):
         '''
-        read txt file for query from s3.
+        Read txt sql file from s3 and fetch it via Athena.
 
-        :param filepath: filepath of s3
+        :param bucket_name: the name of s3 bucket containing file
+        :param filepath: prefix of file
         :param replacements: specified replacements for specific purpose of query
         :return: string, a line of query
         '''
-
-        response = self.cli.get_object(Bucket=self.from_s3_bucket_name, Key=filepath)
-        query_txt = response['Body'].read().decode('utf-8').replace('\n', ' ')
-        for k, v in replacements.items():
-            query_txt = query_txt.replace(k, v)
-        return query_txt
+        pass
 
     def from_athena_to_df(self, sql: str, db_name: str, workgroup: Optional[str] = None):
         '''
