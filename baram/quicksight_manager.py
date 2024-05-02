@@ -204,3 +204,13 @@ class QuicksightManager(object):
         :return:
         '''
         pass
+
+    def list_users(self, account_id: str, namespace: str):
+        '''
+        List QuickSight users of specific account ID.
+
+        :param account_id: AWS account ID
+        :param namespace: The namespace of QuickSight
+        :return: User lists
+        '''
+        return self.cli.list_users(AwsAccountId=account_id, Namespace=namespace)

@@ -23,7 +23,7 @@ class EC2Manager(object):
             print(traceback.format_exc())
             return None
 
-    def list_unused_sg_ids(self, description_filter: str = '', sm_domain_ids: list = None) -> set:
+    def list_unused_sg_ids_in_sagemaker(self, description_filter: str = '', sm_domain_ids: list = None) -> set:
         """
         Describe useless and deletable security group ids.
         (including disused SageMaker domain related things)
@@ -188,7 +188,7 @@ class EC2Manager(object):
         :param sg_id: GroupId
         """
         try:
-            self.cli.delete_sg(GroupId=sg_id)
+            self.cli.delete_security_group(GroupId=sg_id)
             self.logger.info('security group has deleted')
         except:
             print(traceback.format_exc())

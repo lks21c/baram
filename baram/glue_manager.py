@@ -316,6 +316,16 @@ class GlueManager(object):
         # Delete the old job
         self.delete_job(old_name)
 
+    def delete_database(self, database_name: str, catalog_id: str = 'AwsDataCatalog'):
+        '''
+
+        :param database_name: The name of the database to delete. For Hive compatibility, this must be all lowercase.
+        :param catalog_id: The ID of the Data Catalog in which the database resides. If none is provided, the Amazon Web Services account ID is used by default.
+        :return:
+        '''
+
+        self.cli.delete_database(CatalogId=catalog_id, Name=database_name)
+
     def delete_job(self, name: str):
         '''
 

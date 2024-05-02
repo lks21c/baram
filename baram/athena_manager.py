@@ -1,14 +1,13 @@
 from pprint import pprint
 from typing import Optional, Union, Dict, Any, List, Literal
 
-import fire
-import boto3
 import awswrangler as wr
+import fire
 from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
 
-from baram.s3_manager import S3Manager
-from baram.log_manager import LogManager
 from baram.glue_manager import GlueManager
+from baram.log_manager import LogManager
+from baram.s3_manager import S3Manager
 
 
 class AthenaManager(object):
@@ -69,16 +68,17 @@ class AthenaManager(object):
         # TODO
         pass
 
-    def delete_table(self, db_name: str, table_name: str):
+    def delete_table(self, db_name: str, table_name: str, include_s3_data: bool = False):
         '''
         Delete Glue Table.
 
         :param db_name: target glue database name
         :param table_name: target glue table name
-        :param table_path:
+        :param include_s3_data: if True, delete s3 data of table
         :return:
         '''
-        sm = S3Manager(self.OUTPUT_BUCKET)
+        if include_s3_data:
+            sm = S3Manager(self.OUTPUT_BUCKET)
         gm = GlueManager(self.OUTPUT_BUCKET)
 
         try:
@@ -88,8 +88,9 @@ class AthenaManager(object):
             wr.catalog.delete_table_if_exists(database=db_name, table=table_name)
             print(f'{db_name}.{table_name} is deleted, on athena')
 
-            sm.delete_dir(s3_dir_path=location)
-            print(f'data of {table_name} in its location {location} is deleted, on s3')
+            if include_s3_data:
+                sm.delete_dir(s3_dir_path=location)
+                print(f'data of {table_name} in its location {location} is deleted, on s3')
 
         except Exception as e:
             self.logger.info(e)
