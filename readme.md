@@ -112,35 +112,35 @@ sm.copy_object(from_key="from_s3_key",
 
 ### Rename File
 
+---
+
 ## Athena
 
+### List Glue catalog and table
 ```python
-
-# Read rows from Athena
-
-# EDA
-
-# write dataframe to Another Athena Table without schema input.
-
-# Batching(Good for restricted memory environments), https://aws-sdk-pandas.readthedocs.io/en/stable/tutorials/006%20-%20Amazon%20Athena.html
-
-# big table dump to s3
 
 ```
 
-## For Data Engineer
-
-### Manage S3
-
+### Check whether Athena table exists or not
 ```python
 
-# check_s3_object_exists
+```
 
-# count_csv_row_count
-
-# rename_file
+### Delete old table and remake it
+```python
 
 ```
+
+### Fetch CTAS query to athena
+```python
+
+```
+
+### Bring Athena table as `pandas.DataFrame`
+```python
+
+```
+
 
 ## Read The Docs
 
