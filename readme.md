@@ -1,4 +1,4 @@
-## Baram
+# Baram
 
 Python based AWS Framework which leverages boto3 and awswrangler.
 
@@ -141,6 +141,8 @@ sm.rename_file('dir/train.csv', 'dir/train2.csv')
 
 ![image](https://github.com/lks21c/baram/assets/3079144/6ed7c415-3b4a-4a9e-b68a-35fb12276898)
 
+---
+
 ## Athena
 
 ### List Glue catalog and table
@@ -158,7 +160,7 @@ sm.rename_file('dir/train.csv', 'dir/train2.csv')
 
 ```
 
-### Fetch CTAS query to athena
+### Fetch CTAS query to Athena
 ```python
 
 ```
@@ -167,6 +169,8 @@ sm.rename_file('dir/train.csv', 'dir/train2.csv')
 ```python
 
 ```
+
+### Read specific query from text file and fetch it to Athena
 
 
 ## Read The Docs
