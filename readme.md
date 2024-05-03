@@ -18,9 +18,50 @@ Baram means "wind" in Korean which makes cloud move conveniently.
 > pip install awswrangler
 ```
 
-## For Beginner
+## S3
 
-### S3 Usage
+### Automatic KMS Setting
+
+All you have to do is just initialize S3Manager with your bucket name.
+
+S3 Manager will automatically set KMS key for you.
+
+```python
+from baram.s3_manager import S3Manager
+
+sm = S3Manager("my_bucket_name")
+
+```
+
+### Delete Directory with files
+
+Suppose your bucket has a directory with 3 files.
+
+![image](https://github.com/lks21c/baram/assets/3079144/81185772-7a67-43bb-83a2-a652f2a6e3d0)
+
+You can delete the directory including all sub-directories and files with just one line of code.
+
+```python
+from baram.s3_manager import S3Manager
+
+sm = S3Manager("my_bucket_name")
+sm.delete_dir('dir_path')
+```
+
+You can see output logs like below.
+
+```bash
+2024-05-03 13:10:26,512 - S3Manager - INFO - delete 3 keys.
+2024-05-03 13:10:26,569 - S3Manager - INFO - delete dir
+```
+
+You can verify the deletion in the S3 console.
+
+![image](https://github.com/lks21c/baram/assets/3079144/7d7b7c9c-a283-4b94-9b59-105ee8394946)
+
+### Basic file upload/download
+
+You can upload and download files like below.
 
 ```python
 # import S3Manager
@@ -39,26 +80,39 @@ sm.download_dir(s3_dir_path="s3_directory_path",
 # Copy S3 object
 sm.copy_object(from_key="from_s3_key",
                to_key="to_s3_key")
-
 ```
 
-## For Data Scientist
-
-### S3 Usage
+### check line count of csv
 
 ```python
 
-# Read csv from s3
+```
 
-# EDA
+### grep string in csv
 
-# Merging Datasets from S3(https://aws-sdk-pandas.readthedocs.io/en/stable/tutorials/013%20-%20Merging%20Datasets%20on%20S3.html)
-
-# write dataframe to s3
+```python
 
 ```
 
-### Athena Usage
+### pandas EDA
+
+```python
+
+```
+
+### csv to iceberg
+```python
+```
+
+### Merging csv files
+
+```python
+
+```
+
+### Rename File
+
+## Athena
 
 ```python
 
