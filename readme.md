@@ -2,7 +2,7 @@
 
 Python based AWS Framework which leverages boto3 and awswrangler.
 
-Baram means "wind" in Korean which makes cloud move conveniently.
+Baram means 'wind' in Korean which makes cloud move conveniently.
 
 ## Features
 
@@ -29,7 +29,7 @@ S3 Manager will automatically set KMS key for you.
 ```python
 from baram.s3_manager import S3Manager
 
-sm = S3Manager("my_bucket_name")
+sm = S3Manager('baram-test')
 
 ```
 
@@ -44,7 +44,7 @@ You can delete the directory including all sub-directories and files with just o
 ```python
 from baram.s3_manager import S3Manager
 
-sm = S3Manager("my_bucket_name")
+sm = S3Manager('baram-test')
 sm.delete_dir('dir_path')
 ```
 
@@ -67,30 +67,48 @@ You can upload and download files like below.
 # import S3Manager
 from baram.s3_manager import S3Manager
 
-sm = S3Manager("my_bucket_name")
+sm = S3Manager('baram-test')
 
 # Upload local file to S3
-sm.upload_file(local_file_path="local_file_path",
-               s3_file_path="s3_file_path")
+sm.upload_file(local_file_path='local_file_path',
+               s3_file_path='s3_file_path')
 
 # Emphasize Directory Deletion
-sm.download_dir(s3_dir_path="s3_directory_path",
-                local_dir_path="local_directory_path")
+sm.download_dir(s3_dir_path='s3_directory_path',
+                local_dir_path='local_directory_path')
 
 # Copy S3 object
-sm.copy_object(from_key="from_s3_key",
-               to_key="to_s3_key")
+sm.copy_object(from_key='from_s3_key',
+               to_key='to_s3_key')
 ```
 
 ### check line count of csv
 
-```python
+It's often necessary to the line count of csv in S3. You can easily get the line count with the following code.
 
+```python
+from baram.s3_manager import S3Manager
+
+sm = S3Manager('baram-test')
+cnt = sm.count_csv_row_count('directory/filename.csv')
+print(cnt)
 ```
 
-### grep string in csv
+```bash
+891
+```
+
+### get object by lines
+
+You can easily read csv file by lines.
 
 ```python
+
+from baram.s3_manager import S3Manager
+
+sm = S3Manager('baram-test')
+for line in sm.get_object_by_lines('dir/filename.csv'):
+    print(line)
 
 ```
 
@@ -98,10 +116,6 @@ sm.copy_object(from_key="from_s3_key",
 
 ```python
 
-```
-
-### csv to iceberg
-```python
 ```
 
 ### Merging csv files
@@ -112,7 +126,20 @@ sm.copy_object(from_key="from_s3_key",
 
 ### Rename File
 
----
+If you want to rename a file in S3, you can do it like below.
+
+![image](https://github.com/lks21c/baram/assets/3079144/81185772-7a67-43bb-83a2-a652f2a6e3d0)
+
+```python
+
+from baram.s3_manager import S3Manager
+
+sm = S3Manager('baram-test')
+sm.rename_file('dir/train.csv', 'dir/train2.csv')
+
+```
+
+![image](https://github.com/lks21c/baram/assets/3079144/6ed7c415-3b4a-4a9e-b68a-35fb12276898)
 
 ## Athena
 
