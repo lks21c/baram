@@ -20,26 +20,26 @@ Baram means 'wind' in Korean which makes cloud move conveniently.
 
 ## S3
 
-### Automatic KMS Setting
-
-All you have to do is just initialize S3Manager with your bucket name.
-
-S3 Manager will automatically set KMS key for you.
+To import `S3Manager`, all you have to do is just initialize S3Manager with your bucket name.
 
 ```python
 from baram.s3_manager import S3Manager
 
 sm = S3Manager('baram-test')
-
 ```
+### Automatic KMS key Setting
 
-### Delete Directory with files
+Once initialized, `S3Manager` will automatically set KMS key for you.
+
+You don't have to manually configure KMS for S3 actions such as putting object, etc.
+
+### Delete directory with files
 
 Suppose your bucket has a directory with 3 files.
 
 ![image](https://github.com/lks21c/baram/assets/3079144/81185772-7a67-43bb-83a2-a652f2a6e3d0)
 
-You can delete the directory including all sub-directories and files with just one line of code.
+You can delete the directory including all subdirectories and files with just one line of code.
 
 ```python
 from baram.s3_manager import S3Manager
@@ -59,7 +59,7 @@ You can verify the deletion in the S3 console.
 
 ![image](https://github.com/lks21c/baram/assets/3079144/7d7b7c9c-a283-4b94-9b59-105ee8394946)
 
-### Basic file upload/download
+### Basic file upload and download
 
 You can upload and download files like below.
 
@@ -73,7 +73,7 @@ sm = S3Manager('baram-test')
 sm.upload_file(local_file_path='local_file_path',
                s3_file_path='s3_file_path')
 
-# Emphasize Directory Deletion
+# Download whole directory to local
 sm.download_dir(s3_dir_path='s3_directory_path',
                 local_dir_path='local_directory_path')
 
@@ -82,9 +82,11 @@ sm.copy_object(from_key='from_s3_key',
                to_key='to_s3_key')
 ```
 
-### check line count of csv
+### Check line count of csv
 
-It's often necessary to the line count of csv in S3. You can easily get the line count with the following code.
+It's often necessary to check how many lines are in csv file in S3.
+
+You can easily get the line count with the following code.
 
 ```python
 from baram.s3_manager import S3Manager
@@ -94,11 +96,12 @@ cnt = sm.count_csv_row_count('directory/filename.csv')
 print(cnt)
 ```
 
+Below is the output.
 ```bash
 891
 ```
 
-### get object by lines
+### Get object by lines
 
 You can easily read csv file by lines.
 
@@ -109,7 +112,6 @@ from baram.s3_manager import S3Manager
 sm = S3Manager('baram-test')
 for line in sm.get_object_by_lines('dir/filename.csv'):
     print(line)
-
 ```
 
 ### pandas EDA
@@ -138,6 +140,7 @@ sm = S3Manager('baram-test')
 sm.rename_file('dir/train.csv', 'dir/train2.csv')
 
 ```
+`dir/train.csv` is renamed to `dir/train2.csv`
 
 ![image](https://github.com/lks21c/baram/assets/3079144/6ed7c415-3b4a-4a9e-b68a-35fb12276898)
 
