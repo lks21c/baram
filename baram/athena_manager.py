@@ -117,6 +117,7 @@ class AthenaManager(object):
         :return: Dictionary with the get_query_execution response. You can obtain query result as csv on S3.
         '''
         pprint(sql)
+        # TODO: Set default s3_output when this is None
         query_execution_id = wr.athena.start_query_execution(sql=sql,
                                                              workgroup=self.ATHENA_WORKGROUP,
                                                              params=params,
