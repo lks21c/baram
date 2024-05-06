@@ -23,19 +23,22 @@ class S3Manager(object):
             self.kms_algorithm, self.kms_id = None, None
 
     def list_buckets(self):
-        '''
+        """
+        List all S3 buckets.
+
         :return: response
-        '''
+        """
         response = self.cli.list_buckets()
         return response['Buckets'] if 'Buckets' in response else None
 
     def put_object(self, s3_key_id: str, body):
-        '''
+        """
+        Put an object to S3.
 
-        :param s3_key_id: s3 key id. ex) nylon-detector/a.csv
+        :param s3_key_id: S3 key id. ex) dir/a.csv
         :param body: byte or str data
         :return: response
-        '''
+        """
         kwargs = {"Bucket": self.bucket_name,
                   "Key": s3_key_id,
                   "Body": body}
@@ -46,11 +49,12 @@ class S3Manager(object):
         return response
 
     def get_object(self, s3_key_id: str):
-        '''
+        """
+        Get specified object in S3.
 
-        :param s3_key_id: s3 key id. ex) nylon-detector/a.csv
+        :param s3_key_id: S3 key id. ex) dir/a.csv
         :return: response
-        '''
+        """
         try:
             response = self.cli.get_object(Bucket=self.bucket_name,
                                            Key=s3_key_id)
@@ -60,12 +64,12 @@ class S3Manager(object):
             return None
 
     def get_object_by_lines(self, s3_key_id: str):
-        '''
-        get s3 object line by line.
+        """
+        Get S3 object line by line.
 
-        :param s3_key_id: s3 key id. ex) nylon-detector/a.csv
+        :param s3_key_id: S3 key id. ex) dir/a.csv
         :return: response
-        '''
+        """
 
         try:
             import codecs
@@ -78,15 +82,23 @@ class S3Manager(object):
             return None
 
     def delete_object(self, s3_key_id: str):
-        '''
+        """
+        Delete specified object in S3.
 
-        :param s3_key_id: s3 key id. ex) nylon-detector/a.csv
+        :param s3_key_id: S3 key id. ex) dir/a.csv
         :return: response
-        '''
+        """
         return self.cli.delete_object(Bucket=self.bucket_name,
                                       Key=s3_key_id)
 
     def delete_objects(self, s3_keys: list, quiet: bool = True):
+        """
+        Delete list of objects in S3.
+
+        :param s3_keys: list of S3 key ids.
+        :param quiet: True if using quiet mode, False if using verbose mode.
+        :return:
+        """
         objects = [{'Key': k} for k in s3_keys]
         return self.cli.delete_objects(Bucket=self.bucket_name,
                                        Delete={
@@ -95,12 +107,13 @@ class S3Manager(object):
                                        })
 
     def upload_dir(self, local_dir_path: str, s3_dir_path: str):
-        '''
-        Upload directory.
-        :param local_dir_path: local dir path. ex) /Users/lks21c/repo/sli-aflow
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data
+        """
+        Upload local directory to S3.
+
+        :param local_dir_path: local directory path. ex) /Users/JohnDoe/dataset
+        :param s3_dir_path: S3 path. ex) dir/crawl_data
         :return: response
-        '''
+        """
         self.logger.info('Uploading results to s3 initiated...')
         self.logger.info(f'local_path:{local_dir_path}, s3_path:{s3_dir_path}')
         try:
@@ -120,15 +133,15 @@ class S3Manager(object):
             raise e
 
     def write_and_upload_file(self, content: str, local_file_path: str, s3_file_path: str, do_remove: bool = False):
-        '''
-        Upload file.
+        """
+        Write and upload file to S3.
 
-        :param content: the content of file. ex) 'col1,col2\nname,height'
-        :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
-        :param s3_file_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+        :param content: the content of file. ex) 'col1,col2\name,height'
+        :param local_file_path: local file path. ex) /Users/JohnDoe/dataset/a.csv
+        :param s3_file_path: S3 path. ex) dir/crawl_data/a.csv
         :param do_remove: remove written file
         :return: response
-        '''
+        """
 
         with open(local_file_path, 'w') as f:
             f.write(content)
@@ -139,13 +152,13 @@ class S3Manager(object):
             os.remove(local_file_path)
 
     def upload_file(self, local_file_path: str, s3_file_path: str):
-        '''
-        Upload file.
+        """
+        Upload file to S3.
 
-        :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
-        :param s3_file_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+        :param local_file_path: local file path. ex) /Users/JohnDoe/dataset/a.csv
+        :param s3_file_path: S3 path. ex) dir/crawl_data/a.csv
         :return: response
-        '''
+        """
 
         try:
             extra_args = {'ServerSideEncryption': self.kms_algorithm,
@@ -157,13 +170,13 @@ class S3Manager(object):
             raise e
 
     def download_dir(self, s3_dir_path: str, local_dir_path: str = os.getcwd()):
-        '''
-        Download directory from s3.
+        """
+        Download S3 directory to local directory path.
 
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data
-        :param local_dir_path: local dir path. ex) /Users/lks21c/repo/sli-aflow
+        :param s3_dir_path: S3 path. ex) dir/crawl_data
+        :param local_dir_path: local directory path. ex) /Users/JohnDoe/dataset
         :return: response
-        '''
+        """
         self.logger.info('Downloading results to s3 initiated...')
         self.logger.info(f's3_path:{s3_dir_path}, local_path:{local_dir_path}')
         bucket = boto3.resource('s3').Bucket(self.bucket_name)
@@ -175,12 +188,12 @@ class S3Manager(object):
             self.logger.info(f'download : {obj.key} to Target: {local_obj_path} Success.')
 
     def delete_dir(self, s3_dir_path: str):
-        '''
-        Delete s3 directory.
+        """
+        Delete S3 directory.
 
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data
+        :param s3_dir_path: S3 path. ex) dir/crawl_data
         :return:
-        '''
+        """
         files = self.list_objects(s3_dir_path)
         if not files:
             return
@@ -197,71 +210,73 @@ class S3Manager(object):
         self.logger.info(f'delete {s3_dir_path}')
 
     def download_file(self, s3_file_path: str, local_file_path: str):
-        '''
-        Download file from s3.
-        \
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data/a.csv
-        :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
+        """
+        Download file from S3.
+
+        :param s3_file_path: S3 path. ex) dir/crawl_data/a.csv
+        :param local_file_path: local file path. ex) /Users/JohnDoe/dataset/a.csv
         :return: response
-        '''
+        """
         bucket = boto3.resource('s3').Bucket(self.bucket_name)
         bucket.download_file(s3_file_path, local_file_path)
         self.logger.info(f'download : {s3_file_path} to Target: {local_file_path} Success.')
 
     def list_objects(self, prefix: str = '', delimiter: str = ''):
-        '''
+        """
         List S3 objects.
 
         :param prefix: Limits the response to keys that begin with the specified prefix.
         :param delimiter: A delimiter is a character you use to group keys.
         :return: response
-        '''
+        """
         response = self.cli.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix, Delimiter=delimiter)
         return response['Contents'] if 'Contents' in response else None
 
     def list_dir(self, prefix: str = '', delimiter: str = '/'):
-        '''
-        List directory.
+        """
+        List S3 directory.
 
         :param prefix: Limits the response to keys that begin with the specified prefix.
         :param delimiter: A delimiter is a character you use to group keys.
         :return: response
-        '''
+        """
         response = self.cli.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix, Delimiter=delimiter)
-        list = []
+        lst = []
         if 'Contents' in response:
-            list += [item['Key'] for item in response['Contents'] if 'Key' in item]
+            lst += [item['Key'] for item in response['Contents'] if 'Key' in item]
         if 'CommonPrefixes' in response:
-            list += [prefix['Prefix'] for prefix in response['CommonPrefixes']]
-        return list
+            lst += [prefix['Prefix'] for prefix in response['CommonPrefixes']]
+        return lst
 
     def get_s3_arn(self, bucket_name):
-        '''
+        """
+        Get S3 bucket's ARN
 
         :param bucket_name: bucket name
-        :return: s3 bucket arn
-        '''
+        :return: S3 bucket arn
+        """
         return next(
             (f'arn:aws:s3:::{i["Name"]}' for i in self.list_buckets() if bucket_name in i['Name']),
             None)
 
     def get_bucket_encryption(self):
-        '''
+        """
+        Get S3 bucket's encryption key
 
         :return: KMS ID
-        '''
+        """
         conf = self.cli.get_bucket_encryption(Bucket=self.bucket_name)['ServerSideEncryptionConfiguration']
         return conf['Rules'][0]['ApplyServerSideEncryptionByDefault'] if conf else None
 
     def copy(self, from_key: str, to_key: str, to_bucket: Optional[str] = None):
-        '''
+        """
         Creates a copy of an object that is already stored in Amazon S3.
 
-        :param from_key: origin s3 key
-        :param to_key: destination s3 key
-        :param to_bucket: destination s3 bucket
+        :param from_key: origin S3 key
+        :param to_key: destination S3 key
+        :param to_bucket: destination S3 bucket
         :return:
-        '''
+        """
 
         copy_source = {
             'Bucket': self.bucket_name,
@@ -271,13 +286,13 @@ class S3Manager(object):
         self.cli.copy(copy_source, to_bucket, to_key)
 
     def copy_object(self, from_key: str, to_key: str):
-        '''
+        """
         Creates a copy of an object that is already stored in Amazon S3.
 
-        :param from_key: origin s3 key
-        :param to_key: destination s3 key
+        :param from_key: origin S3 key
+        :param to_key: destination S3 key
         :return:
-        '''
+        """
         self.cli.copy_object(
             Bucket=self.bucket_name,
             CopySource=f'{self.bucket_name}/{from_key}',
@@ -285,44 +300,44 @@ class S3Manager(object):
         )
 
     def get_s3_web_url(self, s3_bucket_name, path: str, region: str = 'ap-northeast-2'):
-        '''
-        get s3 web url
+        """
+        Get S3 bucket's web url
 
         :param s3_bucket_name: s3 bucket name
         :param path: s3 path
         :param region: s3 region
         :return:
-        '''
+        """
         return f'https://s3.console.aws.amazon.com/s3/buckets/{s3_bucket_name}?region={region}&prefix={path}'
 
     def convert_s3_path_to_web_url(self, s3_path: str):
-        '''
-        Convert s3 url to web url
+        """
+        Convert S3 url to web url
 
         :param s3_path:
         :return:
-        '''
+        """
         token = s3_path.replace('s3://', '').split('/')
         return self.get_s3_web_url(token[0], '/'.join(token[1:]))
 
     def get_s3_full_path(self, s3_bucket_name: str, path: str):
-        '''
-        Get s3 full path.
+        """
+        Get S3 bucket's full path.
 
         :param s3_bucket_name: bucket name
         :param path: path
         :return:
-        '''
+        """
         return f's3://{s3_bucket_name}/{path}'
 
     def check_s3_object_exists(self, s3_bucket_name: str, path: str):
-        '''
-        Check if s3 object exists.
+        """
+        Check if S3 object exists.
 
         :param s3_bucket_name: s3 bucket name
-        :param path:  path
+        :param path: path
         :return:
-        '''
+        """
         try:
             self.cli.head_object(Bucket=s3_bucket_name,
                                  Key=path)
@@ -332,17 +347,24 @@ class S3Manager(object):
         return False
 
     def rename_file(self, from_file_path: str, to_file_path: str):
-        '''
-        Rename s3 obj.
+        """
+        Rename S3 object
 
-        :param from_file_path:
-        :param to_file_path:
+        :param from_file_path: origin file path
+        :param to_file_path: destination file path
         :return:
-        '''
+        """
         self.copy_object(from_key=from_file_path, to_key=to_file_path)
         self.delete_dir(from_file_path)
 
     def count_csv_row_count(self, csv_path: str, distinct_col_name: Optional[str] = None):
+        """
+        Count the number of lines in a csv file.
+
+        :param csv_path: csv file path
+        :param distinct_col_name: specific column to count rows
+        :return: row count
+        """
         df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{csv_path}', index_col=False,
                             keep_default_na=False)
         import pandas as pd
