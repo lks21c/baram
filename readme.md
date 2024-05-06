@@ -147,34 +147,108 @@ sm.rename_file('dir/train.csv', 'dir/train2.csv')
 ---
 
 ## Athena
+To handle AWS Athena with `baram`, you'll use `S3Manager`, `AthenaManager` and `GlueManager`. Each class needs below arguments.
+#### 1. `S3Manager`
+- `bucket_name`: S3 bucket name where your data is saved (Glue table, csv, etc)
+#### 2. `AthenaManager`
+- `query_result_bucket_name`: S3 bucket name for saving Athena query results
+- `output_bucket_name`: S3 bucket name where table-related data is saved (w.r.t Glue or S3)
+- `workgroup`: Athena workgroup, default is `primary`
+#### 3. `GlueManager`
+- `s3_bucket_name`: S3 bucket name for Glue
 
 ### List Glue catalog and table
 ```python
+from pprint import pprint
 
+from baram.glue_manager import GlueManager
+
+
+gm = GlueManager(bucket_name='baram-test')
+
+glue_catalogs = gm.get_glue_databases
+tables = gm.get_tables(db_name=glue_catalogs[0])
 ```
 
 ### Check whether Athena table exists or not
 ```python
+from baram.athena_manager import AthenaManager
 
+
+am = AthenaManager(query_result_bucket_name='baram-test',
+                   output_bucket_name='baram-test')
+db_name = 'foo_db'
+table_name = 'bar'
+
+am.check_table_exists(db_name=db_name, table_name=table_name)
 ```
 
 ### Delete old table and remake it
 ```python
+from baram.athena_manager import AthenaManager
 
+
+am = AthenaManager(query_result_bucket_name='baram-test',
+                   output_bucket_name='baram-test')
+db_name = 'foo_db'
+old_table_name = 'bar_old'
+new_table_name = 'bar_new'
+
+if am.check_table_exists(db_name=db_name, table_name=old_table_name):
+    am.delete_table(db_name=db_name, table_name=old_table_name)
+
+am.fetch_query()
 ```
 
 ### Fetch CTAS query to Athena
 ```python
+from baram.athena_manager import AthenaManager
 
+
+am = AthenaManager(query_result_bucket_name='baram-test',
+                   output_bucket_name='baram-test')
+db_name = 'foo_db'
+table_name = 'bar'
+sql = f'create table foo as (select * from {db_name}.{table_name})'
+
+am.fetch_query(sql=sql, db_name=db_name)
+```
+
+### Fetch parameterized query to Athena (TBD)
+```python
+from baram.athena_manager import AthenaManager
+
+
+am = AthenaManager(query_result_bucket_name='baram-test',
+                   output_bucket_name='baram-test')
+db_name = 'foo_db'
+table_name = 'bar'
 ```
 
 ### Bring Athena table as `pandas.DataFrame`
 ```python
+from baram.athena_manager import AthenaManager
 
+
+am = AthenaManager(query_result_bucket_name='baram-test',
+                   output_bucket_name='baram-test')
+db_name = 'foo_db'
+table_name = 'bar'
+sql = f'select * from {db_name}.{table_name} where crit=foo'
+
+df = am.from_athena_to_df(sql=sql, db_name=db_name)
 ```
 
 ### Read specific query from text file and fetch it to Athena
+```python
+from baram.athena_manager import AthenaManager
 
+
+am = AthenaManager(query_result_bucket_name='baram-test',
+                   output_bucket_name='baram-test')
+
+am.read_query_txt('directory/sql.txt')
+```
 
 ## Read The Docs
 

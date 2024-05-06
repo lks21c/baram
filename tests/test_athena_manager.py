@@ -9,19 +9,19 @@ from baram.athena_manager import AthenaManager
 
 @pytest.fixture()
 def am():
-    return AthenaManager(query_result_bucket_name='sli-dst-athena-public',
-                         output_bucket_name='sli-dst-dlprod-public',
-                         workgroup='adw_etl')
+    return AthenaManager(query_result_bucket_name='baram-test',
+                         output_bucket_name='baram-test',
+                         workgroup='test-wg')
 
 
 @pytest.fixture()
 def gm():
-    return GlueManager(s3_bucket_name='sli-dst-dlprod-public')
+    return GlueManager(bucket_name='baram-test')
 
 
 @pytest.fixture()
 def sm():
-    return S3Manager(bucket_name='sli-dst-dlprod-public')
+    return S3Manager(bucket_name='baram-test')
 
 
 @pytest.fixture()
@@ -68,7 +68,7 @@ def test_create_external_table(am, sm, gm, sample):
     assert result['DatabaseName'] == sample['db_name']
     assert result['StorageDescriptor']['Location'] == location
     assert {x['Name']: x['Type'] for x in rslt_cols} == sample['column_def']
-    sm.delete_dir(sample['s3_filepath'])
+    # sm.delete_dir(sample['s3_filepath'])
 
 
 def test_create_external_table_with_partitioning(am, sm, gm, sample):

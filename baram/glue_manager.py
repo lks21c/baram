@@ -13,10 +13,10 @@ from baram.s3_manager import S3Manager
 
 
 class GlueManager(object):
-    def __init__(self, s3_bucket_name: str, table_path_prefix='table'):
+    def __init__(self, bucket_name: str, table_path_prefix='table'):
         '''
 
-        :param s3_bucket_name: s3 bucket name where Glue uses as default.
+        :param bucket_name: s3 bucket name where Glue uses as default.
         '''
 
         self.logger = LogManager.get_logger()
@@ -30,7 +30,7 @@ class GlueManager(object):
         self.max_retries = 0
         self.python_ver = '3'
         self.glue_ver = '3.0'
-        self.s3_bucket_name = s3_bucket_name
+        self.s3_bucket_name = bucket_name
         self.s3_path = f's3://{self.s3_bucket_name}'
         self.sm = S3Manager(self.s3_bucket_name)
         self.TABLE_PATH_PREFIX = table_path_prefix

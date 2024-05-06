@@ -1,6 +1,7 @@
 from pprint import pprint
 from typing import Optional, Union, Dict, Any, List, Literal
 
+import pandas as pd
 import awswrangler as wr
 import fire
 from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
@@ -117,6 +118,7 @@ class AthenaManager(object):
         :return: Dictionary with the get_query_execution response. You can obtain query result as csv on S3.
         '''
         pprint(sql)
+        # TODO: Set default s3_output when this is None
         query_execution_id = wr.athena.start_query_execution(sql=sql,
                                                              workgroup=self.ATHENA_WORKGROUP,
                                                              params=params,
@@ -222,6 +224,10 @@ class AthenaManager(object):
         return df
 
     # TODO: Add a method that dumps athena query result into s3 directly.
+
+    def from_df_to_athena(self, df: pd.DataFrame):
+        # TODO
+        pass
 
 
 if __name__ == '__main__':
