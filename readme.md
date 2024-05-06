@@ -1,6 +1,6 @@
 # Baram
 
-Python based AWS Framework which leverages boto3 and awswrangler.
+Python based AWS Framework which leverages `boto3` and `awswrangler`.
 
 Baram means 'wind' in Korean which makes cloud move conveniently.
 
@@ -20,7 +20,7 @@ Baram means 'wind' in Korean which makes cloud move conveniently.
 
 ## S3
 
-To import `S3Manager`, all you have to do is just initialize S3Manager with your bucket name.
+To import `S3Manager`, all you have to do is just initialize `S3Manager` with your bucket name.
 
 ```python
 from baram.s3_manager import S3Manager
@@ -33,13 +33,13 @@ Once initialized, `S3Manager` will automatically set KMS key for you.
 
 You don't have to manually configure KMS for S3 actions such as putting object, etc.
 
-### Delete directory with files
+### Delete directory with objects
 
-Suppose your bucket has a directory with 3 files.
+Suppose your bucket has a directory with 3 objects.
 
 ![image](https://github.com/lks21c/baram/assets/3079144/81185772-7a67-43bb-83a2-a652f2a6e3d0)
 
-You can delete the directory including all subdirectories and files with just one line of code.
+You can delete the directory including all subdirectories and objects with just one line of code.
 
 ```python
 from baram.s3_manager import S3Manager
