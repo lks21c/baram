@@ -73,7 +73,7 @@ sm = S3Manager('baram-test')
 sm.upload_file(local_file_path='local_file_path',
                s3_file_path='s3_file_path')
 
-# Download whole directory to local
+# Download directory to local
 sm.download_dir(s3_dir_path='s3_directory_path',
                 local_dir_path='local_directory_path')
 
@@ -117,13 +117,20 @@ for line in sm.get_object_by_lines('dir/filename.csv'):
 ### pandas EDA
 
 ```python
+from baram.s3_manager import S3Manager
 
+sm = S3Manager('baram-test')
+df = sm.read_csv_from_s3(csv_path='dir/train.csv')
 ```
 
 ### Merging csv files
 
 ```python
+from baram.s3_manager import S3Manager
 
+sm = S3Manager('baram-test')
+sm.merge_datasets(source_path='source_path',
+                  target_path='target_path')
 ```
 
 ### Rename File
