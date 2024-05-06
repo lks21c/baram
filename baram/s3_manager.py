@@ -357,6 +357,32 @@ class S3Manager(object):
         self.copy_object(from_key=from_file_path, to_key=to_file_path)
         self.delete_dir(from_file_path)
 
+    def read_csv_from_s3(self,
+                         csv_path: str,
+                         **kwargs):
+        """
+        Read csv file in S3
+        :param csv_path: csv file path
+        :return: pandas Dataframe
+        """
+        df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{csv_path}', index_col=False,
+                            keep_default_na=False, **kwargs)
+        return df
+
+    # TODO
+    def write_dataframe_to_s3(self):
+        pass
+
+    # TODO
+    def merge_datasets(self,
+                       source_path: str,
+                       target_path: str,
+                       **kwargs):
+        if self.kms_id:
+            kwargs['ServerSideEncryption'] = self.kms_algorithm
+            kwargs['SSEKMSKeyId'] = self.kms_id
+        return wr.s3.merge_datasets(source_path=source_path, target_path=target_path, mode='append', **kwargs)
+
     def count_csv_row_count(self, csv_path: str, distinct_col_name: Optional[str] = None):
         """
         Count the number of lines in a csv file.

@@ -228,6 +228,17 @@ def test_rename_file(sm, sample):
     sm.delete_object(to_file_path)
 
 
+def test_read_csv_from_s3(sm):
+    # Given
+    csv_path = 'dir/gender_submission.csv'
+
+    # When
+    response = sm.read_csv_from_s3(csv_path)
+
+    # Then
+    print(response)
+
+
 def test_count_csv_row_count(sm):
     # Given
     import csv
