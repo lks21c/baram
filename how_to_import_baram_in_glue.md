@@ -23,6 +23,7 @@
 
 ```python
 from baram.athena_manager import AthenaManager
+
 am = AthenaManager(query_result_bucket_name='baram-test',
                    output_bucket_name='baram-test',
                    workgroup='test-wg')
