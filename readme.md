@@ -259,7 +259,7 @@ am.read_query_txt('directory/sql.txt')
 
 ## Read The Docs
 
-- [How to import Baram in Glue](TBD)
-- [How to import Baram in SageMaker](TBD)
+- [How to import Baram in Glue](how_to_import_baram_in_glue.md)
+- [How to import Baram in SageMaker](how_to_import_baram_in_sagemaker.md)
 - [S3 Usage with Baram](TBD)
 - [Athena Usage with Baram](TBD)
