@@ -18,7 +18,7 @@
 (image)
 
 
-## 4. Write and run code using baram
+## 4. Write and run code using `baram`
 - After installation is complete, now you can import and use `baram` in Jupyter notebook.
 - Now we will import `S3Manager` and use its methods for demonstration.
 
