@@ -3,23 +3,22 @@
 
 ## 1. Create Jupyter notebook
 - We will use Jupyter notebook environment for demonstration.
-- To begin, create Jupyter notebook by clicking `File > New > Notebook` in your personal Sagemaker studio,
+- To begin, create Jupyter notebook by clicking `File > New > Notebook` in your personal Sagemaker studio.
 
-(image)
+![img](https://github.com/lks21c/baram/assets/114719043/60bbd3a5-3227-488b-91cc-e677ceeb8e57)
 
 ## 2. Install `baram` with `pip`
-- Run following command to install `baram` using `pip`.
+- Run following command in Jupyter notebook code cell to install `baram` with `pip`.
 ```bash
 !pip install baram
 ```
-
 - Then `baram` will be installed to your notebook environment.
+- Be noted that you have to reinstall `baram` when notebook kernel has been re-started or deleted.
 
-(image)
-
+![image](https://github.com/lks21c/baram/assets/114719043/11e376f7-901c-4c58-83ad-72defeef0a10)
 
 ## 4. Write and run code using `baram`
-- After installation is complete, now you can import and use `baram` in Jupyter notebook.
+- After installation is complete, you can now import and use `baram` in Jupyter notebook.
 - Now we will import `S3Manager` and use its methods for demonstration.
 
 ### 4-1. List objects in specific directory
@@ -51,15 +50,16 @@ print(objects)
   'Size': 61194,
   'StorageClass': 'STANDARD'}]
 ````
-(image)
+
+![img_2](https://github.com/lks21c/baram/assets/114719043/e5945219-ab9e-4733-9150-4e30f84aee85)
 
 ### 4-2. Download file from S3 to Sagemaker
 - You can download file from S3 bucket to your Sagemaker directory.
-- As you can see, there is only `import_baram.ipynb` file in this Sagemaker directory.
+- As you can see, there is only one file, `import_baram.ipynb`, in this Sagemaker directory.
 
-(image)
+![image](https://github.com/lks21c/baram/assets/114719043/8e9b4355-809f-42d6-aa7d-e1437ce7b649)
 
-- We will download file named `train.csv` from `baram-test` bucket's `dir` directory with following code.
+- We will download a file named `train.csv` from `baram-test` bucket's `dir` directory with following code.
 ````python
 from baram.s3_manager import S3Manager
 
@@ -74,4 +74,4 @@ sm.download_file(s3_file_path='dir/train.csv',
 ```
 - We can see that file named `train.csv` is successfully downloaded to Sagemaker directory.
 
-(image)
+![image](https://github.com/lks21c/baram/assets/114719043/67860157-059d-486c-97a4-32282d0fa828)
