@@ -12,6 +12,8 @@ from baram.log_manager import LogManager
 
 class S3Manager(object):
     def __init__(self, bucket_name):
+        if 'my_bucket' == bucket_name:
+            raise ValueError('Please set your bucket name.')
         self.cli = boto3.client('s3', config=Config(signature_version='s3v4'))
         self.km = KMSManager()
         self.logger = LogManager.get_logger('S3Manager')

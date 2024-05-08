@@ -8,13 +8,13 @@ from baram.s3_manager import S3Manager
 
 
 @pytest.fixture()
-def sm():
-    return S3Manager('sli-dst-dlbeta-public')
+def sample():
+    return {'s3_bucket_name': 'my_bucket', 's3_key': 'readme.md'}
 
 
 @pytest.fixture()
-def sample():
-    return {'s3_bucket_name': 'sli-dst-dlbeta-public', 's3_key': 'readme.md'}
+def sm(sample):
+    return S3Manager(sample['s3_bucket_name'])
 
 
 def test_list_buckets(sm):
@@ -306,3 +306,15 @@ def test_copy_object(sm, sample):
     assert sm.check_s3_object_exists(sample['s3_bucket_name'], to_key)
 
     sm.delete_objects([from_key, to_key])
+
+
+def test_list_object(sm, sample):
+    # Given
+    for i in range(1, 11):
+        temp_file = tempfile.mkstemp()
+        s3_tmp_file = f'tmp_file{i}'
+
+        sm.upload_file(temp_file[1], s3_tmp_file)
+
+    # When
+    print(sm.list_objects(''))
