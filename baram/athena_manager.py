@@ -1,9 +1,9 @@
 from pprint import pprint
 from typing import Optional, Union, Dict, Any, List, Literal
 
-import pandas as pd
 import awswrangler as wr
 import fire
+import pandas as pd
 from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
 
 from baram.glue_manager import GlueManager
@@ -46,15 +46,15 @@ class AthenaManager(object):
         columns = ', '.join([f"{k} {column_def[k]} comment '{column_comments[k]}'"
                              if k in column_comments.keys() else f"{k} {column_def[k]}" for k in column_def])
         partitions = 'partitioned by (' + ', '.join([f"{k} {partition_cols[k]}"
-                                                    for k in partition_cols]) + ')' if partition_cols else ''
+                                                     for k in partition_cols]) + ')' if partition_cols else ''
 
-        sql = f"create external table if not exists {db_name}.{table_name}("\
-              f"{columns}) "\
-              f"comment '{table_comment}' "\
+        sql = f"create external table if not exists {db_name}.{table_name}(" \
+              f"{columns}) " \
+              f"comment '{table_comment}' " \
               f"{partitions} " \
-              f"row format delimited fields terminated by ',' "\
-              f"stored as textfile "\
-              f"location '{location}' "\
+              f"row format delimited fields terminated by ',' " \
+              f"stored as textfile " \
+              f"location '{location}' " \
               f"tblproperties ('classification'='csv', 'skip.header.line.count'='1');"
 
         self.fetch_query(sql=sql,
@@ -78,18 +78,16 @@ class AthenaManager(object):
         :param include_s3_data: if True, delete s3 data of table
         :return:
         '''
-        if include_s3_data:
-            sm = S3Manager(self.OUTPUT_BUCKET)
         gm = GlueManager(self.OUTPUT_BUCKET)
 
         try:
-            table = gm.get_table(db_name=db_name, table_name=table_name)
-            location = table['StorageDescriptor']['Location'].replace(f's3://{gm.s3_bucket_name}/', '')
-
             wr.catalog.delete_table_if_exists(database=db_name, table=table_name)
             print(f'{db_name}.{table_name} is deleted, on athena')
 
             if include_s3_data:
+                sm = S3Manager(self.OUTPUT_BUCKET)
+                table = gm.get_table(db_name=db_name, table_name=table_name)
+                location = table['StorageDescriptor']['Location'].replace(f's3://{gm.s3_bucket_name}/', '')
                 sm.delete_dir(s3_dir_path=location)
                 print(f'data of {table_name} in its location {location} is deleted, on s3')
 
