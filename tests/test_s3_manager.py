@@ -314,9 +314,30 @@ def test_list_object(sm, sample):
     # Given
     for i in range(1, 11):
         temp_file = tempfile.mkstemp()
-        s3_tmp_file = f'tmp_file{i}'
+        s3_tmp_file = f'test_list_object/tmp_file{i}'
 
         sm.upload_file(temp_file[1], s3_tmp_file)
 
     # When
-    print(sm.list_objects(''))
+    resp_iter = sm.list_objects('test_list_object/')
+
+    # Then
+    for resp in resp_iter:
+        print(resp['Contents'])
+        assert len(resp['Contents']) == 10
+
+    sm.delete_dir('test_list_object')
+
+
+def test_delete_dir(sm, sample):
+    # Given
+    temp_file = tempfile.mkstemp()
+    s3_tmp_file = f'test_list_object/tmp_file'
+    sm.upload_file(temp_file[1], s3_tmp_file)
+
+    # When
+    sm.delete_dir('')
+
+    # Then
+    for resp in sm.list_objects(''):
+        assert resp['KeyCount'] == 0

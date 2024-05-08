@@ -196,16 +196,14 @@ class S3Manager(object):
         :param s3_dir_path: S3 path. ex) dir/crawl_data
         :return:
         """
-        files = self.list_objects(s3_dir_path)
-        if not files:
-            return
         s3_keys = []
-        for k in self.list_objects(s3_dir_path):
-            s3_keys.append(k['Key'])
-            if len(s3_keys) % 1000 == 0:
-                self.logger.info(f'delete 1000 keys.')
-                self.delete_objects(s3_keys)
-                s3_keys = []
+        for resp in self.list_objects(s3_dir_path):
+            for k in resp['Contents']:
+                s3_keys.append(k['Key'])
+                if len(s3_keys) % 1000 == 0:
+                    self.logger.info(f'delete 1000 keys.')
+                    self.delete_objects(s3_keys)
+                    s3_keys = []
         if len(s3_keys) > 0:
             self.logger.info(f'delete {len(s3_keys)} keys.')
             self.delete_objects(s3_keys)
@@ -223,16 +221,21 @@ class S3Manager(object):
         bucket.download_file(s3_file_path, local_file_path)
         self.logger.info(f'download : {s3_file_path} to Target: {local_file_path} Success.')
 
-    def list_objects(self, prefix: str = '', delimiter: str = ''):
+    def list_objects(self, prefix: str = '', delimiter: str = '', **kwargs):
         """
         List S3 objects.
 
         :param prefix: Limits the response to keys that begin with the specified prefix.
         :param delimiter: A delimiter is a character you use to group keys.
+        :param kwargs: Additional parameters
         :return: response
         """
-        response = self.cli.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix, Delimiter=delimiter)
-        return response['Contents'] if 'Contents' in response else None
+
+        paginator = self.cli.get_paginator('list_objects_v2')
+        return paginator.paginate(Bucket=self.bucket_name,
+                                  Prefix=prefix,
+                                  Delimiter=delimiter,
+                                  **kwargs)
 
     def list_dir(self, prefix: str = '', delimiter: str = '/'):
         """
