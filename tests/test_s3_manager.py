@@ -5,11 +5,13 @@ import tempfile
 import pytest
 
 from baram.s3_manager import S3Manager
+from tests.json_manager import JsonManager
 
 
 @pytest.fixture()
 def sample():
-    return {'s3_bucket_name': 'my_bucket', 's3_key': 'readme.md'}
+    conf = JsonManager.load_json(os.path.join(os.path.dirname(__file__), 'conf', 'test_info.json'))
+    return {'s3_bucket_name': conf['s3_bucket_name'], 's3_key': 'readme.md'}
 
 
 @pytest.fixture()
