@@ -1,3 +1,4 @@
+import csv
 import os.path
 import shutil
 import tempfile
@@ -35,10 +36,10 @@ def test_put_get_delete_object(sm, sample):
 
     # When/Then
     sm.put_object(sample['s3_key'], s3_body)
-    assert sm.get_object(sample['s3_key']).decode() == s3_body
+    assert sm.get_object_body(sample['s3_key']).decode() == s3_body
 
     sm.delete_object(sample['s3_key'])
-    assert sm.get_object(sample['s3_key']) is None
+    assert sm.get_object_body(sample['s3_key']) is None
 
 
 def test_get_object_by_lines(sm, sample):
@@ -67,9 +68,10 @@ def test_upload_download_delete_dir(sm, sample):
     sm.upload_dir(temp_dir, s3_tmp_dir)
 
     file_exist = False
-    for f in sm.list_objects(f'{s3_tmp_dir}/'):
-        if f['Key'].split('/')[-1] == tmp_filename:
-            file_exist = True
+    for resp in sm.list_objects(f'{s3_tmp_dir}/'):
+        for f in resp['Contents']:
+            if f['Key'].split('/')[-1] == tmp_filename:
+                file_exist = True
     assert file_exist
 
     sm.download_dir(s3_tmp_dir)
@@ -89,15 +91,16 @@ def test_upload_download_delete_file(sm, sample):
     sm.upload_file(temp_file[1], s3_tmp_file)
 
     # Then
-    for obj in sm.list_objects(s3_tmp_file):
-        assert obj['Key'] == s3_tmp_file
+    for resp in sm.list_objects(s3_tmp_file):
+        for obj in resp['Contents']:
+            assert obj['Key'] == s3_tmp_file
 
     sm.download_file(s3_tmp_file, s3_tmp_file)
     assert os.path.exists(s3_tmp_file)
     os.remove(s3_tmp_file)
 
     sm.delete_object(s3_tmp_file)
-    assert sm.get_object(s3_tmp_file) is None
+    assert sm.get_object_body(s3_tmp_file) is None
 
 
 def test_write_and_upload_file(sm):
@@ -114,8 +117,9 @@ def test_write_and_upload_file(sm):
                              do_remove=True)
 
     # Then
-    for obj in sm.list_objects(s3_file_path):
-        assert obj['Key'] == s3_file_path
+    for resp in sm.list_objects(s3_file_path):
+        for obj in resp['Contents']:
+            assert obj['Key'] == s3_file_path
 
     sm.delete_object(s3_file_path)
 
@@ -133,8 +137,8 @@ def test_delete_objects(sm, sample):
     sm.delete_objects([s3_tmp_file, s3_tmp_file2])
 
     # Then
-    assert sm.get_object(s3_tmp_file) is None
-    assert sm.get_object(s3_tmp_file2) is None
+    assert sm.get_object_body(s3_tmp_file) is None
+    assert sm.get_object_body(s3_tmp_file2) is None
 
 
 def test_list_dir(sm):
@@ -156,9 +160,10 @@ def test_list_dir(sm):
     sm.delete_dir(s3_key_id)
 
 
-def test_get_s3_arn(sm):
+def test_get_s3_arn(sm, sample):
     # Given
-    bucket_name = 'sli-dst-dlbeta-public'
+    bucket_name = sample['s3_bucket_name']
+
     # When
     response = sm.get_s3_arn(bucket_name)
 
@@ -171,9 +176,11 @@ def test_get_bucket_encryption(sm, sample):
     bi = sm.get_bucket_encryption()
 
     # Then
+    print(bi)
     assert bi
     print(bi['SSEAlgorithm'])
-    print(bi['KMSMasterKeyID'])
+    if 'KMSMasterKeyID' in bi:
+        print(bi['KMSMasterKeyID'])
 
 
 def test_get_s3_web_url(sm):
@@ -232,13 +239,26 @@ def test_rename_file(sm, sample):
 
 def test_read_csv_from_s3(sm):
     # Given
-    csv_path = 'dir/gender_submission.csv'
+    local_tmp_file = 'tmp.csv'
+    header = ['col1', 'col2']
+    data = [['a', 1], ['b', 2], ['c', 3], ['d', 4]]
+
+    with open(local_tmp_file, 'w') as f:
+        w = csv.writer(f)
+        w.writerow(header)
+        for row in data:
+            w.writerow(row)
+
+    s3_tmp_file = 'tmp_file.csv'
+    sm.upload_file(local_tmp_file, s3_tmp_file)
 
     # When
-    response = sm.read_csv_from_s3(csv_path)
+    response = sm.read_csv_from_s3(s3_tmp_file)
 
     # Then
     print(response)
+
+    sm.delete_object(s3_tmp_file)
 
 
 def test_count_csv_row_count(sm):

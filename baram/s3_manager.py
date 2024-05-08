@@ -1,9 +1,11 @@
 import os
+import tempfile
 from typing import Optional
 
 import awswrangler as wr
 import boto3
 import botocore
+import pandas as pd
 from botocore.client import Config
 
 from baram.kms_manager import KMSManager
@@ -50,7 +52,7 @@ class S3Manager(object):
         response = self.cli.put_object(**kwargs)
         return response
 
-    def get_object(self, s3_key_id: str):
+    def get_object_body(self, s3_key_id: str):
         """
         Get specified object in S3.
 
@@ -59,25 +61,26 @@ class S3Manager(object):
         """
         try:
             response = self.cli.get_object(Bucket=self.bucket_name,
-                                           Key=s3_key_id)
+                                                Key=s3_key_id)
             return response['Body'].read()
         except self.cli.exceptions.NoSuchKey:
             self.logger.info(f'{s3_key_id} does not exist.')
             return None
 
-    def get_object_by_lines(self, s3_key_id: str):
+    def get_object_by_lines(self, s3_key_id: str, encoding: str = 'utf-8'):
         """
         Get S3 object line by line.
 
         :param s3_key_id: S3 key id. ex) dir/a.csv
+        :param encoding: encoding, default utf-8
         :return: response
         """
 
         try:
             import codecs
-            line_stream = codecs.getreader("utf-8")
+            line_stream = codecs.getreader(encoding)
             response = self.cli.get_object(Bucket=self.bucket_name,
-                                           Key=s3_key_id)
+                                                Key=s3_key_id)
             return line_stream(response['Body'])
         except self.cli.exceptions.NoSuchKey:
             self.logger.info(f'{s3_key_id} does not exist.')
@@ -102,11 +105,14 @@ class S3Manager(object):
         :return:
         """
         objects = [{'Key': k} for k in s3_keys]
-        return self.cli.delete_objects(Bucket=self.bucket_name,
-                                       Delete={
-                                           'Objects': objects,
-                                           'Quiet': quiet
-                                       })
+        response = self.cli.delete_objects(Bucket=self.bucket_name,
+                                           Delete={
+                                               'Objects': objects,
+                                               'Quiet': quiet
+                                           })
+        if 'Errors' in response and len(response['Errors']) > 0:
+            raise Exception(response['Errors'])
+        return response
 
     def upload_dir(self, local_dir_path: str, s3_dir_path: str):
         """
@@ -145,6 +151,8 @@ class S3Manager(object):
         :return: response
         """
 
+        temp_file = tempfile.mkstemp()
+        local_file_path = temp_file[1]
         with open(local_file_path, 'w') as f:
             f.write(content)
         assert os.path.exists(local_file_path)
@@ -345,7 +353,7 @@ class S3Manager(object):
         """
         try:
             self.cli.head_object(Bucket=s3_bucket_name,
-                                 Key=path)
+                                        Key=path)
             return True
         except botocore.exceptions.ClientError as e:
             pass
@@ -370,7 +378,8 @@ class S3Manager(object):
         :param csv_path: csv file path
         :return: pandas Dataframe
         """
-        df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{csv_path}', index_col=False,
+        df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{csv_path}',
+                            index_col=False,
                             keep_default_na=False, **kwargs)
         return df
 
@@ -378,7 +387,6 @@ class S3Manager(object):
     def write_dataframe_to_s3(self):
         pass
 
-    # TODO
     def merge_datasets(self,
                        source_path: str,
                        target_path: str,
@@ -398,7 +406,6 @@ class S3Manager(object):
         """
         df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{csv_path}', index_col=False,
                             keep_default_na=False)
-        import pandas as pd
 
         if distinct_col_name:
             return len(pd.unique(df[distinct_col_name]))
