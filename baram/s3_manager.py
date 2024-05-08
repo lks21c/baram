@@ -61,7 +61,7 @@ class S3Manager(object):
         """
         try:
             response = self.cli.get_object(Bucket=self.bucket_name,
-                                                Key=s3_key_id)
+                                           Key=s3_key_id)
             return response['Body'].read()
         except self.cli.exceptions.NoSuchKey:
             self.logger.info(f'{s3_key_id} does not exist.')
@@ -80,7 +80,7 @@ class S3Manager(object):
             import codecs
             line_stream = codecs.getreader(encoding)
             response = self.cli.get_object(Bucket=self.bucket_name,
-                                                Key=s3_key_id)
+                                           Key=s3_key_id)
             return line_stream(response['Body'])
         except self.cli.exceptions.NoSuchKey:
             self.logger.info(f'{s3_key_id} does not exist.')
@@ -353,7 +353,7 @@ class S3Manager(object):
         """
         try:
             self.cli.head_object(Bucket=s3_bucket_name,
-                                        Key=path)
+                                 Key=path)
             return True
         except botocore.exceptions.ClientError as e:
             pass
@@ -383,9 +383,20 @@ class S3Manager(object):
                             keep_default_na=False, **kwargs)
         return df
 
-    # TODO
-    def write_dataframe_to_s3(self):
-        pass
+    def write_dataframe_to_s3(self, df: pd.DataFrame, csv_path: str, **kwargs):
+        '''
+        Write pandas DataFrame to S3
+
+        :param df: pandas dataframe
+        :param csv_path: target s3 path to write csv
+        :param kwargs:
+        :return:
+        '''
+
+        wr.s3.to_csv(df=df,
+                     path=f's3://{self.bucket_name}/{csv_path}',
+                     index=False,
+                     **kwargs)
 
     def merge_datasets(self,
                        source_path: str,

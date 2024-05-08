@@ -239,7 +239,7 @@ def test_rename_file(sm, sample):
 
 def test_read_csv_from_s3(sm):
     # Given
-    local_tmp_file = 'tmp.csv'
+    local_tmp_file = tempfile.mkstemp()[1]
     header = ['col1', 'col2']
     data = [['a', 1], ['b', 2], ['c', 3], ['d', 4]]
 
@@ -253,12 +253,40 @@ def test_read_csv_from_s3(sm):
     sm.upload_file(local_tmp_file, s3_tmp_file)
 
     # When
-    response = sm.read_csv_from_s3(s3_tmp_file)
+    df = sm.read_csv_from_s3(s3_tmp_file)
 
     # Then
-    print(response)
+    print(df)
 
     sm.delete_object(s3_tmp_file)
+
+
+def test_write_csv_to_s3(sm):
+    # Given
+    local_tmp_file = tempfile.mkstemp()[1]
+    header = ['col1', 'col2']
+    data = [['a', 1], ['b', 2], ['c', 3], ['d', 4]]
+
+    with open(local_tmp_file, 'w') as f:
+        w = csv.writer(f)
+        w.writerow(header)
+        for row in data:
+            w.writerow(row)
+
+    s3_tmp_file = 'tmp_file.csv'
+    sm.upload_file(local_tmp_file, s3_tmp_file)
+    df = sm.read_csv_from_s3(s3_tmp_file)
+
+    # When
+    s3_tmp_file2 = 'tmp_file2.csv'
+    sm.write_dataframe_to_s3(df, s3_tmp_file2)
+
+    # Then
+    df2 = sm.read_csv_from_s3(s3_tmp_file2)
+    assert df.compare(df2).empty
+
+    sm.delete_object(s3_tmp_file)
+    sm.delete_object(s3_tmp_file2)
 
 
 def test_count_csv_row_count(sm):
