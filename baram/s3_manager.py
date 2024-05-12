@@ -1,6 +1,7 @@
 import os
 import tempfile
-from typing import Optional
+import typing
+from typing import Any, Optional
 
 import awswrangler as wr
 import boto3
@@ -372,40 +373,61 @@ class S3Manager(object):
 
     def read_csv_from_s3(self,
                          csv_path: str,
-                         **kwargs):
+                         **pandas_kwargs: Any):
         """
-        Read csv file in S3
+        Read csv file in S3.
+
         :param csv_path: csv file path
+        :param pandas_kwargs:
+            KEYWORD arguments forwarded to pandas.read_csv(). You can NOT pass pandas_kwargs explicitly,
+            just add valid Pandas arguments in the function call and awswrangler will accept it.
+            e.g. wr.s3.read_csv(‘s3://bucket/prefix/’, sep=’|’, na_values=[‘null’, ‘none’], skip_blank_lines=True)
+            https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
         :return: pandas Dataframe
         """
         df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{csv_path}',
-                            index_col=False,
-                            keep_default_na=False, **kwargs)
+                            index_col=False, keep_default_na=False, **pandas_kwargs)
         return df
 
-    def write_dataframe_to_s3(self, df: pd.DataFrame, csv_path: str, **kwargs):
-        '''
-        Write pandas DataFrame to S3
+    def write_csv_to_s3(self,
+                        df: pd.DataFrame,
+                        csv_path: str,
+                        **pandas_kwargs: Any):
+        """
+        Write csv file to S3.
 
-        :param df: pandas dataframe
-        :param csv_path: target s3 path to write csv
-        :param kwargs:
+        :param df: pandas DataFrame
+        :param csv_path: target S3 path to write csv
+        :param pandas_kwargs:
+            KEYWORD arguments forwarded to pandas.DataFrame.to_csv(). You can NOT pass pandas_kwargs explicit,
+            just add valid Pandas arguments in the function call and awswrangler will accept it.
+            e.g. wr.s3.to_csv(df, path, sep=’|’, na_rep=’NULL’, decimal=’,’)
+            https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_csv.html
         :return:
-        '''
+        """
 
-        wr.s3.to_csv(df=df,
-                     path=f's3://{self.bucket_name}/{csv_path}',
-                     index=False,
-                     **kwargs)
+        extra_args = {'ServerSideEncryption': self.kms_algorithm,
+                      'SSEKMSKeyId': self.kms_id} if self.kms_id else None
+        wr.s3.to_csv(df=df, path=f's3://{self.bucket_name}/{csv_path}', index=False,
+                     s3_additional_kwargs=extra_args, **pandas_kwargs)
 
     def merge_datasets(self,
                        source_path: str,
                        target_path: str,
                        **kwargs):
-        if self.kms_id:
-            kwargs['ServerSideEncryption'] = self.kms_algorithm
-            kwargs['SSEKMSKeyId'] = self.kms_id
-        return wr.s3.merge_datasets(source_path=source_path, target_path=target_path, mode='append', **kwargs)
+        """
+        Merge source dataset into target dataset.
+        :param source_path: source S3 path
+        :param target_path: target S3 path
+        :param kwargs:
+        :return:
+        """
+        extra_args = {'ServerSideEncryption': self.kms_algorithm,
+                      'SSEKMSKeyId': self.kms_id} if self.kms_id else None
+        return wr.s3.merge_datasets(source_path=f's3://{self.bucket_name}/{source_path}',
+                                    target_path=f's3://{self.bucket_name}/{target_path}',
+                                    mode='append',
+                                    s3_additional_kwargs=extra_args, **kwargs)
 
     def count_csv_row_count(self, csv_path: str, distinct_col_name: Optional[str] = None):
         """
