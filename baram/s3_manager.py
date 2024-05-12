@@ -372,12 +372,12 @@ class S3Manager(object):
         self.delete_dir(from_file_path)
 
     def read_csv_from_s3(self,
-                         csv_path: str,
+                         s3_file_path: str,
                          **pandas_kwargs: Any):
         """
         Read csv file in S3.
 
-        :param csv_path: csv file path
+        :param s3_file_path: csv file path in S3
         :param pandas_kwargs:
             KEYWORD arguments forwarded to pandas.read_csv(). You can NOT pass pandas_kwargs explicitly,
             just add valid Pandas arguments in the function call and awswrangler will accept it.
@@ -385,19 +385,19 @@ class S3Manager(object):
             https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.read_csv.html
         :return: pandas Dataframe
         """
-        df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{csv_path}',
+        df = wr.s3.read_csv(path=f's3://{self.bucket_name}/{s3_file_path}',
                             index_col=False, keep_default_na=False, **pandas_kwargs)
         return df
 
     def write_csv_to_s3(self,
                         df: pd.DataFrame,
-                        csv_path: str,
+                        s3_file_path: str,
                         **pandas_kwargs: Any):
         """
         Write csv file to S3.
 
         :param df: pandas DataFrame
-        :param csv_path: target S3 path to write csv
+        :param s3_file_path: target S3 file path to write csv file
         :param pandas_kwargs:
             KEYWORD arguments forwarded to pandas.DataFrame.to_csv(). You can NOT pass pandas_kwargs explicit,
             just add valid Pandas arguments in the function call and awswrangler will accept it.
@@ -408,7 +408,7 @@ class S3Manager(object):
 
         extra_args = {'ServerSideEncryption': self.kms_algorithm,
                       'SSEKMSKeyId': self.kms_id} if self.kms_id else None
-        wr.s3.to_csv(df=df, path=f's3://{self.bucket_name}/{csv_path}', index=False,
+        wr.s3.to_csv(df=df, path=f's3://{self.bucket_name}/{s3_file_path}', index=False,
                      s3_additional_kwargs=extra_args, **pandas_kwargs)
 
     def merge_datasets(self,
