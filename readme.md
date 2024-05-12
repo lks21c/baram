@@ -42,9 +42,12 @@ Suppose your bucket has a directory with 3 objects.
 You can delete the directory including all subdirectories and objects with just one line of code.
 
 ```python
+# import S3Manager
 from baram.s3_manager import S3Manager
 
 sm = S3Manager('baram-test')
+
+# delete S3 directory
 sm.delete_dir('dir_path')
 ```
 
@@ -69,15 +72,15 @@ from baram.s3_manager import S3Manager
 
 sm = S3Manager('baram-test')
 
-# Upload local file to S3
+# upload local file to S3
 sm.upload_file(local_file_path='local_file_path',
                s3_file_path='s3_file_path')
 
-# Download directory to local
+# download directory to local
 sm.download_dir(s3_dir_path='s3_directory_path',
                 local_dir_path='local_directory_path')
 
-# Copy S3 object
+# copy S3 object
 sm.copy_object(from_key='from_s3_key',
                to_key='to_s3_key')
 ```
@@ -89,9 +92,12 @@ It's often necessary to check how many lines are in csv file in S3.
 You can easily get the line count with the following code.
 
 ```python
+# import S3Manager
 from baram.s3_manager import S3Manager
 
 sm = S3Manager('baram-test')
+
+# count the number of rows in csv
 cnt = sm.count_csv_row_count('directory/filename.csv')
 print(cnt)
 ```
@@ -106,21 +112,31 @@ Below is the output.
 You can easily read csv file by lines.
 
 ```python
-
+# import S3Manager
 from baram.s3_manager import S3Manager
 
 sm = S3Manager('baram-test')
+
+# get S3 object line by line
 for line in sm.get_object_by_lines('dir/filename.csv'):
     print(line)
 ```
 
-### pandas EDA
+### Manipulate csv files
+
+You can easily manipulate csv files in S3.
 
 ```python
+# import S3Manager
 from baram.s3_manager import S3Manager
 
 sm = S3Manager('baram-test')
-df = sm.read_csv_from_s3(csv_path='dir/train.csv')
+
+# read csv file from S3 and return as pandas DataFrame
+df = sm.read_csv_from_s3(s3_file_path='dir/train.csv')
+
+# write pandas DataFrame as csv file to S3
+sm.write_csv_to_s3(df=df, s3_file_path='dir/train2.csv')
 ```
 
 ### Merging csv files
