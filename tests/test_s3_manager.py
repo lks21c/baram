@@ -279,7 +279,7 @@ def test_write_csv_to_s3(sm):
 
     # When
     s3_tmp_file2 = 'tmp_file2.csv'
-    sm.write_dataframe_to_s3(df, s3_tmp_file2)
+    sm.write_csv_to_s3(df, s3_tmp_file2)
 
     # Then
     df2 = sm.read_csv_from_s3(s3_tmp_file2)
