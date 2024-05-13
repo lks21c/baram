@@ -198,12 +198,12 @@ class AthenaManager(object):
         Read text sql file from s3.
 
         :param bucket_name: the name of s3 bucket containing file
-        :param sql_filepath: prefix of sql text file
+        :param sql_filepath: prefix of sql text file (s3 key)
         :param replacements: specified replacements for specific purpose of query
         :return:
         '''
         sm = S3Manager(bucket_name=bucket_name)
-        query_txt = sm.get_object(sql_filepath).decode('utf-8').replace('\n', ' ')
+        query_txt = sm.get_object_body(sql_filepath).decode('utf-8').replace('\n', ' ')
         for k, v in replacements.items():
             query_txt = query_txt.replace(k, v)
         return query_txt
