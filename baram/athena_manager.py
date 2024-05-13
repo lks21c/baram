@@ -192,17 +192,21 @@ class AthenaManager(object):
 
     def read_query_txt(self,
                        bucket_name: str,
-                       filepath: str,
+                       sql_filepath: str,
                        replacements: Optional[dict] = None):
         '''
-        Read txt sql file from s3 and fetch it via Athena.
+        Read text sql file from s3.
 
         :param bucket_name: the name of s3 bucket containing file
-        :param filepath: prefix of file
+        :param sql_filepath: prefix of sql text file
         :param replacements: specified replacements for specific purpose of query
-        :return: string, a line of query
+        :return:
         '''
-        pass
+        sm = S3Manager(bucket_name=bucket_name)
+        query_txt = sm.get_object(sql_filepath).decode('utf-8').replace('\n', ' ')
+        for k, v in replacements.items():
+            query_txt = query_txt.replace(k, v)
+        return query_txt
 
     def from_athena_to_df(self, sql: str, db_name: str, workgroup: Optional[str] = None):
         '''

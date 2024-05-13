@@ -270,7 +270,10 @@ from baram.athena_manager import AthenaManager
 am = AthenaManager(query_result_bucket_name='baram-test',
                    output_bucket_name='baram-test')
 
-am.read_query_txt('directory/sql.txt')
+db_name = 'foo_db'
+sql = am.read_query_txt('directory/sql.txt')
+am.fetch_query(sql=sql, db_name=db_name)
+
 ```
 
 ## Read The Docs
