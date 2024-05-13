@@ -106,13 +106,10 @@ def test_upload_download_delete_file(sm, sample):
 def test_write_and_upload_file(sm):
     # Given
     content = 'hello world'
-    tmp_dir = tempfile.mkdtemp()
-    local_file_path = os.path.join(tmp_dir, 'tmp_file.txt')
-    s3_file_path = 'tmp_file'
+    s3_file_path = 'tmp_file.txt'
 
     # When
     sm.write_and_upload_file(content=content,
-                             local_file_path=local_file_path,
                              s3_file_path=s3_file_path,
                              do_remove=True)
 
@@ -261,7 +258,7 @@ def test_read_csv_from_s3(sm):
     sm.delete_object(s3_tmp_file)
 
 
-def test_write_csv_to_s3(sm):
+def test_write_merge_csvs_to_s3(sm):
     # Given
     local_tmp_file = tempfile.mkstemp()[1]
     header = ['col1', 'col2']
@@ -277,16 +274,21 @@ def test_write_csv_to_s3(sm):
     sm.upload_file(local_tmp_file, s3_tmp_file)
     df = sm.read_csv_from_s3(s3_tmp_file)
 
-    # When
+    # When/Then
     s3_tmp_file2 = 'tmp_file2.csv'
     sm.write_csv_to_s3(df, s3_tmp_file2)
 
-    # Then
     df2 = sm.read_csv_from_s3(s3_tmp_file2)
     assert df.compare(df2).empty
 
-    sm.delete_object(s3_tmp_file)
-    sm.delete_object(s3_tmp_file2)
+    sm.merge_csvs(source_path=s3_tmp_file,
+                  target_path=s3_tmp_file2)
+
+    merged_df = sm.read_csv_from_s3(s3_file_path=s3_tmp_file2)
+    assert merged_df.shape[0] == 8
+    assert set(merged_df['col1'].value_counts()) == {2}
+
+    sm.delete_objects([s3_tmp_file, s3_tmp_file2])
 
 
 def test_count_csv_row_count(sm):
