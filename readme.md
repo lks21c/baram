@@ -124,7 +124,7 @@ for line in sm.get_object_by_lines('dir/filename.csv'):
 
 ### Manipulate csv files
 
-You can easily manipulate csv files in S3.
+You can easily read and write csv files in S3.
 
 ```python
 # import S3Manager
@@ -139,14 +139,14 @@ df = sm.read_csv_from_s3(s3_file_path='dir/train.csv')
 sm.write_csv_to_s3(df=df, s3_file_path='dir/train2.csv')
 ```
 
-### Merging csv files
+Below code is to merge two csv files row-wise, appending source csv file's rows to target csv file.
 
 ```python
 from baram.s3_manager import S3Manager
 
 sm = S3Manager('baram-test')
-sm.merge_datasets(source_path='source_path',
-                  target_path='target_path')
+sm.merge_csvs(source_path='source_path',
+              target_path='target_path')
 ```
 
 ### Rename File
