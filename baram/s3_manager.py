@@ -1,6 +1,5 @@
 import os
 import tempfile
-import typing
 from typing import Any, Optional
 
 import awswrangler as wr
@@ -141,12 +140,11 @@ class S3Manager(object):
             self.logger.info(e)
             raise e
 
-    def write_and_upload_file(self, content: str, local_file_path: str, s3_file_path: str, do_remove: bool = False):
+    def write_and_upload_file(self, content: str, s3_file_path: str, do_remove: bool = False):
         """
         Write and upload file to S3.
 
         :param content: the content of file. ex) 'col1,col2\name,height'
-        :param local_file_path: local file path. ex) /Users/JohnDoe/dataset/a.csv
         :param s3_file_path: S3 path. ex) dir/crawl_data/a.csv
         :param do_remove: remove written file
         :return: response
@@ -411,23 +409,25 @@ class S3Manager(object):
         wr.s3.to_csv(df=df, path=f's3://{self.bucket_name}/{s3_file_path}', index=False,
                      s3_additional_kwargs=extra_args, **pandas_kwargs)
 
-    def merge_datasets(self,
-                       source_path: str,
-                       target_path: str,
-                       **kwargs):
+    def merge_csvs(self,
+                   source_path: str,
+                   target_path: str,
+                   chunksize: int = 1000000,
+                   **pandas_kwargs):
         """
-        Merge source dataset into target dataset.
-        :param source_path: source S3 path
-        :param target_path: target S3 path
-        :param kwargs:
+        Merge source csv file into target csv file.
+        :param source_path: S3 path of source csv file
+        :param target_path: S3 path of target csv file
+        :param chunksize: number of rows to append at a time
+        :param pandas_kwargs:
+            KEYWORD arguments forwarded to pandas.DataFrame.to_csv().
+            https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.to_csv.html
         :return:
         """
-        extra_args = {'ServerSideEncryption': self.kms_algorithm,
-                      'SSEKMSKeyId': self.kms_id} if self.kms_id else None
-        return wr.s3.merge_datasets(source_path=f's3://{self.bucket_name}/{source_path}',
-                                    target_path=f's3://{self.bucket_name}/{target_path}',
-                                    mode='append',
-                                    s3_additional_kwargs=extra_args, **kwargs)
+
+        source_df = self.read_csv_from_s3(s3_file_path=source_path)
+        source_df.to_csv(path_or_buf=f's3://{self.bucket_name}/{target_path}', header=False, index=False,
+                         mode='a', chunksize=chunksize, **pandas_kwargs)
 
     def count_csv_row_count(self, csv_path: str, distinct_col_name: Optional[str] = None):
         """
