@@ -1,9 +1,13 @@
+from typing import Optional
+
 import boto3
+from botocore.config import Config
 
 
 class KMSManager(object):
-    def __init__(self):
-        self.cli = boto3.client('kms')
+    def __init__(self, region: Optional[str] = 'ap-northeast-2'):
+        config = Config(region_name=region, signature_version='v4')
+        self.cli = boto3.client('kms', config=config)
 
     def list_keys(self):
         '''

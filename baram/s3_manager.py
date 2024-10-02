@@ -4,16 +4,18 @@ from typing import Optional
 import awswrangler as wr
 import boto3
 import botocore
-from botocore.client import Config
+from botocore.config import Config
 
 from baram.kms_manager import KMSManager
 from baram.log_manager import LogManager
 
 
 class S3Manager(object):
-    def __init__(self, bucket_name):
-        self.cli = boto3.client('s3', config=Config(signature_version='s3v4'))
-        self.km = KMSManager()
+    def __init__(self, bucket_name: str, region: Optional[str] = 'ap-northeast-2'):
+
+        config = Config(region_name=region, signature_version='v4')
+        self.cli = boto3.client('s3', config=config)
+        self.km = KMSManager(region=region)
         self.logger = LogManager.get_logger('S3Manager')
         self.bucket_name = bucket_name
         try:
