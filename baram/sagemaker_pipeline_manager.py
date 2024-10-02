@@ -188,7 +188,7 @@ class SagemakerPipelineManager(object):
             instance_type=instance_type,
             instance_count=self.processing_instance_count,
             sagemaker_session=self.pipeline_session,
-            command=[f'python3 {self.sagemaker_processor_home}/input/code/preprocessing.py'], # TODO: change hard coding
+            command=[f'python3 {self.sagemaker_processor_home}/input/preprocessing.py'],            # TODO: change hard coding
         )
 
         args = self.get_processor_args()
@@ -198,7 +198,7 @@ class SagemakerPipelineManager(object):
                                 destination=os.path.join(self.sagemaker_processor_home, 'input')),
             ],
             code=self._get_s3_full_path(self.default_bucket, code_s3_uri),
-            arguments=args if args else None
+            # arguments=args if args else None #TODO: 체크
         )
 
         return ProcessingStep(name=f"{self.pipeline_name}Process", step_args=processor_args)

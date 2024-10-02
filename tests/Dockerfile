@@ -1,5 +1,5 @@
-FROM python:3.9
+FROM python:3.9-slim
 
 RUN pip install scikit-learn pandas baram
 
-ENTRYPOINT ["python", "/opt/ml/processing/processing.py"]
+ENTRYPOINT ["tail", "-f", "/dev/null"]
