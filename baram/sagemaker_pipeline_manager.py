@@ -4,7 +4,7 @@ from typing import Optional, List
 import boto3
 import sagemaker
 import sagemaker.session
-from sagemaker.processing import ProcessingInput
+from sagemaker.processing import ProcessingInput, ScriptProcessor
 from sagemaker.sklearn import SKLearnProcessor
 from sagemaker.workflow.parameters import (
     ParameterInteger,
@@ -32,14 +32,15 @@ class SagemakerPipelineManager(object):
 
         self.cli = boto3.client('sagemaker')
         self.region = boto3.Session().region_name
-        self.sagemaker_session = sagemaker.session.Session() if not is_local_mode else LocalPipelineSession()
+        self.sagemaker_session = sagemaker.session.Session() if not is_local_mode else LocalPipelineSession()  # TODO: Check Local Mode
         self.role = role_arn if role_arn else sagemaker.get_execution_role()
         self.sagemaker_processor_home = '/opt/ml/processing'
 
         self.default_bucket = default_bucket
         self.sm = S3Manager(default_bucket)
         self.pipeline_name = pipeline_name
-        self.pipeline_params = {'default_bucket': default_bucket, 'pipeline_name': pipeline_name,
+        self.pipeline_params = {'default_bucket': default_bucket,
+                                'pipeline_name': pipeline_name,
                                 'base_dir': self.sagemaker_processor_home}
         if pipeline_params:
             self.pipeline_params.update(pipeline_params)
@@ -101,7 +102,24 @@ class SagemakerPipelineManager(object):
         :return:
         '''
 
-        step_preprocess = self.get_preprocess_step(framework_version, instance_type, base_s3_uri, code_s3_uri)
+        step_preprocess = self.get_sklearn_step(framework_version, instance_type, base_s3_uri, code_s3_uri)
+        self.register_pipeline(step_preprocess)
+
+    def create_single_script_pipeline(self,
+                                      ecr_image_uri: str,
+                                      instance_type: str = 'ml.t3.xlarge',
+                                      base_s3_uri: Optional[str] = None,
+                                      code_s3_uri: Optional[str] = None):
+        '''
+        Create a single script pipeline
+        :param ecr_image_uri:
+        :param instance_type:
+        :param base_s3_uri:
+        :param code_s3_uri:
+        :return:
+        '''
+
+        step_preprocess = self.get_script_step(ecr_image_uri, instance_type, base_s3_uri, code_s3_uri)
         self.register_pipeline(step_preprocess)
 
     def register_pipeline(self, step_preprocess: List[ProcessingStep]):
@@ -114,7 +132,7 @@ class SagemakerPipelineManager(object):
         params = [
             self.processing_instance_count,
             self.model_approval_status,
-            #*self.pipeline_params.values() # TODO: pipeline params 제대로 등록해야함
+            # *self.pipeline_params.values() # TODO: pipeline params 제대로 등록해야함
         ]
         print(f'pipeline_params={params}')
         self.pipeline = Pipeline(
@@ -124,7 +142,7 @@ class SagemakerPipelineManager(object):
         )
         self.pipeline.upsert(role_arn=self.role)
 
-    def get_preprocess_step(self, framework_version: str, instance_type: str, base_s3_uri: str, code_s3_uri: str):
+    def get_sklearn_step(self, framework_version: str, instance_type: str, base_s3_uri: str, code_s3_uri: str):
         '''
         Get preprocess step
         :param framework_version: sklearn framework version
@@ -143,9 +161,7 @@ class SagemakerPipelineManager(object):
             role=self.role,
         )
 
-        args = [f'--{k}' for k, v in self.pipeline_params.items() for _ in (0, 1)]
-        args[1::2] = self.pipeline_params.values()
-
+        args = self.get_processor_args()
         processor_args = sklearn_processor.run(
             inputs=[
                 ProcessingInput(source=self._get_s3_full_path(self.default_bucket, base_s3_uri),
@@ -156,6 +172,41 @@ class SagemakerPipelineManager(object):
         )
 
         return ProcessingStep(name=f"{self.pipeline_name}Process", step_args=processor_args)
+
+    def get_script_step(self, ecr_image_uri: str, instance_type: str, base_s3_uri: str, code_s3_uri: str):
+        '''
+        Get script step
+        :param ecr_image_uri:
+        :param instance_type:
+        :param base_s3_uri:
+        :param code_s3_uri:
+        :return:
+        '''
+        script_processor = ScriptProcessor(
+            image_uri=ecr_image_uri,
+            role=self.role,
+            instance_type=instance_type,
+            instance_count=self.processing_instance_count,
+            sagemaker_session=self.pipeline_session,
+            command=[f'python3 {self.sagemaker_processor_home}/input/code/preprocessing.py'], # TODO: change hard coding
+        )
+
+        args = self.get_processor_args()
+        processor_args = script_processor.run(
+            inputs=[
+                ProcessingInput(source=self._get_s3_full_path(self.default_bucket, base_s3_uri),
+                                destination=os.path.join(self.sagemaker_processor_home, 'input')),
+            ],
+            code=self._get_s3_full_path(self.default_bucket, code_s3_uri),
+            arguments=args if args else None
+        )
+
+        return ProcessingStep(name=f"{self.pipeline_name}Process", step_args=processor_args)
+
+    def get_processor_args(self):
+        args = [f'--{k}' for k, v in self.pipeline_params.items() for _ in (0, 1)]
+        args[1::2] = self.pipeline_params.values()
+        return args
 
     def start_pipeline(self):
         '''
@@ -168,5 +219,5 @@ class SagemakerPipelineManager(object):
     def list_pipelines(self):
         return self.cli.list_pipelines()
 
-    def describe_pipeline(self, pipeline_name:str):
+    def describe_pipeline(self, pipeline_name: str):
         return self.cli.describe_pipeline(PipelineName=pipeline_name)

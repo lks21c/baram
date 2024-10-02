@@ -6,7 +6,7 @@ authors = ["Kwangsik Lee <lks21c@gmail.com>"]
 readme = "readme.md"
 
 [tool.poetry.dependencies]
-python = "^3.9"
+python = ">=3.9,<4.0"
 fire = "^0.4.0"
 pytest-cov = "^3.0.0"
 boto3 = "1.35.28"
@@ -15,7 +15,7 @@ nest-asyncio = "^1.5.5"
 toml = "^0.10.2"
 ujson = "^5.5.0"
 requests = "^2.28.1"
-awswrangler = { version = "3.5.2", extras = ["modin"] }
+awswrangler = { version = "3.9.1", extras = ["modin"] }
 tzlocal = "^5.2"
 six = "^1.16.0"
 sagemaker = "^2.232.1"

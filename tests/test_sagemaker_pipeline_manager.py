@@ -45,6 +45,28 @@ def test_create_single_sklearn_pipeline(spm, sample_data):
     assert pipeline
 
 
+def test_create_single_script_pipeline(spm, sample_data):
+    # When
+    spm.create_single_script_pipeline(
+        ecr_image_uri='145885190059.dkr.ecr.ap-northeast-2.amazonaws.com/lks21c_sm_preprocess:latest',
+        base_s3_uri=f'{sample_data["pipeline_name"]}/input/',
+        code_s3_uri=f'{sample_data["pipeline_name"]}/code/preprocessing.py')
+    spm.start_pipeline()
+
+    # Then
+    pipeline = spm.describe_pipeline(spm.pipeline_name)
+    assert pipeline
+
+
+def test_start_pipeline(spm, sample_data):
+    # Given
+    spm.create_single_sklearn_pipeline(base_s3_uri=f'{sample_data["pipeline_name"]}/input/',
+                                       code_s3_uri=f'{sample_data["pipeline_name"]}/code/preprocessing.py')
+
+    # When
+    spm.start_pipeline()
+
+
 def test_list_pipelines(spm):
     # When
     pipelines = spm.list_pipelines()
