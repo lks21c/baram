@@ -45,12 +45,18 @@ def test_create_single_sklearn_pipeline(spm, sample_data):
     assert pipeline
 
 
-def test_create_single_script_pipeline(spm, sample_data):
+def test_create_single_script_pipeline(spm, sample_data, sm):
+    # Given
+    filename = 'preprocessing.py'
+    # TODO: to be deleted.
+    sm.upload_file(f'/Users/lks21c/repo/baram/tests/{filename}', f'smbeta-pipeline/code/{filename}')
+
     # When
     spm.create_single_script_pipeline(
-        ecr_image_uri='145885190059.dkr.ecr.ap-northeast-2.amazonaws.com/lks21c_sm_preprocess:latest',
+        ecr_image_uri='145885190059.dkr.ecr.ap-northeast-2.amazonaws.com/lks21c_sm_preprocess:241003',
         base_s3_uri=f'{sample_data["pipeline_name"]}/input/',
-        code_s3_uri=f'{sample_data["pipeline_name"]}/code/preprocessing.py')
+        code_s3_uri=f'{sample_data["pipeline_name"]}/code/{filename}',
+        filename=filename),
     spm.start_pipeline()
 
     # Then
