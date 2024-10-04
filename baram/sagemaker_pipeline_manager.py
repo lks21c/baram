@@ -4,15 +4,19 @@ from typing import Optional, List
 import boto3
 import sagemaker
 import sagemaker.session
-from sagemaker.processing import ProcessingInput, ScriptProcessor
+from sagemaker import TrainingInput, Model
+from sagemaker.estimator import Estimator, EstimatorBase
+from sagemaker.processing import ProcessingInput, ScriptProcessor, ProcessingOutput
 from sagemaker.sklearn import SKLearnProcessor
+from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.parameters import (
     ParameterInteger,
     ParameterString,
 )
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.pipeline_context import PipelineSession, LocalPipelineSession
-from sagemaker.workflow.steps import ProcessingStep
+from sagemaker.workflow.step_collections import RegisterModel
+from sagemaker.workflow.steps import ProcessingStep, TrainingStep
 
 from baram.s3_manager import S3Manager
 
@@ -115,21 +119,21 @@ class SagemakerPipelineManager(object):
         '''
 
         step_preprocess = self.get_sklearn_step(framework_version, instance_type, base_s3_uri, code_s3_uri)
-        self.register_pipeline(step_preprocess)
+        self.register_pipeline([step_preprocess])
 
     def create_single_script_pipeline(self,
                                       ecr_image_uri: str,
                                       base_s3_uri: str,
                                       code_s3_uri: str,
-                                      filename: str,
-                                      instance_type: str = 'ml.t3.xlarge'):
+                                      outputs: Optional[List] = None,
+                                      instance_type: str = 'ml.t3.xlarge', **hyperparameters):
         '''
         Create a single script pipeline
 
         :param ecr_image_uri:
         :param base_s3_uri:
         :param code_s3_uri:
-        :param filename:
+        :param outputs:
         :param instance_type:
         :return:
         '''
@@ -137,9 +141,96 @@ class SagemakerPipelineManager(object):
         step_preprocess = self.get_script_step(ecr_image_uri=ecr_image_uri,
                                                base_s3_uri=base_s3_uri,
                                                code_s3_uri=code_s3_uri,
-                                               filename=filename,
+                                               outputs=outputs,
                                                instance_type=instance_type)
-        self.register_pipeline(step_preprocess)
+        self.register_pipeline([step_preprocess])
+
+    def get_estimator(self, image_uri: str, instance_type: str, **hyperparameters):
+        '''
+        Get estimator
+        :param image_uri:
+        :param instance_type:
+        :param hyperparameters:
+        :return:
+        '''
+        estimator = Estimator(
+            image_uri=image_uri,
+            instance_type=instance_type,
+            instance_count=1,
+            output_path=self._get_s3_full_path(self.default_bucket, f'{self.pipeline_name}/model'),
+            sagemaker_session=self.pipeline_session,
+            role=self.role,
+        )
+        estimator.set_hyperparameters(**hyperparameters)
+        return estimator
+
+    def get_training_step(self,
+                          image_uri: str,
+                          train_s3_uri: str,
+                          validation_s3_uri: str,
+                          instance_type: str = 'ml.t3.xlarge',
+                          **hyperparameters):
+        '''
+        Get training step
+
+        :param image_uri:
+        :param train_s3_uri:
+        :param validation_s3_uri:
+        :param instance_type:
+        :param outputs
+        :param hyperparameters:
+        :return:
+        '''
+
+        estimator = self.get_estimator(image_uri=image_uri,
+                                       instance_type=instance_type,
+                                       **hyperparameters)
+
+        train_args = estimator.fit(
+            inputs={
+                "train": TrainingInput(
+                    s3_data=train_s3_uri,
+                    content_type="text/csv"
+                ),
+                "validation": TrainingInput(
+                    s3_data=validation_s3_uri,
+                    content_type="text/csv"
+                )
+            },
+        )
+
+        return TrainingStep(
+            name=f"train_{self.pipeline_name}",
+            step_args=train_args
+        )
+
+    def get_create_model_step(self, image_uri: str, model_data: str, instance_type: str = 'ml.m5.xlarge'):
+        model = Model(
+            image_uri=image_uri,
+            model_data=model_data,
+            sagemaker_session=self.pipeline_session,
+            role=self.role,
+        )
+
+        return ModelStep(
+            name=f"create_model_{self.pipeline_name}",
+            step_args=model.create(instance_type=instance_type),
+        )
+
+    def get_register_model_step(self,
+                                package_group_name: str,
+                                estimator: Optional[EstimatorBase] = None,
+                                model_data=None, ):
+        return RegisterModel(
+            name=f"register_model_{self.pipeline_name}",
+            estimator=estimator,
+            model_data=model_data,
+            content_types=["text/csv"],
+            response_types=["text/csv"],
+            inference_instances=["ml.t2.medium"],
+            model_package_group_name=package_group_name,
+            approval_status=self.param_model_approval_status,
+        )
 
     def register_pipeline(self, step_preprocess: List[ProcessingStep]):
         '''
@@ -161,7 +252,7 @@ class SagemakerPipelineManager(object):
         self.pipeline = Pipeline(
             name=self.pipeline_name,
             parameters=params,
-            steps=[step_preprocess],
+            steps=step_preprocess,
         )
         self.pipeline.upsert(role_arn=self.role)
 
@@ -194,10 +285,14 @@ class SagemakerPipelineManager(object):
             arguments=args if args else None
         )
 
-        return ProcessingStep(name=f"{self.pipeline_name}Process", step_args=processor_args)
+        return ProcessingStep(name=f"preprocess_{self.pipeline_name}", step_args=processor_args)
 
-    def get_script_step(self, ecr_image_uri: str, instance_type: str, base_s3_uri: str, code_s3_uri: str,
-                        filename: str):
+    def get_script_step(self,
+                        ecr_image_uri: str,
+                        base_s3_uri: str,
+                        code_s3_uri: str,
+                        instance_type: str = 'ml.t3.xlarge',
+                        outputs: Optional[List] = None):
         '''
         Get script step
         :param ecr_image_uri:
@@ -222,11 +317,12 @@ class SagemakerPipelineManager(object):
                 ProcessingInput(source=self._get_s3_full_path(self.default_bucket, base_s3_uri),
                                 destination=os.path.join(self.sagemaker_processor_home, 'input')),
             ],
+            outputs=outputs if outputs else None,
             code=self._get_s3_full_path(self.default_bucket, code_s3_uri),
-            arguments=[] + args,
+            arguments=args,
         )
 
-        return ProcessingStep(name=f"{self.pipeline_name}Process", step_args=processor_args)
+        return ProcessingStep(name=f"preprocess_{self.pipeline_name}", step_args=processor_args)
 
     def get_processor_args(self):
         args = [f'--{k}' for k, v in self.pipeline_params.items() for _ in (0, 1)]
@@ -250,3 +346,34 @@ class SagemakerPipelineManager(object):
 
     def describe_pipeline(self, pipeline_name: str):
         return self.cli.describe_pipeline(PipelineName=pipeline_name)
+
+    def get_image_uri(self, framework: str, version: str, instance_type: str, py_version: str = 'py3'):
+        '''
+        Get image uri
+
+        :param framework:
+        :param version:
+        :param instance_type:
+        :return:
+        '''
+        return sagemaker.image_uris.retrieve(
+            framework=framework,
+            region=self.region,
+            version=version,
+            py_version=py_version,
+            instance_type=instance_type
+        )
+
+    def get_processing_output(self,
+                              output_name: str,
+                              source: str,
+                              destination: str):
+        '''
+        Get processing output
+
+        :param output_name:
+        :param source:
+        :param destination:
+        :return:
+        '''
+        return ProcessingOutput(output_name=output_name, source=source, destination=destination)
