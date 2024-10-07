@@ -8,6 +8,7 @@ from sagemaker import TrainingInput, Model
 from sagemaker.estimator import Estimator, EstimatorBase
 from sagemaker.processing import ProcessingInput, ScriptProcessor, ProcessingOutput
 from sagemaker.sklearn import SKLearnProcessor
+from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.parameters import (
     ParameterInteger,
@@ -122,27 +123,33 @@ class SagemakerPipelineManager(object):
         self.register_pipeline([step_preprocess])
 
     def create_single_script_pipeline(self,
+                                      process_name: str,
                                       ecr_image_uri: str,
-                                      base_s3_uri: str,
                                       code_s3_uri: str,
+                                      inputs: List,
                                       outputs: Optional[List] = None,
-                                      instance_type: str = 'ml.t3.xlarge', **hyperparameters):
+                                      instance_type: str = 'ml.t3.xlarge',
+                                      property_files: Optional[List] = None):
         '''
         Create a single script pipeline
 
+        :param process_name:
         :param ecr_image_uri:
-        :param base_s3_uri:
         :param code_s3_uri:
+        :param inputs:
         :param outputs:
         :param instance_type:
+        :param property_files:
         :return:
         '''
 
-        step_preprocess = self.get_script_step(ecr_image_uri=ecr_image_uri,
-                                               base_s3_uri=base_s3_uri,
+        step_preprocess = self.get_script_step(process_name=process_name,
+                                               ecr_image_uri=ecr_image_uri,
                                                code_s3_uri=code_s3_uri,
+                                               instance_type=instance_type,
+                                               inputs=inputs,
                                                outputs=outputs,
-                                               instance_type=instance_type)
+                                               property_files=property_files)
         self.register_pipeline([step_preprocess])
 
     def get_estimator(self, image_uri: str, instance_type: str, **hyperparameters):
@@ -165,26 +172,17 @@ class SagemakerPipelineManager(object):
         return estimator
 
     def get_training_step(self,
-                          image_uri: str,
+                          estimator: Estimator,
                           train_s3_uri: str,
-                          validation_s3_uri: str,
-                          instance_type: str = 'ml.t3.xlarge',
-                          **hyperparameters):
+                          validation_s3_uri: str):
         '''
         Get training step
 
-        :param image_uri:
+        :param estimator
         :param train_s3_uri:
         :param validation_s3_uri:
-        :param instance_type:
-        :param outputs
-        :param hyperparameters:
         :return:
         '''
-
-        estimator = self.get_estimator(image_uri=image_uri,
-                                       instance_type=instance_type,
-                                       **hyperparameters)
 
         train_args = estimator.fit(
             inputs={
@@ -198,7 +196,6 @@ class SagemakerPipelineManager(object):
                 )
             },
         )
-
         return TrainingStep(
             name=f"train_{self.pipeline_name}",
             step_args=train_args
@@ -220,16 +217,27 @@ class SagemakerPipelineManager(object):
     def get_register_model_step(self,
                                 package_group_name: str,
                                 estimator: Optional[EstimatorBase] = None,
-                                model_data=None, ):
+                                model_data=None,
+                                model_metrics=None):
+        '''
+        Get register model step
+
+        :param package_group_name:
+        :param estimator:
+        :param model_data:
+        :param model_metrics:
+        :return:
+        '''
+
         return RegisterModel(
             name=f"register_model_{self.pipeline_name}",
             estimator=estimator,
             model_data=model_data,
             content_types=["text/csv"],
             response_types=["text/csv"],
-            inference_instances=["ml.t2.medium"],
             model_package_group_name=package_group_name,
             approval_status=self.param_model_approval_status,
+            model_metrics=model_metrics
         )
 
     def register_pipeline(self, step_preprocess: List[ProcessingStep]):
@@ -288,17 +296,23 @@ class SagemakerPipelineManager(object):
         return ProcessingStep(name=f"preprocess_{self.pipeline_name}", step_args=processor_args)
 
     def get_script_step(self,
+                        process_name: str,
                         ecr_image_uri: str,
-                        base_s3_uri: str,
                         code_s3_uri: str,
                         instance_type: str = 'ml.t3.xlarge',
-                        outputs: Optional[List] = None):
+                        inputs: Optional[List] = None,
+                        outputs: Optional[List] = None,
+                        property_files: Optional[List] = None):
         '''
         Get script step
+
+        :param process_name:
         :param ecr_image_uri:
         :param instance_type:
-        :param base_s3_uri:
         :param code_s3_uri:
+        :param inputs:
+        :param outputs:
+        :param property_files:
         :return:
         '''
         script_processor = ScriptProcessor(
@@ -313,16 +327,14 @@ class SagemakerPipelineManager(object):
         args = self.get_processor_args()
         print(args)
         processor_args = script_processor.run(
-            inputs=[
-                ProcessingInput(source=self._get_s3_full_path(self.default_bucket, base_s3_uri),
-                                destination=os.path.join(self.sagemaker_processor_home, 'input')),
-            ],
+            inputs=inputs,
             outputs=outputs if outputs else None,
             code=self._get_s3_full_path(self.default_bucket, code_s3_uri),
             arguments=args,
         )
 
-        return ProcessingStep(name=f"preprocess_{self.pipeline_name}", step_args=processor_args)
+        return ProcessingStep(name=f"script_process_{process_name}", step_args=processor_args,
+                              property_files=property_files)
 
     def get_processor_args(self):
         args = [f'--{k}' for k, v in self.pipeline_params.items() for _ in (0, 1)]
@@ -377,3 +389,19 @@ class SagemakerPipelineManager(object):
         :return:
         '''
         return ProcessingOutput(output_name=output_name, source=source, destination=destination)
+
+    def get_condition_step(self, conditions: List, if_steps: List, else_steps: Optional[List] = None):
+        '''
+        Get condition step
+
+        :param conditions:
+        :param if_steps:
+        :param else_steps:
+        :return:
+        '''
+        return ConditionStep(
+            name=f"condition_step_{self.pipeline_name}",
+            conditions=conditions,
+            if_steps=if_steps,
+            else_steps=else_steps,
+        )
