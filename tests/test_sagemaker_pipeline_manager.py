@@ -174,6 +174,8 @@ def test_preprocess_train_pipeline(spm, sample_data, sm):
                                                 model_data=train_step.properties.ModelArtifacts.S3ModelArtifacts,
                                                 model_metrics=model_metrics)
 
+    fail_step = spm.get_fail_step('fail', 'mse error can not meet criteria.')
+
     cond_lte = ConditionLessThanOrEqualTo(
         left=JsonGet(
             step_name=eval_step.name,
@@ -184,7 +186,7 @@ def test_preprocess_train_pipeline(spm, sample_data, sm):
     )
     condition_step = spm.get_condition_step(conditions=[cond_lte],
                                             if_steps=[register_step],
-                                            else_steps=[])
+                                            else_steps=[fail_step])
 
     spm.register_pipeline([preprocess_step, train_step, eval_step, condition_step])
     spm.start_pipeline()

@@ -9,6 +9,7 @@ from sagemaker.estimator import Estimator, EstimatorBase
 from sagemaker.processing import ProcessingInput, ScriptProcessor, ProcessingOutput
 from sagemaker.sklearn import SKLearnProcessor
 from sagemaker.workflow.condition_step import ConditionStep
+from sagemaker.workflow.fail_step import FailStep
 from sagemaker.workflow.model_step import ModelStep
 from sagemaker.workflow.parameters import (
     ParameterInteger,
@@ -37,7 +38,7 @@ class SagemakerPipelineManager(object):
 
         self.cli = boto3.client('sagemaker')
         self.region = boto3.Session().region_name
-        self.sagemaker_session = sagemaker.session.Session() if not is_local_mode else LocalPipelineSession()  # TODO: Check Local Mode
+        print(f'is_local_mode={is_local_mode}')
         self.role = role_arn if role_arn else sagemaker.get_execution_role()
         self.sagemaker_processor_home = '/opt/ml/processing'
         self.default_bucket = default_bucket
@@ -71,7 +72,7 @@ class SagemakerPipelineManager(object):
             name="region",
             default_value=self.region
         )
-        self.pipeline_session = PipelineSession(default_bucket=default_bucket)
+        self.pipeline_session = PipelineSession(default_bucket=default_bucket) if not is_local_mode else LocalPipelineSession()
 
     def upload_local_files(self, local_dir: str):
         '''
@@ -261,6 +262,7 @@ class SagemakerPipelineManager(object):
             name=self.pipeline_name,
             parameters=params,
             steps=step_preprocess,
+            sagemaker_session=self.pipeline_session
         )
         self.pipeline.upsert(role_arn=self.role)
 
@@ -404,4 +406,17 @@ class SagemakerPipelineManager(object):
             conditions=conditions,
             if_steps=if_steps,
             else_steps=else_steps,
+        )
+
+    def get_fail_step(self, step_name: str, error_msg: str):
+        '''
+        Get fail step
+
+        :param step_name:
+        :param error_msg:
+        :return:
+        '''
+        return FailStep(
+            name=step_name,
+            error_message=error_msg,
         )
