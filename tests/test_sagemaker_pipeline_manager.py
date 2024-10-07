@@ -109,13 +109,13 @@ def test_preprocess_train_pipeline(spm, sample_data, sm):
         outputs=[
             spm.get_processing_output(output_name='train',
                                       source=f"{spm.sagemaker_processor_home}/train",
-                                      destination=f'eval_step://{spm.default_bucket}/{spm.pipeline_name}/output/train.csv'),
+                                      destination=f's3://{spm.default_bucket}/{spm.pipeline_name}/output/train.csv'),
             spm.get_processing_output(output_name='validation',
                                       source=f"{spm.sagemaker_processor_home}/validation",
-                                      destination=f'eval_step://{spm.default_bucket}/{spm.pipeline_name}/output/validation.csv'),
+                                      destination=f's3://{spm.default_bucket}/{spm.pipeline_name}/output/validation.csv'),
             spm.get_processing_output(output_name='test',
                                       source=f"{spm.sagemaker_processor_home}/test",
-                                      destination=f'eval_step://{spm.default_bucket}/{spm.pipeline_name}/output/test.csv'),
+                                      destination=f's3://{spm.default_bucket}/{spm.pipeline_name}/output/test.csv'),
         ]
     )
 
