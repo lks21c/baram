@@ -4,12 +4,11 @@ from typing import Any, Optional
 
 import boto3
 import botocore
-import avro.schema
 import pandas as pd
 import awswrangler as wr
-from botocore.client import Config
 from avro.io import DatumReader, DatumWriter
 from avro.datafile import DataFileReader, DataFileWriter
+from botocore.config import Config
 
 from baram.kms_manager import KMSManager
 from baram.log_manager import LogManager
