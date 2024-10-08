@@ -391,3 +391,11 @@ def test_delete_dir(sm, sample):
     # Then
     for resp in sm.list_objects(''):
         assert resp['KeyCount'] == 0
+
+
+# TODO
+def test_get_avro_as_list(sm, sample):
+    # Given
+    # When
+    # Then
+    pass

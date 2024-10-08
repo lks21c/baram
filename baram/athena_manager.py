@@ -1,9 +1,13 @@
 from pprint import pprint
 from typing import Optional, Union, Dict, Any, List, Literal
 
-import awswrangler as wr
 import fire
+import avro.schema
 import pandas as pd
+import ujson as json
+import awswrangler as wr
+from avro.io import DatumReader, DatumWriter
+from avro.datafile import DataFileReader, DataFileWriter
 from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
 
 from baram.glue_manager import GlueManager
@@ -43,7 +47,7 @@ class AthenaManager(object):
         :param partition_cols: same with column_def when do partitioning, None when don't.
         :return:
         '''
-        columns = ', '.join([f"{k} {column_def[k]} comment '{column_comments[k]}'"
+        columns = ', '.join([f"`{k}` {column_def[k]} comment '{column_comments[k]}'"
                              if k in column_comments.keys() else f"{k} {column_def[k]}" for k in column_def])
         partitions = 'partitioned by (' + ', '.join([f"{k} {partition_cols[k]}"
                                                      for k in partition_cols]) + ')' if partition_cols else ''
@@ -230,6 +234,85 @@ class AthenaManager(object):
     def from_df_to_athena(self, df: pd.DataFrame):
         # TODO
         pass
+
+    def get_iceberg_metadata_df(self,
+                                db_name: str,
+                                table_name: str,
+                                property: str = 'files',
+                                workgroup: Optional[str] = None) -> pd.DataFrame:
+        '''
+        Get metadata DataFrame of athena iceberg table.
+
+        :param db_name:
+        :param table_name:
+        :param property: among below things
+                        files – Shows a table's current data files.
+                        manifests – Shows a table's current file manifests.
+                        history – Shows a table's history.
+                        partitions – Shows a table's current partitions.
+                        snapshots – Shows a table's snapshots.
+                        refs – Shows a table's references.
+        :param workgroup:
+        :return:
+        '''
+
+        assert property in ['files', 'manifests', 'history', 'partitions', 'snapshots', 'refs']
+
+        sql = f'select * from "{db_name}"."{table_name}${property}"'
+        df = self.from_athena_to_df(sql=sql, db_name=db_name, workgroup=workgroup)
+
+        return df
+
+    def get_table_manifest_paths(self,
+                                 db_name: str,
+                                 table_name: str,
+                                 workgroup: Optional[str] = None) -> list:
+        '''
+        get manifest paths as list
+
+        :param db_name:
+        :param table_name:
+        :param workgroup:
+        :return:
+        '''
+
+        df = self.get_table_manifest_df(db_name=db_name,
+                                        table_name=table_name,
+                                        property='manifests',
+                                        workgroup=workgroup)
+        return df['path'].to_list()
+
+    def create_iceberg_table_from_table(self,
+                                        to_db_name: str,
+                                        to_table_name: str,
+                                        as_sql: str,
+                                        location: str,
+                                        params: Union[Dict[str, Any], List[str], None] = None,
+                                        paramstyle: Literal['qmark', 'named'] = 'qmark'
+                                        ):
+        '''
+        create iceberg table from existing table (using ctas)
+
+        :param to_db_name: database name of result table
+        :param to_table_name: table name of result table
+        :param as_sql: query before "create table * with * as", usually starts with "select"
+        :param location: s3 location which data and metadata of iceberg table will be saved
+        :param params: for parametrized query.
+                       This should be dictionary for "named" paramstyle and list for "qmark" paramstyle.
+        :param paramstyle: "named" or "qmark"
+        :return:
+        '''
+
+        ctas = f"""create table {to_db_name}.{to_table_name}
+                   with (table_type = 'ICEBERG',
+                         location = '{location}',
+                         is_external = false)
+                   as {as_sql}"""
+
+        self.fetch_query(sql=ctas,
+                         db_name=to_db_name,
+                         params=params,
+                         paramstyle=paramstyle)
 
 
 if __name__ == '__main__':

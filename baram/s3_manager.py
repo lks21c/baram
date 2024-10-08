@@ -2,11 +2,14 @@ import os
 import tempfile
 from typing import Any, Optional
 
-import awswrangler as wr
 import boto3
 import botocore
+import avro.schema
 import pandas as pd
+import awswrangler as wr
 from botocore.client import Config
+from avro.io import DatumReader, DatumWriter
+from avro.datafile import DataFileReader, DataFileWriter
 
 from baram.kms_manager import KMSManager
 from baram.log_manager import LogManager
@@ -444,3 +447,20 @@ class S3Manager(object):
             return len(pd.unique(df[distinct_col_name]))
         else:
             return df.shape[0]
+
+    def get_avro_as_list(self, avro_path: str):
+        """
+
+        :param avro_path:
+        :return:
+        """
+        filename = avro_path.split('/')[-1]
+        assert filename.split('.')[-1] != 'avro'
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            local_file_path = f'{tmpdir}/{filename}'
+            self.download_file(s3_file_path=avro_path,
+                               local_file_path=local_file_path)
+            reader = DataFileReader(open(local_file_path, 'rb'), DatumReader())
+
+        return list(reader)
