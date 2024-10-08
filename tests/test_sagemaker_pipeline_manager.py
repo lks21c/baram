@@ -2,6 +2,7 @@ import os
 from pprint import pprint
 
 import pytest
+import sagemaker
 from sagemaker import ModelMetrics, MetricsSource
 from sagemaker.inputs import TransformInput
 from sagemaker.processing import ProcessingInput
@@ -261,3 +262,32 @@ def test_register_model(spm):
     spm.register_model(image_uri=image_uri,
                        model_s3_uri=model_data,
                        model_package_name=model_package_name)
+
+def test_create_endpoint(spm):
+    # 세이지메이커 세션 생성
+    sess = sagemaker.Session()
+
+    # 모델 생성
+    model = sagemaker.model.Model(
+        image_uri='366743142698.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker-xgboost:1.0-1-cpu-py3',
+        model_data=f's3://{spm.default_bucket}/{spm.pipeline_name}/model/pipelines-v5g0epxo78dc-train-smbeta-pipelin-T2cscQY9nc/output/model.tar.gz',
+        role=spm.role,
+        sagemaker_session=sess
+    )
+
+    # 엔드포인트 구성 생성
+    endpoint_config_name = "my-endpoint-config"
+    endpoint_config = model.prepare_container_def(
+        instance_type="ml.t2.medium",
+        serverless_inference_config=sagemaker.serverless.ServerlessInferenceConfig()
+    )
+    print(f'endpoint_config: {endpoint_config}')
+    sess.create_endpoint_config(**endpoint_config)
+
+    # 엔드포인트 생성
+    endpoint_name = "kwangsik-endpoint"
+    sess.create_endpoint(
+        endpoint_name=endpoint_name,
+        endpoint_config_name=endpoint_config_name,
+        wait=True
+    )
