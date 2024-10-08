@@ -3,18 +3,21 @@ from pprint import pprint
 
 import pytest
 from sagemaker import ModelMetrics, MetricsSource
+from sagemaker.inputs import TransformInput
 from sagemaker.processing import ProcessingInput
 from sagemaker.workflow.conditions import ConditionLessThanOrEqualTo
 from sagemaker.workflow.functions import JsonGet
 from sagemaker.workflow.properties import PropertyFile
 
 from baram.s3_manager import S3Manager
+from baram.sagemaker_manager import SagemakerManager
 from baram.sagemaker_pipeline_manager import SagemakerPipelineManager
 
 
 @pytest.fixture()
 def sample_data():
     return {'pipeline_name': 'smbeta-pipeline',
+            'pipeline_name2': 'smbeta-pipeline2',
             'default_s3_bucket': 'sli-dst-dlprod-public', }
 
 
@@ -23,7 +26,7 @@ def spm(sample_data):
     return SagemakerPipelineManager(default_bucket=sample_data['default_s3_bucket'],
                                     pipeline_name=sample_data['pipeline_name'],
                                     role_arn='arn:aws:iam::145885190059:role/smbeta-execution-engineer-iam-role',
-                                    is_local_mode=True)
+                                    is_local_mode=False)
 
 
 @pytest.fixture()
@@ -83,6 +86,31 @@ def test_create_single_script_pipeline(spm, sample_data, sm):
     # Then
     pipeline = spm.describe_pipeline(spm.pipeline_name)
     assert pipeline
+
+
+def test_create_inference_pipeline(sample_data):
+    # Given
+    spm = SagemakerPipelineManager(default_bucket=sample_data['default_s3_bucket'],
+                                   pipeline_name=sample_data['pipeline_name2'],
+                                   role_arn='arn:aws:iam::145885190059:role/smbeta-execution-engineer-iam-role',
+                                   is_local_mode=False)
+    sm = SagemakerManager('smbeta-public-domain')
+    model_package_group_name = 'kwangsik'
+    spec = sm.get_latest_inference_spec(model_package_group_name=model_package_group_name)
+    batch_data_s3_uri = f's3://{spm.default_bucket}/{sample_data["pipeline_name"]}/input/abalone-dataset-batch2.csv'
+
+    # When
+    model_step = spm.get_create_model_step(image_uri=spec['Containers'][0]['Image'],
+                                           model_data=spec['Containers'][0]['ModelDataUrl'])
+    transformer_step = spm.get_transformer_step(step_name='batch_inference',
+                                                model_name=model_step.properties.ModelName,
+                                                inputs=TransformInput(
+                                                    data=batch_data_s3_uri,
+                                                    content_type="text/csv",
+                                                ),
+                                                output_path=f"s3://{spm.default_bucket}/{spm.pipeline_name}/transform")
+    spm.register_pipeline([model_step, transformer_step])
+    spm.start_pipeline()
 
 
 def test_preprocess_train_pipeline(spm, sample_data, sm):
@@ -221,3 +249,15 @@ def test_describe_pipeline(spm):
     # Then
     assert pipeline
     pprint(pipeline)
+
+
+def test_register_model(spm):
+    # Given
+    image_uri = '366743142698.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker-xgboost:1.0-1-cpu-py3'
+    model_data = f's3://{spm.default_bucket}/{spm.pipeline_name}/model/pipelines-v5g0epxo78dc-train-smbeta-pipelin-T2cscQY9nc/output/model.tar.gz'
+    model_package_name = 'abalon'
+
+    # When
+    spm.register_model(image_uri=image_uri,
+                       model_s3_uri=model_data,
+                       model_package_name=model_package_name)

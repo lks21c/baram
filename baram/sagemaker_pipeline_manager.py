@@ -3,11 +3,12 @@ from typing import Optional, List
 
 import boto3
 import sagemaker
-import sagemaker.session
 from sagemaker import TrainingInput, Model
 from sagemaker.estimator import Estimator, EstimatorBase
+from sagemaker.inputs import TransformInput
 from sagemaker.processing import ProcessingInput, ScriptProcessor, ProcessingOutput
 from sagemaker.sklearn import SKLearnProcessor
+from sagemaker.transformer import Transformer
 from sagemaker.workflow.condition_step import ConditionStep
 from sagemaker.workflow.fail_step import FailStep
 from sagemaker.workflow.model_step import ModelStep
@@ -18,7 +19,7 @@ from sagemaker.workflow.parameters import (
 from sagemaker.workflow.pipeline import Pipeline
 from sagemaker.workflow.pipeline_context import PipelineSession, LocalPipelineSession
 from sagemaker.workflow.step_collections import RegisterModel
-from sagemaker.workflow.steps import ProcessingStep, TrainingStep
+from sagemaker.workflow.steps import ProcessingStep, TrainingStep, TransformStep
 
 from baram.s3_manager import S3Manager
 
@@ -72,7 +73,8 @@ class SagemakerPipelineManager(object):
             name="region",
             default_value=self.region
         )
-        self.pipeline_session = PipelineSession(default_bucket=default_bucket) if not is_local_mode else LocalPipelineSession()
+        self.pipeline_session = PipelineSession(
+            default_bucket=default_bucket) if not is_local_mode else LocalPipelineSession()
 
     def upload_local_files(self, local_dir: str):
         '''
@@ -202,7 +204,10 @@ class SagemakerPipelineManager(object):
             step_args=train_args
         )
 
-    def get_create_model_step(self, image_uri: str, model_data: str, instance_type: str = 'ml.m5.xlarge'):
+    def get_create_model_step(self,
+                              image_uri: str,
+                              model_data: str,
+                              instance_type: str = 'ml.m5.xlarge'):
         model = Model(
             image_uri=image_uri,
             model_data=model_data,
@@ -419,4 +424,47 @@ class SagemakerPipelineManager(object):
         return FailStep(
             name=step_name,
             error_message=error_msg,
+        )
+
+    def get_transformer_step(self,
+                             step_name: str,
+                             output_path: str,
+                             model_name: str,
+                             inputs: TransformInput,
+                             instance_type: str = 'ml.m5.xlarge'):
+        transformer = Transformer(
+            model_name=model_name,
+            instance_type=instance_type,
+            instance_count=self.param_processing_instance_count,
+            output_path=output_path,
+            sagemaker_session=self.pipeline_session)
+
+        return TransformStep(
+            name=step_name,
+            transformer=transformer,
+            inputs=inputs
+        )
+
+    def register_model(self, image_uri: str, model_s3_uri: str, model_package_name: str):
+        '''
+        Register model
+
+        :param image_uri:
+        :param model_s3_uri:
+        :param model_package_name:
+        :return:
+        '''
+        model = sagemaker.model.Model(
+            image_uri=image_uri,
+            model_data=model_s3_uri,
+            role=self.role,
+            sagemaker_session=sagemaker.Session()
+        )
+        model.register(
+            content_types=["text/csv"],
+            response_types=["text/csv"],
+            inference_instances=["ml.m5.large"],
+            transform_instances=["ml.m5.large"],
+            model_package_name=model_package_name,
+            approval_status='Approved',
         )

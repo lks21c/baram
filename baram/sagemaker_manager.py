@@ -360,3 +360,67 @@ class SagemakerManager(object):
         except self.cli.exceptions.ResourceNotFound:
             self.logger.info(f'{image_name}: version {version} does not exist')
             return None
+
+    def list_models(self, **kwargs):
+        '''
+        List models
+
+        :param kwargs:
+        :return:
+        '''
+        return self.cli.list_models(**kwargs)
+
+    def describe_model(self, **kwargs):
+        '''
+        Describe model
+        :param kwargs:
+        :return:
+        '''
+        return self.cli.describe_model(**kwargs)
+
+    def list_model_packages(self, **kwargs):
+        '''
+        List model packages
+
+        :param kwargs:
+        :return:
+        '''
+        return self.cli.list_model_packages(**kwargs)
+
+    def list_model_package_groups(self, **kwargs):
+        '''
+        List model package groups
+
+        :param kwargs:
+        :return:
+        '''
+        return self.cli.list_model_package_groups(**kwargs)
+
+    def describe_model_package(self, ModelPackageName: str):
+        '''
+        Describe model package
+
+        :param ModelPackageName:
+        :return:
+        '''
+        return self.cli.describe_model_package(ModelPackageName=ModelPackageName)
+
+    def describe_model_package_group(self, **kwargs):
+        '''
+        Describe model package group
+        :param kwargs:
+        :return:
+        '''
+        return self.cli.describe_model_package_group(**kwargs)
+
+    def get_latest_inference_spec(self,model_package_group_name:str):
+        '''
+        Get the latest inference spec of the model package group
+
+        :param model_package_group_name:
+        :return:
+        '''
+        model_packages = self.list_model_packages(ModelPackageGroupName=model_package_group_name, SortBy='CreationTime', SortOrder='Descending')
+        model_package = model_packages['ModelPackageSummaryList'][0]
+        arn = model_package['ModelPackageArn']
+        return self.describe_model_package(ModelPackageName=arn)['InferenceSpecification']

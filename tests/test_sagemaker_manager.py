@@ -2,8 +2,8 @@ from pprint import pprint
 
 import pytest
 
-from baram.iam_manager import IAMManager
 from baram.ec2_manager import EC2Manager
+from baram.iam_manager import IAMManager
 from baram.kms_manager import KMSManager
 from baram.sagemaker_manager import SagemakerManager
 
@@ -237,3 +237,105 @@ def test_create_describe_delete_image_version(sm, im):
     assert sm.describe_image_version(image_name=image_name, Version=version) is None
 
     sm.delete_image(image_name=image_name)
+
+
+def test_list_model_packages(sm):
+    # When
+    resp = sm.list_model_packages(SortBy='CreationTime', SortOrder='Descending')
+
+    # Then
+    pprint(f'resp={resp}')
+    for m in resp['ModelPackageSummaryList']:
+        pprint(m)
+
+
+def test_list_model_packages_with_group_name(sm):
+    # When
+    resp = sm.list_model_packages(ModelPackageGroupName='kwangsik', SortBy='CreationTime', SortOrder='Descending')
+
+    # Then
+    pprint(f'resp={resp}')
+    print()
+    for m in resp['ModelPackageSummaryList']:
+        pprint(m)
+
+
+def test_describe_model_package(sm):
+    # Given
+    resp = sm.list_model_packages(SortBy='CreationTime', SortOrder='Descending')
+    pprint(f'resp={resp}')
+    model_package_name = resp['ModelPackageSummaryList'][0]['ModelPackageName']
+    print(f'model_package_name: {model_package_name}')
+
+    # When
+    resp = sm.describe_model_package(ModelPackageName=model_package_name)
+
+    # Then
+    pprint(resp)
+    print(resp['InferenceSpecification']['Containers'][0]['ModelDataUrl'])
+
+
+def test_describe_model_package_with_arn(sm):
+    # Given
+    model_package_name = 'arn:aws:sagemaker:ap-northeast-2:145885190059:model-package/kwangsik/5'
+
+    # When
+    resp = sm.describe_model_package(ModelPackageName=model_package_name)
+
+    # Then
+    pprint(resp)
+    print(resp['InferenceSpecification']['Containers'][0]['ModelDataUrl'])
+
+
+def test_list_models(sm):
+    # When
+    resp = sm.list_models(SortBy='CreationTime', SortOrder='Descending', MaxResults=100)
+
+    # Then
+    for m in resp['Models']:
+        pprint(m)
+
+
+def test_describe_model(sm):
+    # Given
+    resp = sm.list_models(SortBy='CreationTime', SortOrder='Descending')
+    model_name = resp['Models'][0]['ModelName']
+    print(f'model_name: {model_name}')
+
+    # When
+    resp = sm.describe_model(ModelName=model_name)
+
+    # Then
+    pprint(resp)
+    print(resp['PrimaryContainer']['ModelDataUrl'])
+
+
+def test_list_model_package_groups(sm):
+    # When
+    resp = sm.list_model_package_groups(SortBy='CreationTime', SortOrder='Descending')
+
+    # Then
+    # pprint(f'resp={resp}')
+    for m in resp['ModelPackageGroupSummaryList']:
+        pprint(m)
+
+
+def test_describe_model_package_group(sm):
+    # Given
+    resp = sm.list_model_package_groups(SortBy='CreationTime', SortOrder='Descending')
+    model_package_group_name = resp['ModelPackageGroupSummaryList'][0]['ModelPackageGroupName']
+    print(f'model_package_group_name: {model_package_group_name}')
+
+    # When
+    resp = sm.describe_model_package_group(ModelPackageGroupName=model_package_group_name)
+
+    # Then
+    pprint(resp)
+    print(resp['ModelPackageGroupArn'])
+
+def test_get_latest_inference_spec(sm):
+    # When
+    resp = sm.get_latest_inference_spec(model_package_group_name='kwangsik')
+
+    # Then
+    pprint(resp)
