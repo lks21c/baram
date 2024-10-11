@@ -2,7 +2,7 @@ from pprint import pprint
 from typing import Optional, Union, Dict, Any, List, Literal
 
 import fire
-import boto3
+import pandas as pd
 import awswrangler as wr
 from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
 
@@ -43,7 +43,7 @@ class AthenaManager(object):
         :param partition_cols: same with column_def when do partitioning, None when don't.
         :return:
         '''
-        columns = ', '.join([f"{k} {column_def[k]} comment '{column_comments[k]}'"
+        columns = ', '.join([f"`{k}` {column_def[k]} comment '{column_comments[k]}'"
                              if k in column_comments.keys() else f"{k} {column_def[k]}" for k in column_def])
         partitions = 'partitioned by (' + ', '.join([f"{k} {partition_cols[k]}"
                                                     for k in partition_cols]) + ')' if partition_cols else ''
@@ -191,17 +191,21 @@ class AthenaManager(object):
 
     def read_query_txt(self,
                        bucket_name: str,
-                       filepath: str,
+                       sql_filepath: str,
                        replacements: Optional[dict] = None):
         '''
         Read txt sql file from s3 and fetch it via Athena.
 
         :param bucket_name: the name of s3 bucket containing file
-        :param filepath: prefix of file
+        :param sql_filepath: prefix of sql text file (s3 key)
         :param replacements: specified replacements for specific purpose of query
         :return: string, a line of query
         '''
-        pass
+        sm = S3Manager(bucket_name=bucket_name)
+        query_txt = sm.get_object_body(sql_filepath).decode('utf-8').replace('\n', ' ')
+        for k, v in replacements.items():
+            query_txt = query_txt.replace(k, v)
+        return query_txt
 
     def from_athena_to_df(self, sql: str, db_name: str, workgroup: Optional[str] = None):
         '''
@@ -222,6 +226,85 @@ class AthenaManager(object):
 
     # TODO: Add a method that dumps athena query result into s3 directly.
 
+    def from_df_to_athena(self, df: pd.DataFrame):
+        # TODO
+        pass
+
+    def get_iceberg_metadata_df(self,
+                                db_name: str,
+                                table_name: str,
+                                property: str = 'files',
+                                workgroup: Optional[str] = None) -> pd.DataFrame:
+        '''
+        Get metadata DataFrame of athena iceberg table.
+        :param db_name:
+        :param table_name:
+        :param property: among below things
+                        files – Shows a table's current data files.
+                        manifests – Shows a table's current file manifests.
+                        history – Shows a table's history.
+                        partitions – Shows a table's current partitions.
+                        snapshots – Shows a table's snapshots.
+                        refs – Shows a table's references.
+        :param workgroup:
+        :return:
+        '''
+
+        assert property in ['files', 'manifests', 'history', 'partitions', 'snapshots', 'refs']
+
+        sql = f'select * from "{db_name}"."{table_name}${property}"'
+        df = self.from_athena_to_df(sql=sql, db_name=db_name, workgroup=workgroup)
+
+        return df
+
+    def get_table_manifest_paths(self,
+                                 db_name: str,
+                                 table_name: str,
+                                 workgroup: Optional[str] = None) -> list:
+        '''
+        get manifest paths as list
+        :param db_name:
+        :param table_name:
+        :param workgroup:
+        :return:
+        '''
+
+        df = self.get_table_manifest_df(db_name=db_name,
+                                        table_name=table_name,
+                                        property='manifests',
+                                        workgroup=workgroup)
+        return df['path'].to_list()
+
+    def create_iceberg_table_from_table(self,
+                                        to_db_name: str,
+                                        to_table_name: str,
+                                        as_sql: str,
+                                        location: str,
+                                        params: Union[Dict[str, Any], List[str], None] = None,
+                                        paramstyle: Literal['qmark', 'named'] = 'qmark'
+                                        ):
+        '''
+        create iceberg table from existing table (using ctas)
+        :param to_db_name: database name of result table
+        :param to_table_name: table name of result table
+        :param as_sql: query before "create table * with * as", usually starts with "select"
+        :param location: s3 location which data and metadata of iceberg table will be saved
+        :param params: for parametrized query.
+                       This should be dictionary for "named" paramstyle and list for "qmark" paramstyle.
+        :param paramstyle: "named" or "qmark"
+        :return:
+        '''
+
+        ctas = f"""create table {to_db_name}.{to_table_name}
+                   with (table_type = 'ICEBERG',
+                         location = '{location}',
+                         is_external = false)
+                   as {as_sql}"""
+
+        self.fetch_query(sql=ctas,
+                         db_name=to_db_name,
+                         params=params,
+                         paramstyle=paramstyle)
 
 if __name__ == '__main__':
     fire.Fire(AthenaManager)

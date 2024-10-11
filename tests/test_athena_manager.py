@@ -43,6 +43,8 @@ def sample():
 
 def test_create_external_table(am, sm, gm, sample):
     # Given
+    if am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name']):
+        am.delete_table(db_name=sample['db_name'], table_name=sample['table_name'])
     sm.write_and_upload_file(sample['file_content'],
                              sample['s3_filename'],
                              f"{sample['s3_filepath']}/{sample['s3_filename']}")
@@ -273,3 +275,65 @@ def test_from_athena_to_df(am, sm, sample):
     assert df.shape[0] == sample['file_content'].count('\n')
     assert df.shape[1] == len(sample['column_def'].keys())
     sm.delete_dir(sample['s3_filepath'])
+
+
+# TODO
+def test_get_iceberg_metadata_df(am, sample):
+    # Given
+    # When
+    # Then
+    pass
+
+
+# TODO
+def test_get_table_manifest_paths(am, sample):
+    # Given
+    # When
+    # Then
+    pass
+
+
+def test_create_iceberg_table_from_table(am, sm, gm, sample):
+    # Given
+    if am.check_table_exists(db_name=sample['db_name'], table_name=sample['table_name']):
+        am.delete_table(db_name=sample['db_name'], table_name=sample['table_name'])
+    sm.write_and_upload_file(sample['file_content'],
+                             sample['s3_filename'],
+                             f"{sample['s3_filepath']}/{sample['s3_filename']}")
+    location = sm.get_s3_full_path(sm.bucket_name, sample['s3_filepath'])
+
+    am.create_external_table(db_name=sample['db_name'],
+                             table_name=sample['table_name'],
+                             column_def=sample['column_def'],
+                             location=location,
+                             s3_output=sm.get_s3_full_path(am.QUERY_RESULT_BUCKET,
+                                                           f"{am.ATHENA_WORKGROUP}/once/tables/{sample['table_name']}"),
+                             column_comments=sample['column_comments'],
+                             table_comment='table1')
+
+    to_db_name = sample['db_name']
+    to_table_name = f"{sample['table_name']}_iceberg"
+    as_sql = f"select * from {sample['db_name']}.{sample['table_name']}"
+    location = f"s3://{am.OUTPUT_BUCKET}/table/{to_db_name}.db/{to_table_name}"
+
+    if am.check_table_exists(db_name=sample['db_name'], table_name=to_table_name):
+        am.delete_table(db_name=sample['db_name'], table_name=to_table_name)
+
+    # When
+    am.create_iceberg_table_from_table(to_db_name=to_db_name,
+                                       to_table_name=to_table_name,
+                                       as_sql=as_sql,
+                                       location=location)
+
+    df_before = am.from_athena_to_df(sql=f"select * from {sample['db_name']}.{sample['table_name']}",
+                                     db_name=sample['db_name'])
+
+    df_after = am.from_athena_to_df(sql=f"select * from {sample['db_name']}.{to_table_name}",
+                                    db_name=sample['db_name'])
+
+    # TODO: add assertions
+    # Then
+    print(f'df_before={df_before}')
+    print(f'df_after={df_after}')
+
+
