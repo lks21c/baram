@@ -409,18 +409,40 @@ class GlueManager(object):
             self.create_job(name, package_name, role_name, extra_jars, security_configuration)
             self.logger.info(f'{name} created.')
 
-    def summary(self):
-        jobs = self.cli.list_jobs()
-        if 'JobNames' in jobs:
-            for j in jobs['JobNames']:
-                r = self.cli.get_job_runs(JobName=j)
-                if 'JobRuns' in r and len(r['JobRuns']) > 0:
-                    last_run = r['JobRuns'][0]
-                    last_run['StartedOn']
+    def analyze_glue_usage(self):
+        '''
+        Analyze Glue usage
 
+        :return:
+        '''
+
+        total_duration = 0
+        job_list = []
+        next_token = None
+        while True:
+            response = self.cli.list_jobs(MaxResults=50, **({'NextToken': next_token} if next_token else {}))
+
+            job_names = response.get('JobNames', [])
+            for j in job_names:
+                r = self.cli.get_job_runs(JobName=j)
+                job_runs = r.get('JobRuns', [])
+                if job_runs:
+                    last_run = job_runs[0]
                     duration = int((last_run['CompletedOn'] - last_run['StartedOn']).total_seconds())
-                    print(
-                        f"{last_run['JobName']}\t{last_run['AllocatedCapacity']}\t{last_run['StartedOn']}\t{last_run['CompletedOn']}\t{duration}")
+                    total_duration += duration
+                    job_list.append(
+                        (last_run['JobName'], last_run['AllocatedCapacity'], last_run['StartedOn'],
+                         last_run['CompletedOn'],
+                         duration))
+
+            next_token = response.get('NextToken')
+            if not next_token:
+                break
+
+        job_list_sorted = sorted(job_list, key=lambda x: x[4], reverse=True)
+        for job in job_list_sorted:
+            job_name, allocated_capacity, started_on, completed_on, duration = job
+            print(f"{job_name}\t{allocated_capacity}\t{started_on}\t{completed_on}\t{duration}")
 
 
 if __name__ == '__main__':

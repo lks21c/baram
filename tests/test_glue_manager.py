@@ -234,7 +234,7 @@ def test_refresh_job(gm):
 
 
 def test_summary(gm):
-    gm.summary()
+    gm.analyze_glue_usage()
 
 
 def test_rename_job(gm, sample):

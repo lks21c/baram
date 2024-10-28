@@ -1,4 +1,5 @@
 import os
+from http.client import responses
 from pprint import pprint
 
 import pytest
@@ -268,26 +269,31 @@ def test_create_endpoint(spm):
     sess = sagemaker.Session()
 
     # 모델 생성
-    model = sagemaker.model.Model(
-        image_uri='366743142698.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker-xgboost:1.0-1-cpu-py3',
-        model_data=f's3://{spm.default_bucket}/{spm.pipeline_name}/model/pipelines-v5g0epxo78dc-train-smbeta-pipelin-T2cscQY9nc/output/model.tar.gz',
-        role=spm.role,
-        sagemaker_session=sess
+    # model = sagemaker.model.Model(
+    #     image_uri='366743142698.dkr.ecr.ap-northeast-2.amazonaws.com/sagemaker-xgboost:1.0-1-cpu-py3',
+    #     model_data=f's3://{spm.default_bucket}/{spm.pipeline_name}/model/pipelines-v5g0epxo78dc-train-smbeta-pipelin-T2cscQY9nc/output/model.tar.gz',
+    #     role=spm.role,
+    #     sagemaker_session=sess
+    # )
+    #
+    # response = spm.cli.create_endpoint_config(
+    #     EndpointConfigName="serverless-endpoint",
+    #     ProductionVariants=[
+    #         {
+    #             "ModelName": "pipelines-wr8jz5d4j79m-create-model-smbeta--Y5eCRMOt7F",
+    #             "VariantName": "AllTraffic",
+    #             "ServerlessConfig": {
+    #                 "MemorySizeInMB": 2048,
+    #                 "MaxConcurrency": 20,
+    #                 "ProvisionedConcurrency": 10,
+    #             }
+    #         }
+    #     ]
+    # )
+
+    response = spm.cli.create_endpoint(
+        EndpointName="slep",
+        EndpointConfigName="serverless-endpoint"
     )
 
-    # 엔드포인트 구성 생성
-    endpoint_config_name = "my-endpoint-config"
-    endpoint_config = model.prepare_container_def(
-        instance_type="ml.t2.medium",
-        serverless_inference_config=sagemaker.serverless.ServerlessInferenceConfig()
-    )
-    print(f'endpoint_config: {endpoint_config}')
-    sess.create_endpoint_config(**endpoint_config)
-
-    # 엔드포인트 생성
-    endpoint_name = "kwangsik-endpoint"
-    sess.create_endpoint(
-        endpoint_name=endpoint_name,
-        endpoint_config_name=endpoint_config_name,
-        wait=True
-    )
+    pprint(responses)

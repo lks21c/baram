@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 import tempfile
 from typing import Optional
 
@@ -356,6 +357,66 @@ class S3Manager(object):
             return len(pd.unique(df[distinct_col_name]))
         else:
             return df.shape[0]
+
+    def analyze_s3_access_logs(self,
+                               bucket_name: str,
+                               prefix: str = None,
+                               start_date: str = None,
+                               end_date: str = None,
+                               timezone=timezone.utc) -> tuple[int, int]:
+        '''
+        Analyze S3 access logs to count read and write operations.
+
+        :param bucket_name:
+        :param prefix:
+        :param start_date:
+        :param end_date:
+        :return:
+        '''
+
+        s3 = boto3.client('s3')
+
+        read_count = 0
+        write_count = 0
+
+        if start_date:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d').replace(tzinfo=timezone)
+        if end_date:
+            end_date = datetime.strptime(end_date, '%Y-%m-%d').replace(tzinfo=timezone)
+
+        kwargs = {'Bucket': bucket_name}
+        if prefix:
+            kwargs['Prefix'] = prefix
+        while True:
+            response = s3.list_objects_v2(**kwargs)
+            if 'Contents' not in response:
+                break
+
+            for obj in response['Contents']:
+
+                if start_date and obj['LastModified'] < start_date:
+                    continue
+                if end_date and obj['LastModified'] >= end_date:
+                    continue
+
+                log_file = obj['Key']
+                log_content = s3.get_object(Bucket=bucket_name, Key=log_file)['Body'].read().decode('utf-8')
+
+                for line in log_content.splitlines():
+                    if len(line.split(' ')) < 6:
+                        continue
+                    operation = line.split(' ')[5]
+                    if operation in ('REST.GET.OBJECT', 'GET.ACL', 'GET.CORS', 'HEAD'):
+                        read_count += 1
+                    elif operation in ('PUT.OBJECT', 'POST.OBJECT', 'DELETE.OBJECT', 'PUT.ACL', 'PUT.CORS'):
+                        write_count += 1
+
+            if 'NextContinuationToken' in response:
+                kwargs['ContinuationToken'] = response['NextContinuationToken']
+            else:
+                break
+
+        return read_count, write_count
 
     def get_avro_as_list(self, avro_path: str):
         """

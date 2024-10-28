@@ -1,6 +1,8 @@
 from pprint import pprint
 from typing import Optional, Union, Dict, Any, List, Literal
 
+import awswrangler as wr
+import boto3
 import fire
 import pandas as pd
 import awswrangler as wr
@@ -20,6 +22,7 @@ class AthenaManager(object):
         self.QUERY_RESULT_BUCKET = query_result_bucket_name
         self.OUTPUT_BUCKET = output_bucket_name
         self.ATHENA_WORKGROUP = workgroup
+        self.cli = boto3.client('athena')
 
     def create_external_table(self,
                               db_name: str,
@@ -305,6 +308,73 @@ class AthenaManager(object):
                          db_name=to_db_name,
                          params=params,
                          paramstyle=paramstyle)
+    def analyze_query_usage(self, workgroup: str, threshold_size: int):
+        '''
+        Analyze Athena query usage.
+
+        :param workgroup:
+        :param threshold_size:
+        :return:
+        '''
+
+        def get_query(query_execution_id: str):
+            response = athena_client.get_query_execution(
+                QueryExecutionId=query_execution_id
+            )
+
+            query_string = response['QueryExecution']['Query']
+            return query_string
+
+        query_execution_ids = []
+        next_token = None
+        kwargs = {'WorkGroup': workgroup, 'MaxResults': 50}
+        while True:
+            if next_token:
+                kwargs['NextToken'] = next_token
+            else:
+                kwargs.pop('NextToken', None)
+
+            response = athena_client.list_query_executions(**kwargs)
+            query_execution_ids.extend(response['QueryExecutionIds'])
+
+            next_token = response.get('NextToken')
+            if not next_token:
+                break
+
+        # Retrieve information for each query and print the amount of data scanned
+        scan_dict = {}
+        for query_execution_id in query_execution_ids:
+            try:
+                query_info = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
+                completion_datetime = query_info['QueryExecution']['Status']['CompletionDateTime'].replace(tzinfo=None)
+                current_month = datetime(datetime.today().year, datetime.today().month, 1)
+                one_month_later = current_month + relativedelta(months=1)
+
+                if current_month <= completion_datetime and completion_datetime < one_month_later:
+                    data_scanned = query_info['QueryExecution']['Statistics']['DataScannedInBytes']
+                    if data_scanned > threshold_size:
+                        scan_dict[query_execution_id] = data_scanned
+            except:
+                continue
+
+        sorted_scan_dict = {k: v for k, v in sorted(scan_dict.items(), key=lambda item: item[1], reverse=True)}
+        total_scanned_byte = 0
+        new_dict = {}
+        for k, v in sorted_scan_dict.items():
+            key = get_query(k)
+            if key not in new_dict:
+                new_dict[key] = v
+            else:
+                new_dict[key] += v
+            total_scanned_byte += int(v)
+
+        sorted_scan_new_dict = {k: v for k, v in sorted(new_dict.items(), key=lambda item: item[1], reverse=True)}
+        for k, v in sorted_scan_new_dict.items():
+            percent = v / total_scanned_byte * 100
+            print(k, f'{v / threshold_size:.1f}GB ({percent:.1f}%)')
+
+        print(f'total_scanned_byte: {total_scanned_byte / threshold_size:.1f}GB')
+
 
 if __name__ == '__main__':
     fire.Fire(AthenaManager)
