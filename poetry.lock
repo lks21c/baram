@@ -198,6 +198,21 @@ tests-mypy = ["mypy (>=1.6)", "pytest-mypy-plugins"]
 tests-no-zope = ["attrs[tests-mypy]", "cloudpickle", "hypothesis", "pympler", "pytest (>=4.3.0)", "pytest-xdist[psutil]"]
 
 [[package]]
+name = "avro"
+version = "1.12.0"
+description = "Avro is a serialization and RPC framework."
+optional = false
+python-versions = ">=3.7"
+files = [
+    {file = "avro-1.12.0-py2.py3-none-any.whl", hash = "sha256:9a255c72e1837341dd4f6ff57b2b6f68c0f0cecdef62dd04962e10fd33bec05b"},
+    {file = "avro-1.12.0.tar.gz", hash = "sha256:cad9c53b23ceed699c7af6bddced42e2c572fd6b408c257a7d4fc4e8cf2e2d6b"},
+]
+
+[package.extras]
+snappy = ["python-snappy"]
+zstandard = ["zstandard"]
+
+[[package]]
 name = "awswrangler"
 version = "3.9.1"
 description = "Pandas on AWS."
@@ -3857,4 +3872,4 @@ type = ["pytest-mypy"]
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.9,<4.0"
-content-hash = "beec3eab4c880f15fcd77bdb7b72929ef472155184f9e20fe4f1b2374d4f907b"
+content-hash = "6a42329dfc90aa0fea0e397191bb6a6abee99bb145df4ef8385a820a588a6e3c"
