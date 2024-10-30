@@ -295,3 +295,14 @@ def test_copy_object(sm, sample):
     assert sm.check_s3_object_exists(sample['s3_bucket_name'], to_key)
 
     sm.delete_objects([from_key, to_key])
+
+
+def test_analyze_s3_access_logs(sm, sample):
+    # When
+    stats = sm.analyze_s3_access_logs(bucket_name='sli-dst-s3access-public',
+                                      prefix='145885190059/ap-northeast-2/sli-dst-dlprod-public/',
+                                      start_date='2024-10-01',
+                                      end_date='2024-10-31')
+
+    # Then
+    print(stats)

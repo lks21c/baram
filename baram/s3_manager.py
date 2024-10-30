@@ -1,14 +1,15 @@
 import os
-from datetime import datetime, timezone
 import tempfile
+from datetime import datetime, timezone
+from pprint import pprint
 from typing import Optional
 
+import awswrangler as wr
 import boto3
 import botocore
-import awswrangler as wr
-from botocore.client import Config
-from avro.io import DatumReader
 from avro.datafile import DataFileReader
+from avro.io import DatumReader
+from botocore.client import Config
 
 from baram.kms_manager import KMSManager
 from baram.log_manager import LogManager
@@ -363,7 +364,7 @@ class S3Manager(object):
                                prefix: str = None,
                                start_date: str = None,
                                end_date: str = None,
-                               timezone=timezone.utc) -> tuple[int, int]:
+                               timezone=timezone.utc):
         '''
         Analyze S3 access logs to count read and write operations.
 
@@ -376,9 +377,6 @@ class S3Manager(object):
 
         s3 = boto3.client('s3')
 
-        read_count = 0
-        write_count = 0
-
         if start_date:
             start_date = datetime.strptime(start_date, '%Y-%m-%d').replace(tzinfo=timezone)
         if end_date:
@@ -387,10 +385,15 @@ class S3Manager(object):
         kwargs = {'Bucket': bucket_name}
         if prefix:
             kwargs['Prefix'] = prefix
+
+        stats = []
         while True:
             response = s3.list_objects_v2(**kwargs)
+
             if 'Contents' not in response:
                 break
+
+            pprint(response)
 
             for obj in response['Contents']:
 
@@ -400,23 +403,41 @@ class S3Manager(object):
                     continue
 
                 log_file = obj['Key']
-                log_content = s3.get_object(Bucket=bucket_name, Key=log_file)['Body'].read().decode('utf-8')
+                try:
+                    log_content = s3.get_object(Bucket=bucket_name, Key=log_file)['Body'].read().decode('utf-8')
+                except Exception as e:
+                    print(f'Error: {e} {log_file}')
+                    continue
 
                 for line in log_content.splitlines():
-                    if len(line.split(' ')) < 6:
-                        continue
-                    operation = line.split(' ')[5]
-                    if operation in ('REST.GET.OBJECT', 'GET.ACL', 'GET.CORS', 'HEAD'):
-                        read_count += 1
-                    elif operation in ('PUT.OBJECT', 'POST.OBJECT', 'DELETE.OBJECT', 'PUT.ACL', 'PUT.CORS'):
-                        write_count += 1
+                    token = line.split(' ')
+                    cnt_type = 'read' if token[9].replace('"', '') in ('GET', 'HEAD') else 'write'
+                    target_bucket = token[1]
+                    resource = token[10]
+
+                    found = False
+                    for i, (ct, tb, res, val) in enumerate(stats):
+                        if ct == cnt_type and tb == target_bucket and res == resource:
+                            stats[i] = (ct, tb, res, val + 1)
+                            found = True
+                            break
+
+                    if not found:
+                        stats.append((cnt_type, target_bucket, resource, 1))
 
             if 'NextContinuationToken' in response:
                 kwargs['ContinuationToken'] = response['NextContinuationToken']
             else:
                 break
 
-        return read_count, write_count
+        stats.sort(key=lambda x: x[3], reverse=True)
+        return self._format_stats_for_excel(stats)
+
+    def _format_stats_for_excel(self, stats):
+        headers = ["Count Type", "Target Bucket", "Resource", "Value"]
+        rows = [headers] + stats
+        formatted_output = "\n".join(["\t".join(map(str, row)) for row in rows])
+        return formatted_output
 
     def get_avro_as_list(self, avro_path: str):
         """
