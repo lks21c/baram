@@ -277,6 +277,25 @@ def test_copy(sm, sample):
     sm.delete_objects([from_key, to_key])
 
 
+def test_copy_with_storage_class(sm, sample):
+    # Given
+    from_key, to_key = sample['s3_key'], 'readme_2.md'
+    storage_class = 'DEEP_ARCHIVE'
+    sm.put_object(from_key, 'hello world')
+
+    # When
+    sm.copy(from_key=from_key, to_key=to_key, StorageClass=storage_class)
+
+    # Then
+    from_check = sm.check_s3_object_exists(sample['s3_bucket_name'], from_key)
+    assert from_check
+
+    response = sm.head_s3_object(sample['s3_bucket_name'], to_key)
+    assert response['StorageClass'] == storage_class
+
+    sm.delete_objects([from_key, to_key])
+
+
 def test_copy_object(sm, sample):
     # Given
     s3_body = 'hello world'
@@ -306,3 +325,9 @@ def test_analyze_s3_access_logs(sm, sample):
 
     # Then
     print(stats)
+
+def test_change_storage_class(sm, sample):
+    sm.change_object_storage_class(delimiter='/')
+
+    # for obj in sm.list_dir(''):
+    #     print(obj)

@@ -223,8 +223,20 @@ class S3Manager(object):
         :param delimiter: A delimiter is a character you use to group keys.
         :return: response
         '''
-        response = self.cli.list_objects_v2(Bucket=self.bucket_name, Prefix=prefix, Delimiter=delimiter)
-        return response['Contents'] if 'Contents' in response else None
+        kwargs = {'Bucket': self.bucket_name, 'Prefix': prefix, 'Delimiter': delimiter}
+        objects = []
+
+        while True:
+            response = self.cli.list_objects_v2(**kwargs)
+            if 'Contents' in response:
+                for obj in response['Contents']:
+                    objects.append(obj)
+            if 'NextContinuationToken' in response:
+                kwargs['ContinuationToken'] = response['NextContinuationToken']
+            else:
+                break
+
+        return objects if objects else None
 
     def list_dir(self, prefix: str = '', delimiter: str = '/'):
         '''
@@ -260,7 +272,7 @@ class S3Manager(object):
         conf = self.cli.get_bucket_encryption(Bucket=self.bucket_name)['ServerSideEncryptionConfiguration']
         return conf['Rules'][0]['ApplyServerSideEncryptionByDefault'] if conf else None
 
-    def copy(self, from_key: str, to_key: str, to_bucket: Optional[str] = None):
+    def copy(self, from_key: str, to_key: str, to_bucket: Optional[str] = None, **kwargs):
         '''
         Creates a copy of an object that is already stored in Amazon S3.
 
@@ -275,7 +287,7 @@ class S3Manager(object):
             'Key': from_key
         }
         to_bucket = to_bucket if to_bucket else self.bucket_name
-        self.cli.copy(copy_source, to_bucket, to_key)
+        self.cli.copy(copy_source, to_bucket, to_key, ExtraArgs=kwargs)
 
     def copy_object(self, from_key: str, to_key: str):
         '''
@@ -322,6 +334,20 @@ class S3Manager(object):
         '''
         return f's3://{s3_bucket_name}/{path}'
 
+    def head_s3_object(self, s3_bucket_name: str, path: str):
+        '''
+        Head s3 object.
+        :param s3_bucket_name:
+        :param path:
+        :return:
+        '''
+
+        try:
+            response = self.cli.head_object(Bucket=s3_bucket_name, Key=path)
+            return response
+        except botocore.exceptions.ClientError as e:
+            return None
+
     def check_s3_object_exists(self, s3_bucket_name: str, path: str):
         '''
         Check if s3 object exists.
@@ -331,8 +357,7 @@ class S3Manager(object):
         :return:
         '''
         try:
-            self.cli.head_object(Bucket=s3_bucket_name,
-                                 Key=path)
+            self.head_s3_object(s3_bucket_name, path)
             return True
         except botocore.exceptions.ClientError as e:
             pass
@@ -454,3 +479,20 @@ class S3Manager(object):
             reader = DataFileReader(open(local_file_path, 'rb'), DatumReader())
 
         return list(reader)
+
+    def change_object_storage_class(self, prefix: str = '', delimiter: str = '', storage_class: str = 'DEEP_ARCHIVE'):
+        '''
+        Change the storage class of all objects in the S3 bucket to DEEP_ARCHIVE.
+
+        :param prefix: Limits the response to keys that begin with the specified prefix.
+        :param delimiter: A delimiter is a character you use to group keys.
+        :param storage_class: STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE
+        '''
+
+        objects = self.list_objects(prefix=prefix,delimiter=delimiter)
+        if objects:
+            for obj in objects:
+                try:
+                    self.copy(from_key=obj['Key'], to_key=obj['Key'], StorageClass=storage_class)
+                except Exception as e:
+                    print(obj['Key'] + f' error {e}')
