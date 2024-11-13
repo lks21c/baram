@@ -215,14 +215,26 @@ class S3Manager(object):
         bucket.download_file(s3_file_path, local_file_path)
         self.logger.info(f'download : {s3_file_path} to Target: {local_file_path} Success.')
 
-    def list_objects(self, prefix: str = '', delimiter: str = ''):
+    def list_objects(self,
+                     prefix: str = '',
+                     delimiter: str = '',
+                     threshold: datetime = None,
+                     crit: str = None):
         '''
         List S3 objects.
 
         :param prefix: Limits the response to keys that begin with the specified prefix.
         :param delimiter: A delimiter is a character you use to group keys.
+        :param threshold: A specific datetime value for filtering.
+        :param crit: A criteria for filtering. This should be one among 'after', 'before' or 'equals'.
         :return: response
         '''
+        if crit:
+            assert threshold, "You need 'threshold' when using 'crit' argument"
+            assert crit in ('after', 'before', 'equals'), f'crit:{crit} is wrong value for crit'
+        else:
+            assert threshold is None
+
         kwargs = {'Bucket': self.bucket_name, 'Prefix': prefix, 'Delimiter': delimiter}
         objects = []
 
@@ -236,7 +248,14 @@ class S3Manager(object):
             else:
                 break
 
-        return objects if objects else None
+        if objects and threshold:
+            return [obj for obj in objects if obj['LastModified'] > threshold] if crit == 'after' \
+                else [obj for obj in objects if obj['LastModified'] < threshold] if crit == 'before' \
+                else [obj for obj in objects if obj['LastModified'] == threshold]
+        elif objects:
+            return objects
+        else:
+            return None
 
     def list_dir(self, prefix: str = '', delimiter: str = '/'):
         '''
