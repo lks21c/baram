@@ -1,11 +1,12 @@
 from pprint import pprint
 from typing import Optional, Union, Dict, Any, List, Literal
 
-import awswrangler as wr
 import boto3
 import fire
 import pandas as pd
 import awswrangler as wr
+from datetime import datetime
+from dateutil.relativedelta import relativedelta
 from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
 
 from baram.s3_manager import S3Manager
@@ -49,15 +50,15 @@ class AthenaManager(object):
         columns = ', '.join([f"`{k}` {column_def[k]} comment '{column_comments[k]}'"
                              if k in column_comments.keys() else f"{k} {column_def[k]}" for k in column_def])
         partitions = 'partitioned by (' + ', '.join([f"{k} {partition_cols[k]}"
-                                                    for k in partition_cols]) + ')' if partition_cols else ''
+                                                     for k in partition_cols]) + ')' if partition_cols else ''
 
-        sql = f"create external table if not exists {db_name}.{table_name}("\
-              f"{columns}) "\
-              f"comment '{table_comment}' "\
+        sql = f"create external table if not exists {db_name}.{table_name}(" \
+              f"{columns}) " \
+              f"comment '{table_comment}' " \
               f"{partitions} " \
-              f"row format delimited fields terminated by ',' "\
-              f"stored as textfile "\
-              f"location '{location}' "\
+              f"row format delimited fields terminated by ',' " \
+              f"stored as textfile " \
+              f"location '{location}' " \
               f"tblproperties ('classification'='csv', 'skip.header.line.count'='1');"
 
         self.fetch_query(sql=sql,
@@ -74,11 +75,10 @@ class AthenaManager(object):
 
     def delete_table(self, db_name: str, table_name: str):
         '''
-        Delete Glue Table.
+        Delete glue table.
 
         :param db_name: target glue database name
         :param table_name: target glue table name
-        :param table_path:
         :return:
         '''
         sm = S3Manager(self.OUTPUT_BUCKET)
@@ -97,6 +97,20 @@ class AthenaManager(object):
         except Exception as e:
             self.logger.info(e)
             raise e
+
+    def delete_table_if_exists(self, db_name: str, table_name: str):
+        '''
+        Delete glue table if it exists, else pass
+
+        :param db_name: target glue database name
+        :param table_name: target glue table name
+        :return:
+        '''
+
+        if self.check_table_exists(db_name=db_name, table_name=table_name):
+            self.delete_table(db_name=db_name, table_name=table_name)
+        else:
+            self.logger.info('There is no table to delete')
 
     def fetch_query(self,
                     sql: str,
@@ -139,6 +153,7 @@ class AthenaManager(object):
         '''
         Return rows from table.
 
+        :param db_name:
         :param table_name:
         :return:
         '''
@@ -182,7 +197,8 @@ class AthenaManager(object):
 
         return self.fetch_query(f"VACUUM {table_name}", db_name)
 
-    def check_table_exists(self, db_name: str, table_name: str):
+    @staticmethod
+    def check_table_exists(db_name: str, table_name: str):
         '''
         Return table exists or not.
 
@@ -243,12 +259,12 @@ class AthenaManager(object):
         :param db_name:
         :param table_name:
         :param property: among below things
-                        files – Shows a table's current data files.
-                        manifests – Shows a table's current file manifests.
-                        history – Shows a table's history.
-                        partitions – Shows a table's current partitions.
-                        snapshots – Shows a table's snapshots.
-                        refs – Shows a table's references.
+                    files – Shows a table's current data files.
+                    manifests – Shows a table's current file manifests.
+                    history – Shows a table's history.
+                    partitions – Shows a table's current partitions.
+                    snapshots – Shows a table's snapshots.
+                    refs – Shows a table's references.
         :param workgroup:
         :return:
         '''
@@ -272,10 +288,10 @@ class AthenaManager(object):
         :return:
         '''
 
-        df = self.get_table_manifest_df(db_name=db_name,
-                                        table_name=table_name,
-                                        property='manifests',
-                                        workgroup=workgroup)
+        df = self.get_iceberg_metadata_df(db_name=db_name,
+                                          table_name=table_name,
+                                          property='manifests',
+                                          workgroup=workgroup)
         return df['path'].to_list()
 
     def create_iceberg_table_from_table(self,
@@ -301,13 +317,13 @@ class AthenaManager(object):
         ctas = f"""create table {to_db_name}.{to_table_name}
                    with (table_type = 'ICEBERG',
                          location = '{location}',
-                         is_external = false)
-                   as {as_sql}"""
+                         is_external = false) as {as_sql}"""
 
         self.fetch_query(sql=ctas,
                          db_name=to_db_name,
                          params=params,
                          paramstyle=paramstyle)
+
     def analyze_query_usage(self, workgroup: str, threshold_size: int):
         '''
         Analyze Athena query usage.
@@ -318,7 +334,7 @@ class AthenaManager(object):
         '''
 
         def get_query(query_execution_id: str):
-            response = athena_client.get_query_execution(
+            response = self.cli.get_query_execution(
                 QueryExecutionId=query_execution_id
             )
 
@@ -334,7 +350,7 @@ class AthenaManager(object):
             else:
                 kwargs.pop('NextToken', None)
 
-            response = athena_client.list_query_executions(**kwargs)
+            response = self.cli.list_query_executions(**kwargs)
             query_execution_ids.extend(response['QueryExecutionIds'])
 
             next_token = response.get('NextToken')
@@ -345,12 +361,12 @@ class AthenaManager(object):
         scan_dict = {}
         for query_execution_id in query_execution_ids:
             try:
-                query_info = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
+                query_info = self.cli.get_query_execution(QueryExecutionId=query_execution_id)
                 completion_datetime = query_info['QueryExecution']['Status']['CompletionDateTime'].replace(tzinfo=None)
                 current_month = datetime(datetime.today().year, datetime.today().month, 1)
                 one_month_later = current_month + relativedelta(months=1)
 
-                if current_month <= completion_datetime and completion_datetime < one_month_later:
+                if current_month <= completion_datetime < one_month_later:
                     data_scanned = query_info['QueryExecution']['Statistics']['DataScannedInBytes']
                     if data_scanned > threshold_size:
                         scan_dict[query_execution_id] = data_scanned
@@ -374,6 +390,152 @@ class AthenaManager(object):
             print(k, f'{v / threshold_size:.1f}GB ({percent:.1f}%)')
 
         print(f'total_scanned_byte: {total_scanned_byte / threshold_size:.1f}GB')
+
+    def create_named_query(self,
+                           query_name: str,
+                           sql: str,
+                           db_name: str,
+                           workgroup: str = None):
+        '''
+        Create named query
+
+        :param query_name: the name of query
+        :param sql: DDL or DML script to save
+        :param db_name: database name query belongs to
+        :param workgroup: athena workgroup which named query saved in
+        :param description:
+        :return:
+        '''
+
+        self.cli.create_named_query(Name=query_name,
+                                    Database=db_name,
+                                    QueryString=sql,
+                                    WorkGroup=workgroup if workgroup else self.ATHENA_WORKGROUP)
+
+    def delete_named_query_by_name(self, query_name: str, workgroup: str = None):
+        '''
+        Delete named query with its name
+
+        :param query_name: the name of query
+        :param workgroup: The name of athena workgroup
+        :return:
+        '''
+
+        query_id = self.get_named_query_info_by_name(query_name=query_name,
+                                                     workgroup=workgroup)['NamedQueryId']
+
+        self.cli.delete_named_query(NamedQueryId=query_id)
+
+    def get_named_query_ids(self, workgroup: str = None) -> List:
+        '''
+        Get all named query ids in specific athena workgroup
+
+        :param workgroup: The name of athena workgroup
+        :return: list of ids of named queries
+        '''
+
+        kwargs = {'WorkGroup': workgroup if workgroup else self.ATHENA_WORKGROUP}
+        objects = []
+
+        while True:
+            response = self.cli.list_named_queries(**kwargs)
+            if 'NamedQueryIds' in response:
+                objects += response['NamedQueryIds']
+            if 'NextToken' in response:
+                kwargs['NextToken'] = response['NextToken']
+            else:
+                break
+
+        return objects if objects else None
+
+    def get_named_query_infos(self, workgroup: str = None) -> List:
+        '''
+        Get all named query infos in specific athena workgroup
+        (Name, Database, QueryString, NamedQueryId, WorkGroup)
+
+        :param workgroup: The name of athena workgroup
+        :return: list of dictionaries about named query information
+        '''
+
+        query_ids = self.get_named_query_ids(workgroup=workgroup)
+
+        try:
+            return [self.cli.get_named_query(NamedQueryId=query_id)['NamedQuery']
+                    for query_id in query_ids]
+        except Exception as e:
+            self.logger.info(e)
+            raise e
+
+    def get_named_query_names(self, workgroup: str = None) -> List:
+        '''
+        Get all named query names in specific athena workgroup
+
+        :param workgroup: The name of athena workgroup
+        :return: list of names of named queries
+        '''
+
+        return [info['Name'] for info in self.get_named_query_infos(workgroup=workgroup)]
+
+    def get_named_query_info_by_name(self,
+                                     query_name: str,
+                                     workgroup: str = None):
+        '''
+        Get information of named query with its name
+
+        :param query_name: name of named query
+        :param workgroup: The name of athena workgroup
+        :param workgroup:
+        :return:
+        '''
+
+        query_infos = self.get_named_query_infos(workgroup=workgroup)
+
+        return [info for info in query_infos if info['Name'] == query_name][0]
+
+    def get_named_query_string_by_name(self,
+                                       query_name: str,
+                                       workgroup: str = None) -> str:
+        '''
+        Get query string of named query with its name
+
+        :param query_name: name of named query
+        :param workgroup: The name of athena workgroup
+        :return: query string of named query
+        '''
+
+        return self.get_named_query_info_by_name(query_name=query_name,
+                                                 workgroup=workgroup)['QueryString']
+
+    def fetch_named_query(self,
+                          query_name: str,
+                          workgroup: str = None,
+                          db_name: Optional[str] = None,
+                          params: Union[Dict[str, Any], List[str], None] = None,
+                          paramstyle: Literal['qmark', 'named'] = 'qmark',
+                          s3_output: Optional[str] = None,
+                          athena_query_wait_polling_delay: float = _QUERY_WAIT_POLLING_DELAY):
+        '''
+        Fetch named query with its name
+
+        :param query_name: the name of named query
+        :param workgroup: The name of athena workgroup
+        :param db_name: database name
+        :param params: for parametrized query.
+                       This should be dictionary for "named" paramstyle and list for "qmark" paramstyle.
+        :param paramstyle: "named" or "qmark"
+        :param s3_output: You can choose output bucket for query result. default is workgroup s3 bucket.
+        :param athena_query_wait_polling_delay: float, default: 0.25 seconds
+        Interval in seconds for how often the function will check if the Athena query has completed.
+        :return: Dictionary with the get_query_execution response. You can obtain query result as csv on S3.
+        '''
+
+        self.fetch_query(sql=self.get_named_querystring_with_name(query_name=query_name,
+                                                                  workgroup=workgroup),
+                         db_name=db_name,
+                         params=params,
+                         paramstyle=paramstyle,
+                         s3_output=s3_output,
+                         athena_query_wait_polling_delay=athena_query_wait_polling_delay)
 
 
 if __name__ == '__main__':
