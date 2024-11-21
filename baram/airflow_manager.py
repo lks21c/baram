@@ -118,14 +118,14 @@ class AirflowManager(object):
         :return:
         '''
 
-        data = {'conf': json.dumps(params)}
+        data = {'conf': params}
         headers = {'accept': 'application/json', 'Content-Type': 'application/json'}
 
         response = requests.post(
-            url=f'http://{server_ip}:{server_port}/api/vi/dags/{dag_id}/dagRuns',
+            url=f'http://{server_ip}:{server_port}/api/v1/dags/{dag_id}/dagRuns',
             auth=auth,
             headers=headers,
-            data=data
+            data=json.dumps(data)
         )
 
         assert response.status_code == 200
