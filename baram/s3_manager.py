@@ -1,12 +1,12 @@
 import os
 import tempfile
 from datetime import datetime, timezone
-from pprint import pprint
 from typing import Optional
 
 import awswrangler as wr
 import boto3
 import botocore
+import ujson
 from avro.datafile import DataFileReader
 from avro.io import DatumReader
 from botocore.client import Config
@@ -15,7 +15,7 @@ from baram.kms_manager import KMSManager
 from baram.log_manager import LogManager
 
 
-class S3Manager(object):
+class S3Manager:
     def __init__(self, bucket_name: str, region: Optional[str] = 'ap-northeast-2'):
 
         config = Config(region_name=region, signature_version='v4')
@@ -26,7 +26,7 @@ class S3Manager(object):
         try:
             bi = self.get_bucket_encryption()
             self.kms_algorithm, self.kms_id = bi['SSEAlgorithm'], bi['KMSMasterKeyID']
-        except:
+        except (botocore.exceptions.ClientError, KeyError, TypeError):
             self.kms_algorithm, self.kms_id = None, None
 
     def list_buckets(self):
@@ -65,6 +65,26 @@ class S3Manager(object):
         except self.cli.exceptions.NoSuchKey:
             self.logger.info(f'{s3_key_id} does not exist.')
             return None
+
+    def get_object_as_json(self, s3_key_id: str) -> Optional[dict]:
+        '''
+        Get S3 object and parse as JSON.
+
+        :param s3_key_id: s3 key id. ex) nylon-detector/a.json
+        :return: parsed dict or None
+        '''
+        body = self.get_object(s3_key_id)
+        return ujson.loads(body) if body else None
+
+    def put_object_as_json(self, s3_key_id: str, data: dict):
+        '''
+        Serialize dict to JSON and put to S3.
+
+        :param s3_key_id: s3 key id. ex) nylon-detector/a.json
+        :param data: dict data
+        :return: response
+        '''
+        return self.put_object(s3_key_id, ujson.dumps(data))
 
     def get_object_by_lines(self, s3_key_id: str):
         '''
@@ -206,8 +226,8 @@ class S3Manager(object):
     def download_file(self, s3_file_path: str, local_file_path: str):
         '''
         Download file from s3.
-        \
-        :param s3_dir_path: s3 path. ex) nylon-detector/crawl_data/a.csv
+
+        :param s3_file_path: s3 path. ex) nylon-detector/crawl_data/a.csv
         :param local_file_path: local file path. ex) /Users/lks21c/repo/sli-aflow/a.csv
         :return: response
         '''
@@ -237,6 +257,17 @@ class S3Manager(object):
                 break
 
         return objects if objects else None
+
+    def list_object_keys(self, prefix: str = '', delimiter: str = '') -> Optional[list]:
+        '''
+        List S3 object keys as strings.
+
+        :param prefix: Limits the response to keys that begin with the specified prefix.
+        :param delimiter: A delimiter is a character you use to group keys.
+        :return: list of key strings or None
+        '''
+        objects = self.list_objects(prefix=prefix, delimiter=delimiter)
+        return [obj['Key'] for obj in objects] if objects else None
 
     def list_dir(self, prefix: str = '', delimiter: str = '/'):
         '''
@@ -303,7 +334,7 @@ class S3Manager(object):
             Key=to_key
         )
 
-    def get_s3_web_url(self, s3_bucket_name, path: str, region: str = 'ap-northeast-2'):
+    def get_s3_web_url(self, s3_bucket_name: Optional[str] = None, path: str = '', region: str = 'ap-northeast-2'):
         '''
         get s3 web url
 
@@ -312,6 +343,7 @@ class S3Manager(object):
         :param region: s3 region
         :return:
         '''
+        s3_bucket_name = s3_bucket_name or self.bucket_name
         return f'https://s3.console.aws.amazon.com/s3/buckets/{s3_bucket_name}?region={region}&prefix={path}'
 
     def convert_s3_path_to_web_url(self, s3_path: str):
@@ -324,7 +356,7 @@ class S3Manager(object):
         token = s3_path.replace('s3://', '').split('/')
         return self.get_s3_web_url(token[0], '/'.join(token[1:]))
 
-    def get_s3_full_path(self, s3_bucket_name: str, path: str):
+    def get_s3_full_path(self, s3_bucket_name: Optional[str] = None, path: str = ''):
         '''
         Get s3 full path.
 
@@ -332,23 +364,24 @@ class S3Manager(object):
         :param path: path
         :return:
         '''
+        s3_bucket_name = s3_bucket_name or self.bucket_name
         return f's3://{s3_bucket_name}/{path}'
 
-    def head_s3_object(self, s3_bucket_name: str, path: str):
+    def head_s3_object(self, s3_bucket_name: Optional[str] = None, path: str = ''):
         '''
         Head s3 object.
         :param s3_bucket_name:
         :param path:
         :return:
         '''
-
+        s3_bucket_name = s3_bucket_name or self.bucket_name
         try:
             response = self.cli.head_object(Bucket=s3_bucket_name, Key=path)
             return response
-        except botocore.exceptions.ClientError as e:
+        except botocore.exceptions.ClientError:
             return None
 
-    def check_s3_object_exists(self, s3_bucket_name: str, path: str):
+    def check_s3_object_exists(self, s3_bucket_name: Optional[str] = None, path: str = ''):
         '''
         Check if s3 object exists.
 
@@ -356,12 +389,53 @@ class S3Manager(object):
         :param path:  path
         :return:
         '''
+        s3_bucket_name = s3_bucket_name or self.bucket_name
+        return self.head_s3_object(s3_bucket_name, path) is not None
+
+    def get_object_metadata(self, s3_key_id: str) -> Optional[dict]:
+        '''
+        Get object metadata via head_object using instance bucket.
+
+        :param s3_key_id: s3 key id
+        :return: metadata dict or None
+        '''
+        return self.head_s3_object(self.bucket_name, s3_key_id)
+
+    def generate_presigned_url(self, s3_key_id: str, expiration: int = 3600, http_method: str = 'GET') -> str:
+        '''
+        Generate a presigned URL for an S3 object.
+
+        :param s3_key_id: s3 key id
+        :param expiration: expiration in seconds, default 3600
+        :param http_method: GET or PUT
+        :return: presigned URL
+        '''
+        client_method = 'get_object' if http_method == 'GET' else 'put_object'
+        return self.cli.generate_presigned_url(client_method,
+                                                Params={'Bucket': self.bucket_name, 'Key': s3_key_id},
+                                                ExpiresIn=expiration)
+
+    def get_bucket_location(self) -> str:
+        '''
+        Get the region of the bucket.
+
+        :return: region string
+        '''
+        response = self.cli.get_bucket_location(Bucket=self.bucket_name)
+        return response['LocationConstraint'] or 'us-east-1'
+
+    def check_bucket_exists(self, bucket_name: Optional[str] = None) -> bool:
+        '''
+        Check if a bucket exists.
+
+        :param bucket_name: bucket name, defaults to instance bucket
+        :return: True if exists
+        '''
         try:
-            self.head_s3_object(s3_bucket_name, path)
+            self.cli.head_bucket(Bucket=bucket_name or self.bucket_name)
             return True
-        except botocore.exceptions.ClientError as e:
-            pass
-        return False
+        except botocore.exceptions.ClientError:
+            return False
 
     def rename_file(self, from_file_path: str, to_file_path: str):
         '''
@@ -400,8 +474,6 @@ class S3Manager(object):
         :return:
         '''
 
-        s3 = boto3.client('s3')
-
         if start_date:
             start_date = datetime.strptime(start_date, '%Y-%m-%d').replace(tzinfo=timezone)
         if end_date:
@@ -413,12 +485,12 @@ class S3Manager(object):
 
         stats = []
         while True:
-            response = s3.list_objects_v2(**kwargs)
+            response = self.cli.list_objects_v2(**kwargs)
 
             if 'Contents' not in response:
                 break
 
-            pprint(response)
+            self.logger.debug(response)
 
             for obj in response['Contents']:
 
@@ -429,9 +501,9 @@ class S3Manager(object):
 
                 log_file = obj['Key']
                 try:
-                    log_content = s3.get_object(Bucket=bucket_name, Key=log_file)['Body'].read().decode('utf-8')
+                    log_content = self.cli.get_object(Bucket=bucket_name, Key=log_file)['Body'].read().decode('utf-8')
                 except Exception as e:
-                    print(f'Error: {e} {log_file}')
+                    self.logger.error(f'Error: {e} {log_file}')
                     continue
 
                 for line in log_content.splitlines():
@@ -470,7 +542,7 @@ class S3Manager(object):
         :return:
         """
         filename = avro_path.split('/')[-1]
-        assert filename.split('.')[-1] != 'avro'
+        assert filename.split('.')[-1] == 'avro'
 
         with tempfile.TemporaryDirectory() as tmpdir:
             local_file_path = f'{tmpdir}/{filename}'
@@ -489,10 +561,10 @@ class S3Manager(object):
         :param storage_class: STANDARD_IA, ONEZONE_IA, INTELLIGENT_TIERING, GLACIER, DEEP_ARCHIVE
         '''
 
-        objects = self.list_objects(prefix=prefix,delimiter=delimiter)
+        objects = self.list_objects(prefix=prefix, delimiter=delimiter)
         if objects:
             for obj in objects:
                 try:
                     self.copy(from_key=obj['Key'], to_key=obj['Key'], StorageClass=storage_class)
                 except Exception as e:
-                    print(obj['Key'] + f' error {e}')
+                    self.logger.error(obj['Key'] + f' error {e}')

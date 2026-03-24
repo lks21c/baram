@@ -6,7 +6,7 @@ import boto3
 from baram.log_manager import LogManager
 
 
-class SagemakerManager(object):
+class SagemakerManager:
     def __init__(self, domain_name: str):
         self.cli = boto3.client('sagemaker')
         self.domain_id = self.get_domain_id(domain_name=domain_name)

@@ -8,7 +8,7 @@ from baram.log_manager import LogManager
 from baram.process_manager import ProcessManager
 
 
-class LambdaManager(object):
+class LambdaManager:
     def __init__(self):
         self.cli = boto3.client('lambda')
         self.logger = LogManager.get_logger('LambdaManager')
@@ -60,3 +60,36 @@ class LambdaManager(object):
         self.cli.publish_layer_version(LayerName=arn,
                                        Content=content,
                                        CompatibleRuntimes=['python3.7', 'python3.8', 'python3.9'])
+
+    def list_functions(self, max_items: int = 50) -> list:
+        '''
+        List Lambda functions.
+
+        :param max_items: max number of functions to return
+        :return: list of functions
+        '''
+        return self.cli.list_functions(MaxItems=max_items)['Functions']
+
+    def invoke_function(self, function_name: str, payload: str = '',
+                        invocation_type: str = 'RequestResponse') -> dict:
+        '''
+        Invoke a Lambda function.
+
+        :param function_name: function name or ARN
+        :param payload: JSON string payload
+        :param invocation_type: RequestResponse, Event, or DryRun
+        :return: invocation response
+        '''
+        kwargs = {'FunctionName': function_name, 'InvocationType': invocation_type}
+        if payload:
+            kwargs['Payload'] = payload
+        return self.cli.invoke(**kwargs)
+
+    def get_function(self, function_name: str) -> dict:
+        '''
+        Get Lambda function configuration and code location.
+
+        :param function_name: function name or ARN
+        :return: function details
+        '''
+        return self.cli.get_function(FunctionName=function_name)

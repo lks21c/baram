@@ -4,7 +4,7 @@ import aiohttp
 import nest_asyncio
 
 
-class AsyncCrawler(object):
+class AsyncCrawler:
 
     def request_urls(self, method: str, urls: list, **kwargs: dict) -> list:
         '''

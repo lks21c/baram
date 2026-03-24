@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from pprint import pprint
 from typing import Optional
 
 import awswrangler as wr
@@ -12,7 +11,7 @@ from baram.log_manager import LogManager
 from baram.s3_manager import S3Manager
 
 
-class GlueManager(object):
+class GlueManager:
     def __init__(self, s3_bucket_name: str, table_path_prefix='table'):
         '''
 
@@ -219,7 +218,6 @@ class GlueManager(object):
         except self.cli.exceptions.EntityNotFoundException:
             return None
 
-    # TODO: add more parameters
     def update_job(self,
                    job_name: str,
                    glue_job_type: str = 'glueetl',
@@ -243,7 +241,7 @@ class GlueManager(object):
         '''
 
         prev_job = self.get_job(job_name)
-        print(f'prev_job: {prev_job}')
+        self.logger.info(f'prev_job: {prev_job}')
 
         prev_job['Job']['Command']['Name'] = glue_job_type
 
@@ -299,7 +297,7 @@ class GlueManager(object):
             dpu = old_job_params['MaxCapacity']
         else:
             dpu = old_job_params['AllocatedCapacity']
-        pprint(old_job_params)
+        self.logger.debug(old_job_params)
 
         # Create a new job with the new name and the same parameters as the old job
         self.create_job(job_name=new_name,
@@ -371,7 +369,37 @@ class GlueManager(object):
         max_results = max_results if max_results else self.MAX_RESULTS
         jobs = self.cli.list_jobs(MaxResults=max_results)['JobNames']
 
-        return [job for job in jobs if name_filter in jobs]
+        return [job for job in jobs if name_filter in job]
+
+    def list_job_runs(self, job_name: str, max_results: int = 20) -> list:
+        '''
+        List runs for a Glue job.
+
+        :param job_name: glue job name
+        :param max_results: max number of results
+        :return: list of job runs
+        '''
+        return self.cli.get_job_runs(JobName=job_name, MaxResults=max_results)['JobRuns']
+
+    def get_job_run(self, job_name: str, run_id: str) -> dict:
+        '''
+        Get details of a specific Glue job run.
+
+        :param job_name: glue job name
+        :param run_id: job run id
+        :return: job run details
+        '''
+        return self.cli.get_job_run(JobName=job_name, RunId=run_id)['JobRun']
+
+    def stop_job_run(self, job_name: str, run_id: str):
+        '''
+        Stop a running Glue job.
+
+        :param job_name: glue job name
+        :param run_id: job run id
+        :return:
+        '''
+        return self.cli.batch_stop_job_run(JobName=job_name, JobRunIds=[run_id])
 
     def refresh_job(self,
                     code_path: str,
@@ -391,7 +419,6 @@ class GlueManager(object):
         :return:
         '''
 
-        # TODO: compare between real job and s3
         glue_jobs = set([f'{jn}.scala' for jn in self.list_job_names()])
         git_jobs = set([f for f in os.listdir(code_path)])
 
@@ -442,7 +469,7 @@ class GlueManager(object):
         job_list_sorted = sorted(job_list, key=lambda x: x[4], reverse=True)
         for job in job_list_sorted:
             job_name, allocated_capacity, started_on, completed_on, duration = job
-            print(f"{job_name}\t{allocated_capacity}\t{started_on}\t{completed_on}\t{duration}")
+            self.logger.info(f"{job_name}\t{allocated_capacity}\t{started_on}\t{completed_on}\t{duration}")
 
 
 if __name__ == '__main__':

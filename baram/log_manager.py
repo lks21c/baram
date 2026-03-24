@@ -2,17 +2,18 @@ import sys
 import logging
 
 
-class LogManager(object):
+class LogManager:
 
     @staticmethod
     def get_logger(name=''):
         logger = logging.getLogger(name)
-        logger.propagate = False
-        logger.setLevel(logging.INFO)
+        if not logger.handlers:
+            logger.propagate = False
+            logger.setLevel(logging.INFO)
 
-        streamHandler = logging.StreamHandler(sys.stdout)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-        streamHandler.setFormatter(formatter)
-        logger.addHandler(streamHandler)
+            handler = logging.StreamHandler(sys.stdout)
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
 
         return logger

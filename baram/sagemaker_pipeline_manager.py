@@ -24,7 +24,7 @@ from sagemaker.workflow.steps import ProcessingStep, TrainingStep, TransformStep
 from baram.s3_manager import S3Manager
 
 
-class SagemakerPipelineManager(object):
+class SagemakerPipelineManager:
     def __init__(self,
                  default_bucket: str,
                  pipeline_name: str,

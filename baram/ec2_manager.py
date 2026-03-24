@@ -5,7 +5,7 @@ import boto3
 from baram.log_manager import LogManager
 
 
-class EC2Manager(object):
+class EC2Manager:
     def __init__(self):
         self.cli = boto3.client('ec2')
 
@@ -19,8 +19,8 @@ class EC2Manager(object):
         """
         try:
             return self.cli.describe_security_groups()['SecurityGroups']
-        except:
-            print(traceback.format_exc())
+        except Exception as e:
+            self.logger.error(traceback.format_exc())
             return None
 
     def list_unused_sg_ids(self, description_filter: str = '', sm_domain_ids: list = None) -> set:
@@ -66,7 +66,7 @@ class EC2Manager(object):
             return result
 
         except TypeError:
-            print(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
             return None
 
     def get_default_vpc(self) -> list:
@@ -88,7 +88,7 @@ class EC2Manager(object):
         try:
             return [sg['GroupId'] for sg in sgs if sg['VpcId'] == vpc_id]
         except TypeError:
-            print(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
             return None
 
     def get_eni_with_sg_id(self, sg_id: str) -> list:
@@ -102,7 +102,7 @@ class EC2Manager(object):
         try:
             return [eni for eni in enis if eni['Groups'] != [] and sg_id in [x['GroupId'] for x in eni['Groups']]]
         except TypeError:
-            print(traceback.format_exc())
+            self.logger.error(traceback.format_exc())
             return None
 
     def list_sg_relations(self) -> list:
@@ -164,8 +164,8 @@ class EC2Manager(object):
                     self.cli.revoke_security_group_ingress(GroupId=sg_id,
                                                            SecurityGroupRuleIds=[sg_rule['sg_rule_id']])
                 self.logger.info('security group rule has deleted')
-        except:
-            print(traceback.format_exc())
+        except Exception as e:
+            self.logger.error(traceback.format_exc())
 
     def delete_sgs(self, sg_ids: list):
         """
@@ -178,8 +178,8 @@ class EC2Manager(object):
             for sg_id in sg_ids:
                 self.delete_sg_rules(sg_id)
                 self.delete_sg(sg_id)
-        except:
-            print(traceback.format_exc())
+        except Exception as e:
+            self.logger.error(traceback.format_exc())
 
     def delete_sg(self, sg_id: str):
         """
@@ -188,10 +188,10 @@ class EC2Manager(object):
         :param sg_id: GroupId
         """
         try:
-            self.cli.delete_sg(GroupId=sg_id)
+            self.cli.delete_security_group(GroupId=sg_id)
             self.logger.info('security group has deleted')
-        except:
-            print(traceback.format_exc())
+        except Exception as e:
+            self.logger.error(traceback.format_exc())
 
     def list_instances_with_status(self, status: str = 'running'):
         """
@@ -202,8 +202,8 @@ class EC2Manager(object):
         try:
             instances = [instance['Instances'][0] for instance in self.describe_instances()['Reservations']]
             return [instance for instance in instances if instance['State']['Name'] == status]
-        except:
-            print(traceback.format_exc())
+        except Exception as e:
+            self.logger.error(traceback.format_exc())
             return None
 
     def delete_unused_key_pairs(self):
@@ -215,8 +215,8 @@ class EC2Manager(object):
             for key_pair in key_pairs_redundant:
                 self.cli.delete_key_pair(KeyName=key_pair)
                 self.logger.info('key pair has deleted')
-        except:
-            print(traceback.format_exc())
+        except Exception as e:
+            self.logger.error(traceback.format_exc())
 
     def list_unused_key_pairs(self):
         """

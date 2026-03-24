@@ -1,19 +1,19 @@
-from pprint import pprint
+from datetime import datetime
 from typing import Optional, Union, Dict, Any, List, Literal
 
 import awswrangler as wr
 import boto3
 import fire
 import pandas as pd
-import awswrangler as wr
 from awswrangler.athena._utils import _QUERY_WAIT_POLLING_DELAY
+from dateutil.relativedelta import relativedelta
 
 from baram.s3_manager import S3Manager
 from baram.log_manager import LogManager
 from baram.glue_manager import GlueManager
 
 
-class AthenaManager(object):
+class AthenaManager:
     def __init__(self,
                  query_result_bucket_name: str,
                  output_bucket_name: str,
@@ -78,7 +78,6 @@ class AthenaManager(object):
 
         :param db_name: target glue database name
         :param table_name: target glue table name
-        :param table_path:
         :return:
         '''
         sm = S3Manager(self.OUTPUT_BUCKET)
@@ -89,10 +88,10 @@ class AthenaManager(object):
             location = table['StorageDescriptor']['Location'].replace(f's3://{gm.s3_bucket_name}/', '')
 
             wr.catalog.delete_table_if_exists(database=db_name, table=table_name)
-            print(f'{db_name}.{table_name} is deleted, on athena')
+            self.logger.info(f'{db_name}.{table_name} is deleted, on athena')
 
             sm.delete_dir(s3_dir_path=location)
-            print(f'data of {table_name} in its location {location} is deleted, on s3')
+            self.logger.info(f'data of {table_name} in its location {location} is deleted, on s3')
 
         except Exception as e:
             self.logger.info(e)
@@ -118,7 +117,7 @@ class AthenaManager(object):
         Interval in seconds for how often the function will check if the Athena query has completed.
         :return: Dictionary with the get_query_execution response. You can obtain query result as csv on S3.
         '''
-        pprint(sql)
+        self.logger.debug(sql)
         query_execution_id = wr.athena.start_query_execution(sql=sql,
                                                              workgroup=self.ATHENA_WORKGROUP,
                                                              params=params,
@@ -132,7 +131,7 @@ class AthenaManager(object):
         arr = str(res['ResultConfiguration']['OutputLocation']).replace('s3://', '').split('/')
 
         sm = S3Manager(self.QUERY_RESULT_BUCKET)
-        print(f"fetch_result_path={sm.get_s3_web_url(arr[0], '/'.join(arr[1:]))}")
+        self.logger.info(f"fetch_result_path={sm.get_s3_web_url(arr[0], '/'.join(arr[1:]))}")
         return res
 
     def count_rows_from_table(self, db_name: str, table_name: str):
@@ -154,11 +153,11 @@ class AthenaManager(object):
         :return:
         '''
 
-        print(f"{table_name} optimize start")
-        self.optimize_table(table_name, db_name)
+        self.logger.info(f"{table_name} optimize start")
+        self.optimize_iceberg_table(db_name, table_name)
 
-        print(f"{table_name} vacumm start")
-        self.vacumm_table(table_name, db_name)
+        self.logger.info(f"{table_name} vacumm start")
+        self.vacumm_iceberg_table(db_name, table_name)
 
     def optimize_iceberg_table(self, db_name: str, table_name: str):
         '''
@@ -205,7 +204,7 @@ class AthenaManager(object):
         :return: string, a line of query
         '''
         sm = S3Manager(bucket_name=bucket_name)
-        query_txt = sm.get_object_body(sql_filepath).decode('utf-8').replace('\n', ' ')
+        query_txt = sm.get_object(sql_filepath).decode('utf-8').replace('\n', ' ')
         for k, v in replacements.items():
             query_txt = query_txt.replace(k, v)
         return query_txt
@@ -226,8 +225,6 @@ class AthenaManager(object):
                                       database=db_name,
                                       workgroup=workgroup)
         return df
-
-    # TODO: Add a method that dumps athena query result into s3 directly.
 
     def from_df_to_athena(self, df: pd.DataFrame):
         # TODO
@@ -272,10 +269,10 @@ class AthenaManager(object):
         :return:
         '''
 
-        df = self.get_table_manifest_df(db_name=db_name,
-                                        table_name=table_name,
-                                        property='manifests',
-                                        workgroup=workgroup)
+        df = self.get_iceberg_metadata_df(db_name=db_name,
+                                           table_name=table_name,
+                                           property='manifests',
+                                           workgroup=workgroup)
         return df['path'].to_list()
 
     def create_iceberg_table_from_table(self,
@@ -308,6 +305,7 @@ class AthenaManager(object):
                          db_name=to_db_name,
                          params=params,
                          paramstyle=paramstyle)
+
     def analyze_query_usage(self, workgroup: str, threshold_size: int):
         '''
         Analyze Athena query usage.
@@ -318,7 +316,7 @@ class AthenaManager(object):
         '''
 
         def get_query(query_execution_id: str):
-            response = athena_client.get_query_execution(
+            response = self.cli.get_query_execution(
                 QueryExecutionId=query_execution_id
             )
 
@@ -334,27 +332,26 @@ class AthenaManager(object):
             else:
                 kwargs.pop('NextToken', None)
 
-            response = athena_client.list_query_executions(**kwargs)
+            response = self.cli.list_query_executions(**kwargs)
             query_execution_ids.extend(response['QueryExecutionIds'])
 
             next_token = response.get('NextToken')
             if not next_token:
                 break
 
-        # Retrieve information for each query and print the amount of data scanned
         scan_dict = {}
         for query_execution_id in query_execution_ids:
             try:
-                query_info = athena_client.get_query_execution(QueryExecutionId=query_execution_id)
+                query_info = self.cli.get_query_execution(QueryExecutionId=query_execution_id)
                 completion_datetime = query_info['QueryExecution']['Status']['CompletionDateTime'].replace(tzinfo=None)
                 current_month = datetime(datetime.today().year, datetime.today().month, 1)
                 one_month_later = current_month + relativedelta(months=1)
 
-                if current_month <= completion_datetime and completion_datetime < one_month_later:
+                if current_month <= completion_datetime < one_month_later:
                     data_scanned = query_info['QueryExecution']['Statistics']['DataScannedInBytes']
                     if data_scanned > threshold_size:
                         scan_dict[query_execution_id] = data_scanned
-            except:
+            except Exception:
                 continue
 
         sorted_scan_dict = {k: v for k, v in sorted(scan_dict.items(), key=lambda item: item[1], reverse=True)}
@@ -371,9 +368,9 @@ class AthenaManager(object):
         sorted_scan_new_dict = {k: v for k, v in sorted(new_dict.items(), key=lambda item: item[1], reverse=True)}
         for k, v in sorted_scan_new_dict.items():
             percent = v / total_scanned_byte * 100
-            print(k, f'{v / threshold_size:.1f}GB ({percent:.1f}%)')
+            self.logger.info(f'{k} {v / threshold_size:.1f}GB ({percent:.1f}%)')
 
-        print(f'total_scanned_byte: {total_scanned_byte / threshold_size:.1f}GB')
+        self.logger.info(f'total_scanned_byte: {total_scanned_byte / threshold_size:.1f}GB')
 
 
 if __name__ == '__main__':

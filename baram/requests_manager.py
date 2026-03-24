@@ -3,7 +3,7 @@ import requests
 from baram.log_manager import LogManager
 
 
-class RequestsManager(object):
+class RequestsManager:
 
     @staticmethod
     def get(url: str,

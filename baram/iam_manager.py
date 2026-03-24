@@ -4,7 +4,7 @@ import boto3
 from baram.log_manager import LogManager
 
 
-class IAMManager(object):
+class IAMManager:
     def __init__(self):
         self.cli = boto3.client('iam')
         self.logger = LogManager.get_logger()
@@ -105,6 +105,56 @@ class IAMManager(object):
         :return:
         """
         return [i for i in self.list_policies(scope=scope) if i['AttachmentCount'] == 0]
+
+    def list_roles(self, max_items: int = 1000) -> list:
+        '''
+        List all IAM roles with pagination.
+
+        :param max_items: max items per page
+        :return: list of roles
+        '''
+        roles = self.cli.list_roles(MaxItems=max_items)
+        result = roles['Roles']
+        while 'Marker' in roles:
+            roles = self.cli.list_roles(MaxItems=max_items, Marker=roles['Marker'])
+            result += roles['Roles']
+        return result
+
+    def create_role(self, role_name: str, assume_role_policy_document: str, description: str = '') -> dict:
+        '''
+        Create an IAM role.
+
+        :param role_name: role name
+        :param assume_role_policy_document: trust policy JSON string
+        :param description: role description
+        :return: created role
+        '''
+        return self.cli.create_role(RoleName=role_name,
+                                     AssumeRolePolicyDocument=assume_role_policy_document,
+                                     Description=description)['Role']
+
+    def delete_role(self, role_name: str):
+        '''
+        Delete an IAM role.
+
+        :param role_name: role name
+        :return:
+        '''
+        return self.cli.delete_role(RoleName=role_name)
+
+    def list_users(self, max_items: int = 1000) -> list:
+        '''
+        List all IAM users with pagination.
+
+        :param max_items: max items per page
+        :return: list of users
+        '''
+        users = self.cli.list_users(MaxItems=max_items)
+        result = users['Users']
+        while 'Marker' in users:
+            users = self.cli.list_users(MaxItems=max_items, Marker=users['Marker'])
+            result += users['Users']
+        return result
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@ import time
 from subprocess import Popen, PIPE, STDOUT
 
 
-class ProcessManager(object):
+class ProcessManager:
 
     @classmethod
     def run_cmd(cls, cmd, sleep=True):

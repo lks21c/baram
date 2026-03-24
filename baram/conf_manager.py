@@ -5,7 +5,7 @@ import ujson as json
 from baram.log_manager import LogManager
 
 
-class ConfManager(object):
+class ConfManager:
 
     @staticmethod
     def load_json_to_dict(filename: str) -> dict:

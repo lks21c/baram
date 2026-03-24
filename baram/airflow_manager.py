@@ -1,7 +1,7 @@
 import boto3
 
 
-class AirflowManager(object):
+class AirflowManager:
     def __init__(self):
         self.cli = boto3.client('mwaa')
 
@@ -22,3 +22,21 @@ class AirflowManager(object):
         :return:
         '''
         self.cli.update_environment(Name=name)
+
+    def list_environments(self, max_results: int = 25) -> list:
+        '''
+        List MWAA environments.
+
+        :param max_results: max number of results
+        :return: list of environment names
+        '''
+        return self.cli.list_environments(MaxResults=max_results)['Environments']
+
+    def create_cli_token(self, name: str) -> dict:
+        '''
+        Create a CLI token for an MWAA environment.
+
+        :param name: environment name
+        :return: CLI token response
+        '''
+        return self.cli.create_cli_token(Name=name)

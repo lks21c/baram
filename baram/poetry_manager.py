@@ -3,7 +3,7 @@ import os
 import toml
 
 
-class PoetryManager(object):
+class PoetryManager:
 
     def __init__(self):
         self.path = os.getcwd().replace("tests", "") if 'tests' in os.getcwd() else os.getcwd()

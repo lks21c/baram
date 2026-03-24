@@ -5,7 +5,7 @@ import boto3
 import tzlocal
 
 
-class QuicksightManager(object):
+class QuicksightManager:
     def __init__(self):
         self.cli = boto3.client('quicksight')
         self.TIMEZONE = tzlocal.get_localzone().key
@@ -175,7 +175,7 @@ class QuicksightManager(object):
         :param schedule_id:
         :return:
         '''
-        schedules = self.list_refresh_schedules(account_id, dataset_id)
+        schedules = self.list_dataset_refresh_schedules(account_id, dataset_id)
         if len(schedules) > 0:
             for schedule_id in [x['ScheduleId'] for x in schedules]:
                 self.cli.delete_refresh_schedule(AwsAccountId=account_id,
